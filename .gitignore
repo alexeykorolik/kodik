@@ -1,0 +1,10 @@
+node_modules/
+dist/
+test-results/
+artifacts/
+*.log
+.env
+.env.local
+*.tsbuildinfo
+initial-review.png
+local-server.pid

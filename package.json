@@ -1,0 +1,29 @@
+{
+  "name": "kodik-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./node_modules/vite/bin/vite.js",
+    "build": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build",
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "test:smoke": "node ./node_modules/tsx/dist/cli.mjs tests/learningEngine.smoke.ts && node ./node_modules/tsx/dist/cli.mjs tests/blockly-adapter.smoke.ts && node ./node_modules/tsx/dist/cli.mjs tests/runtime.regression.ts && node ./node_modules/tsx/dist/cli.mjs tests/learningProgress.smoke.ts",
+    "test:ui": "playwright test",
+    "local": "node scripts/start-local.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "blockly": "^12.3.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
+    "tsx": "^4.20.5",
+    "typescript": "~5.9.2",
+    "vite": "^7.1.7"
+  }
+}
