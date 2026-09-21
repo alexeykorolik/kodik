@@ -8,16 +8,43 @@ import { newSession, starsFor, type Session } from './achievement'
 import { track } from './analytics'
 import { checkTextLesson } from './textLearning'
 import { CodePreview, Modal, Stars } from './LearningUI'
+import { applyMasteryEvent } from './mastery'
+import { lessons } from './course'
+import { practicePool } from './practicePool'
+import { selectNextExercise } from './exerciseSelector'
 const BlocklyEditor = lazy(() => import('./BlocklyEditor').then(m => ({ default: m.BlocklyEditor })))
 type Result = { passed: boolean; message: string; result: RunResult; stars?: number; code: string }
+function solvedTokenOrder(tokens: string[], answer = '') {
+  const search = (prefix: string, used: number[]): number[] | null => {
+    if (prefix === answer) return used
+    if (!answer.startsWith(prefix)) return null
+    for (let index=0;index<tokens.length;index++) if (!used.includes(index)) {
+      const found=search(prefix+tokens[index],[...used,index])
+      if (found) return found
+    }
+    return null
+  }
+  return search('',[]) || []
+}
 
-export function LearningLesson({ lesson, progress, onProgress, onContinue }: { lesson: Lesson; progress: Progress; onProgress: (p: Progress) => void; onContinue: () => void }) {
-  const [session, setSession] = useState<Session>(() => progress.sessions?.[lesson.id] || newSession())
+export function LearningLesson({ lesson: sourceLesson, progress, onProgress, onContinue, practiceMessage }: { lesson: Lesson; progress: Progress; onProgress: (p: Progress) => void; onContinue: () => void; practiceMessage?: string }) {
+  const adaptiveCode=progress.supportOverrides?.[sourceLesson.id]==='free_code' && !!sourceLesson.codeAnswer
+  const lesson: Lesson=adaptiveCode ? {...sourceLesson,mode:'text',answer:sourceLesson.codeAnswer,supportLevel:'free_code',tutorial:undefined,instruction:`Ты уверенно справлялся с этим навыком, поэтому блоки убраны. ${sourceLesson.instruction}`} : sourceLesson
+  const initialSession = progress.sessions?.[lesson.id] || newSession()
+  const [session, setSession] = useState<Session>(initialSession)
   const [program, setProgram] = useState<Program>({ statements: [] })
   const [info, setInfo] = useState(emptyInfo)
   const [modal, setModal] = useState<'blocks'|'variable'|'code'|'clear'|'help'|'example'|null>(null)
-  const [outcome, setOutcome] = useState<Result | null>(null)
+  const [outcome, setOutcome] = useState<Result | null>(() => initialSession.lastCheck ? {
+    passed: initialSession.lastCheck.passed,
+    message: initialSession.lastCheck.message,
+    result: { output: initialSession.lastCheck.output, error: initialSession.lastCheck.error, systemError: initialSession.lastCheck.systemError, errorType: initialSession.lastCheck.errorType, affectedSkills: initialSession.lastCheck.affectedSkills },
+    stars: initialSession.lastCheck.stars,
+    code: initialSession.lastCheck.code
+  } : null)
   const [checking, setChecking] = useState(false)
+  const [editorReady, setEditorReady] = useState(false)
+  const [codeExpanded, setCodeExpanded] = useState(false)
   const editor = useRef<EditorHandle>(null)
   const tutorial = !!lesson.tutorial?.length
   const guide = nextGuide(lesson, progress.introducedConcepts || [], info, program)
@@ -55,7 +82,7 @@ export function LearningLesson({ lesson, progress, onProgress, onContinue }: { l
     track('hint', lesson.id, { level: next.hintsUsed })
   }
   const solution = () => {
-    persistSession({ ...session, solutionUsed: true, hintsUsed: Math.max(3, session.hintsUsed), answer: !blocksMode ? lesson.answer : session.answer, tokens: lesson.mode === 'tokens' ? ['print','(','"Учусь!"',')'].map(t => lesson.tokens!.indexOf(t)) : session.tokens })
+    persistSession({ ...session, solutionUsed: true, hintsUsed: Math.max(3, session.hintsUsed), answer: !blocksMode ? lesson.answer : session.answer, tokens: lesson.mode === 'tokens' ? solvedTokenOrder(lesson.tokens || [],lesson.answer) : session.tokens })
     if (blocksMode) editor.current?.showSolution()
     track('hint', lesson.id, { solution: true })
   }
@@ -67,17 +94,30 @@ export function LearningLesson({ lesson, progress, onProgress, onContinue }: { l
         const currentProgram = editor.current?.getProgram() || program
         const checked = blocksMode ? { ...checkLesson(lesson, currentProgram), program: currentProgram } : checkTextLesson(lesson, currentAnswer)
         if (checked.result.systemError) { setOutcome({ ...checked, code: '' }); return }
-        const next = { ...session, attempts: session.attempts + 1, finished: checked.passed }
-        const stars = checked.passed && !tutorial ? starsFor(next) : undefined
+        const nextBase = { ...session, attempts: session.attempts + 1, finished: checked.passed }
+        const stars = checked.passed && !tutorial ? starsFor(nextBase) : undefined
         const p = readLocalProgress()
-        const extra: Partial<Progress> = { attempts: { ...p.attempts, [lesson.id]: (p.attempts?.[lesson.id] || 0) + 1 } }
+        const practiceSequence = (p.practiceSequence || 0) + 1
+        const observedSkills = checked.passed ? [...new Set([...(lesson.skills?.teaches || []), ...(lesson.skills?.practices || [])])] : checked.result.affectedSkills || lesson.skills?.practices || []
+        const skillStates = applyMasteryEvent(p.skillStates || {}, { skills: observedSkills, success: checked.passed, supportLevel: lesson.supportLevel || 'blocks_with_code', hintsUsed: session.hintsUsed, solutionUsed: session.solutionUsed, at: new Date().toISOString(), sequence: practiceSequence })
+        const extra: Partial<Progress> = { attempts: { ...p.attempts, [lesson.id]: (p.attempts?.[lesson.id] || 0) + 1 }, skillStates, practiceSequence }
+        if (!checked.passed && p.supportOverrides?.[lesson.id]==='free_code' && observedSkills.some(skillId=>(skillStates[skillId]?.consecutiveErrors||0)>=2)) extra.supportOverrides={...p.supportOverrides,[lesson.id]:'blocks_with_code'}
+        if (!checked.passed && !p.activePractice) {
+          const selected=selectNextExercise({lessons,pool:practicePool,completed:p.completed,currentLessonId:lesson.id,skillStates,practiceSequence,completedPracticeIds:p.completedPracticeIds})
+          if (selected?.reason==='corrective' && selected.practiceId && selected.message) {
+            const nextMain=lessons[lessons.findIndex(item=>item.id===lesson.id)+1]
+            const returnLesson=selected.lessonId===nextMain?.id ? lessons[lessons.findIndex(item=>item.id===nextMain.id)+1] : nextMain
+            extra.recommendedPractice={id:selected.practiceId,lessonId:selected.lessonId,returnLessonId:returnLesson?.id,message:selected.message,reason:'corrective'}
+          }
+        }
         if (checked.passed) {
           extra.completed = [...new Set([...p.completed, lesson.id])]
           extra.bestStars = { ...p.bestStars, ...(stars ? { [lesson.id]: Math.max(stars, p.bestStars?.[lesson.id] || 0) } : {}) }
           extra.introducedConcepts = [...new Set([...(p.introducedConcepts || []), ...(lesson.tutorial || [])])]
         }
-        persistSession(next, extra)
         const code = lesson.mode === 'completion' ? `${lesson.prefix}${currentAnswer}${lesson.suffix}` : renderPython(checked.program)
+        const next = { ...nextBase, lastCheck: { passed: checked.passed, message: checked.message, output: checked.result.output, error: checked.result.error, systemError: checked.result.systemError, errorType: checked.result.errorType, affectedSkills: checked.result.affectedSkills, stars, code } }
+        persistSession(next, extra)
         setOutcome({ ...checked, stars, code })
         track('check', lesson.id, { passed: checked.passed, attempt: next.attempts, stars: stars || 0 })
       } catch { setOutcome({ passed: false, message: 'Не удалось проверить. Прогресс сохранён. Попробуй ещё раз.', result: { output: [], systemError: true }, code: '' }) }
@@ -91,20 +131,21 @@ export function LearningLesson({ lesson, progress, onProgress, onContinue }: { l
   return <>
     <article className={`lesson-flow novice-flow ${guided ? 'is-guided' : ''}`}>
       <section className="task-intro" aria-labelledby="lesson-title">
+        {practiceMessage && <p className="practice-intro" role="status">{practiceMessage}. Это короткое повторение, не откат назад.</p>}
         <div className="exercise-meta"><span>{tutorial ? 'Знакомство · без оценки' : lesson.review ? 'Практика главы' : 'Самостоятельная практика'}</span>{!tutorial && <Stars value={progress.bestStars?.[lesson.id] || 0} />}</div>
         <h1 id="lesson-title">{lesson.title}</h1><p className="instruction">{lesson.instruction}</p><p className="task-copy">{lesson.goal}</p>
         {!guided && <p className="next-action">{assistance}</p>}
         <div className="help-row"><button className="text-button" onClick={() => setModal('help')}>Как пользоваться блоками?</button>{!tutorial && <span>Помощь с интерфейсом бесплатна</span>}</div>
-        {!guided && <div className="hint-area"><button className="text-button" onClick={() => useHint()} disabled={session.hintsUsed >= 3}>{session.hintsUsed ? 'Ещё подсказка' : 'Подсказка по решению'}</button>{!tutorial && !session.hintsUsed && <small>Одна подсказка — до 2 ★. Две — 1 ★.</small>}{session.hintsUsed > 0 && <p className="hint-text" role="status">{session.hintsUsed === 1 ? firstHint : lesson.hint}</p>}{session.hintsUsed >= 3 && <button className="text-button" onClick={solution}>Показать готовый вариант{!tutorial ? ' · 1 ★' : ''}</button>}</div>}
+        {!guided && <div className="hint-area"><button className="text-button" onClick={() => useHint()} disabled={session.hintsUsed >= 3}>{session.hintsUsed ? 'Ещё подсказка' : 'Подсказка по решению'}</button>{!tutorial && !session.hintsUsed && <small>Подсказки идут от идеи к примеру. Они влияют на звёзды, но не закрывают путь к освоению.</small>}{session.hintsUsed > 0 && <p className="hint-text" role="status">{lesson.progressiveHints?.[Math.min(session.hintsUsed - 1, lesson.progressiveHints.length - 1)] || (session.hintsUsed === 1 ? firstHint : lesson.hint)}</p>}{session.hintsUsed >= 3 && <button className="text-button" onClick={solution}>Показать готовый вариант{!tutorial ? ' · 1 ★' : ''}</button>}</div>}
       </section>
       <section className={`learning-work ${lesson.id === 1 ? 'first-command' : ''}`} aria-label="Собери решение">
         {guided && <div className="coach" role="status"><span>Шаг {guide ? steps.indexOf(guide) + 1 : steps.length + 1} из {steps.length + 1}</span><p>{assistance}</p></div>}
         {blocksMode ? <>
           <div className="workspace-section"><div className="workspace-heading"><h2>Твои блоки</h2><button className="quiet-button" onClick={() => setModal('clear')}>Очистить</button></div>
-            <Suspense fallback={<div className="blockly-host editor-loading" role="status">Готовим блоки…</div>}><BlocklyEditor ref={editor} lesson={lesson} onChange={setProgram} onInfo={setInfo} onAction={action} focusType={guide?.target === 'field' ? guide.block : guide?.block === 'text' ? 'text_print' : undefined} hideTools={guided} /></Suspense>
-            <div className="workspace-actions"><button className={`add-block-button ${guide?.target === 'add' ? 'coach-target' : ''}`} onClick={showBlocks}><span>+</span> Добавить блок</button>{lesson.allowed?.includes('variables_set') && <button className={`code-button ${guide?.target === 'variable' ? 'coach-target' : ''}`} onClick={() => setModal('variable')}>Создать переменную</button>}</div>
+            <Suspense fallback={<div className="blockly-host editor-loading" role="status">Готовим блоки…</div>}><BlocklyEditor ref={editor} lesson={lesson} onChange={setProgram} onInfo={setInfo} onAction={action} onReady={() => setEditorReady(true)} focusType={guide?.target === 'field' ? guide.block : guide?.block === 'text' ? 'text_print' : undefined} hideTools={guided} /></Suspense>
+            <div className="workspace-actions"><button disabled={!editorReady} className={`add-block-button ${guide?.target === 'add' ? 'coach-target' : ''}`} onClick={showBlocks}><span>+</span> {editorReady ? 'Добавить блок' : 'Готовим блоки…'}</button>{lesson.allowed?.includes('variables_set') && <button disabled={!editorReady} className={`code-button ${guide?.target === 'variable' ? 'coach-target' : ''}`} onClick={() => setModal('variable')}>Создать переменную</button>}</div>
           </div>
-          <section className="live-mirror" aria-label="Твой Python"><div><h2>Твой Python</h2><button className="text-button" onClick={() => { setModal('code'); track('python_view', lesson.id) }}>Развернуть</button></div><CodePreview code={renderPython(program)} highlights={selectedLines(program, info.selectedType)} /><p>{lesson.codeNote || 'Те же действия на языке Python. Когда меняются блоки, меняется и код.'}</p>{guide?.id === 'value' && <p className="slot-explanation">Многоточие … — пустое место. Команда ждёт, что ей показать.</p>}</section>
+          <section className={`live-mirror ${codeExpanded ? 'code-expanded' : 'code-compact'}`} aria-label="Твой Python"><div><h2>Твой Python</h2><button className="text-button compact-code-toggle" aria-expanded={codeExpanded} onClick={() => { setCodeExpanded(value=>!value); track('python_view', lesson.id) }}>{codeExpanded ? 'Свернуть' : 'Посмотреть, как это выглядит в Python →'}</button><button className="text-button desktop-code-toggle" onClick={() => { setModal('code'); track('python_view', lesson.id) }}>Развернуть</button></div><div className="code-reveal"><CodePreview code={renderPython(program)} highlights={selectedLines(program, info.selectedType)} /><p>{lesson.codeNote || 'Те же действия на языке Python. Когда меняются блоки, меняется и код.'}</p>{guide?.id === 'value' && <p className="slot-explanation">Многоточие … — пустое место. Команда ждёт, что ей показать.</p>}</div></section>
         </> : <section className="text-exercise">
           {lesson.mode === 'recognition' && <div className="block-meaning">Напечатать <span>{lesson.id === 15 ? 'значение из «имя»' : '«Привет!»'}</span></div>}
           {lesson.mode === 'completion' && <CodePreview code={`${lesson.prefix}${currentAnswer || '___'}${lesson.suffix}`} />}
@@ -121,13 +162,21 @@ export function LearningLesson({ lesson, progress, onProgress, onContinue }: { l
     {modal === 'code' && <Modal title="Твой Python" onClose={() => setModal(null)}><CodePreview code={renderPython(program)} highlights={selectedLines(program, info.selectedType)} /><p>{lesson.codeNote}</p></Modal>}
     {modal === 'clear' && <Modal title="Очистить программу?" onClose={() => setModal(null)}><p>Блоки можно вернуть кнопкой «Отменить изменение». Попытка проверки за очистку не расходуется.</p><button className="sheet-primary" onClick={() => { editor.current?.clear(); setModal(null) }}>Очистить</button></Modal>}
     {modal === 'help' && <Modal title="Как собирать программу" onClose={() => setModal(null)}><ol className="ui-help"><li>«Добавить блок» открывает команды и значения.</li><li>Сначала добавь команду. Например, «Напечатать».</li><li>В её пустое место добавь значение: текст или число.</li><li>Нажми белое поле, чтобы изменить значение. Новая команда соединится снизу; внутри условия или цикла — займёт свободное место.</li><li>Выбери внешний блок, чтобы продолжить после него. Блоки можно перетаскивать, отменять изменения и удалять.</li></ol><p>Это помощь с интерфейсом. Она не уменьшает звёзды.</p></Modal>}
-    {modal === 'example' && <Modal title="Вспомним связь с блоками" onClose={() => setModal(null)}><div className="block-meaning">Напечатать <span>«текст»</span></div><CodePreview code={'print("текст")'} /><p>Имя команды — print. Скобки окружают то, что нужно показать. Текст записывается в кавычках.</p>{lesson.mode === 'completion' && <><div className="block-meaning">Если <span>баллы не меньше 10</span></div><CodePreview code={'if баллы >= 10:\n    print("Можно пройти")'} /></>}</Modal>}
+    {modal === 'example' && <Modal title="Вспомним связь с блоками" onClose={() => setModal(null)}><ReferenceExample lesson={lesson} /></Modal>}
     {outcome && <Modal title={outcome.result.systemError ? 'Не удалось проверить' : outcome.passed ? 'Получилось!' : 'Давай исправим'} onClose={() => setOutcome(null)} success={outcome.passed}>
       {outcome.passed && (tutorial ? <p className="intro-complete">Знакомство завершено · без оценки</p> : <><Stars value={outcome.stars || 1} /><p className="sheet-note">{outcome.stars === 3 ? 'С первой проверки и без подсказок.' : outcome.stars === 2 ? 'Хорошая практика. Можно повторить и улучшить результат.' : 'Задание пройдено. Повтори самостоятельно, чтобы заработать больше звёзд.'} Лучший результат сохраняется.</p></>)}
       <p className="feedback-message">{outcome.message}</p>{outcome.passed && <><h3>Вот твой Python</h3><CodePreview code={outcome.code} /><p className="sheet-note">{lesson.codeNote}</p></>}{outcome.result.output.length > 0 && <div className="output-preview"><span>Программа показала</span><pre>{outcome.result.output.join('\n')}</pre></div>}
       <button className="sheet-primary" onClick={outcome.passed ? onContinue : () => setOutcome(null)}>{outcome.passed ? 'Продолжить' : 'Исправить'}</button>
     </Modal>}
   </>
+}
+function ReferenceExample({lesson}:{lesson:Lesson}) {
+  const practiced=lesson.skills?.practices || []
+  if (practiced.includes('function')) return <><div className="block-meaning">Создать функцию <span>приветствие</span> → вызвать её</div><CodePreview code={'def приветствие():\n    print("Привет!")\n\nприветствие()'} /><p>def описывает действие. Имя со скобками запускает его. Команды внутри функции имеют отступ.</p></>
+  if (practiced.includes('loop')) return <><div className="block-meaning">Повторить <span>3 раза</span></div><CodePreview code={'for i in range(3):\n    print("Учусь!")'} /><p>range(3) задаёт три повторения, а отступ связывает print с циклом.</p></>
+  if (practiced.includes('if')) return <><div className="block-meaning">Если <span>баллы не меньше 10</span></div><CodePreview code={'if баллы >= 10:\n    print("Можно пройти")'} /><p>Двоеточие начинает ветку, а отступ показывает действие внутри условия.</p></>
+  if (practiced.includes('variable')) return <><div className="block-meaning">Сохранить <span>Мира в имя</span> → прочитать имя</div><CodePreview code={'имя = "Мира"\nprint(имя)'} /><p>Слева от = находится имя коробки. В print имя пишется без кавычек, чтобы прочитать значение.</p></>
+  return <><div className="block-meaning">Напечатать <span>«текст»</span></div><CodePreview code={'print("текст")'} /><p>Имя команды — print. Скобки окружают то, что нужно показать. Текст записывается в кавычках.</p></>
 }
 function Picker({ allowed, fresh, onAdd }: { allowed: string[]; fresh: string[]; onAdd: (type:string) => void }) {
   const [category, setCategory] = useState('Все')

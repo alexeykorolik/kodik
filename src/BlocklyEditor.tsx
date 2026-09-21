@@ -20,9 +20,9 @@ const theme = Blockly.Theme.defineTheme('kodik', {
   fontStyle: { family: 'Arial, sans-serif', weight: '600', size: 15 }
 })
 export type EditorHandle = { showSolution: () => void; clear: () => void; addBlock: (type: string) => void; createVariable: (name: string) => void; getProgram: () => Program }
-type Props = { lesson: Lesson; onChange: (program: Program) => void; onInfo?: (info: WorkspaceInfo) => void; onAction?: (kind: string) => void; focusType?: string; hideTools?: boolean }
+type Props = { lesson: Lesson; onChange: (program: Program) => void; onInfo?: (info: WorkspaceInfo) => void; onAction?: (kind: string) => void; onReady?: () => void; focusType?: string; hideTools?: boolean }
 
-export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEditor({ lesson, onChange, onInfo, onAction, focusType, hideTools }, ref) {
+export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEditor({ lesson, onChange, onInfo, onAction, onReady, focusType, hideTools }, ref) {
   const host = useRef<HTMLDivElement>(null)
   const workspace = useRef<Blockly.WorkspaceSvg | null>(null)
   const onChangeRef = useRef(onChange)
@@ -30,6 +30,8 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
   infoRef.current = onInfo
   const actionRef = useRef(onAction)
   actionRef.current = onAction
+  const readyRef = useRef(onReady)
+  readyRef.current = onReady
   const selectedId = useRef<string | undefined>(undefined)
   const preferredVariableId = useRef<string | undefined>(undefined)
   const [selection, setSelection] = useState(false)
@@ -41,11 +43,26 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
     if (active) selectedId.current = active.id
     infoRef.current?.({ blocks: w.getAllBlocks(false).map(b => ({ id: b.id, type: b.type, fields: Object.fromEntries(b.inputList.flatMap(i => i.fieldRow.filter(f => f.name).map(f => [f.name!, String(f.getValue())]))) })), variables: w.getVariableMap().getAllVariables().map(v => v.getName()), selectedType: active?.type, selectedId: active?.id })
   }
+  const serialize = (w: Blockly.WorkspaceSvg) => {
+    const saved = Blockly.serialization.workspaces.save(w)
+    const topBlocks = w.getTopBlocks(true)
+    const savedBlocks = (saved.blocks as { blocks?: unknown[] } | undefined)?.blocks
+    // Blockly can emit a create event before its workspace serializer sees the
+    // new root. Build the same portable shape directly so an immediate reload
+    // can never replace the learner's work with an empty draft.
+    if (topBlocks.length && (!Array.isArray(savedBlocks) || savedBlocks.length === 0)) {
+      const blocks = topBlocks.map(block => Blockly.serialization.blocks.save(block, { addCoordinates: true, addInputBlocks: true, addNextBlocks: true, saveIds: true })).filter(Boolean)
+      saved.blocks = { languageVersion: 0, blocks }
+      const variables = w.getVariableMap().getAllVariables()
+      if (variables.length) saved.variables = variables.map(variable => ({ name: variable.getName(), id: variable.getId(), type: variable.getType() }))
+    }
+    return saved
+  }
   const publish = () => {
     if (!workspace.current) return
     onChangeRef.current(workspaceToProgram(workspace.current))
     report(workspace.current)
-    saveDraft(lesson.id, Blockly.serialization.workspaces.save(workspace.current))
+    saveDraft(lesson.id, serialize(workspace.current))
   }
   const load = (state: object) => {
     const w = workspace.current
@@ -87,7 +104,11 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
         }
         if (!connected) block.moveBy(24, prior.length ? Math.max(...w.getTopBlocks(false).filter(b => b !== block).map(b => b.getRelativeToSurfaceXY().y + b.getHeightWidth().height), 0) + 32 : 32)
         block.select()
-        void Blockly.renderManagement.finishQueuedRenders().then(() => { if (workspace.current === w && w.getBlockById(block.id)) w.centerOnBlock(block.id, true) })
+        void Blockly.renderManagement.finishQueuedRenders().then(() => {
+          if (workspace.current !== w || !w.getBlockById(block.id)) return
+          w.centerOnBlock(block.id, true)
+          publish()
+        })
         setNotice(connected ? 'Блок добавлен в программу.' : 'Блок добавлен. Выбери его, чтобы заполнить пустые места.')
       } finally { Blockly.Events.setGroup(false); publish() }
     }
@@ -125,6 +146,7 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
     onChangeRef.current(workspaceToProgram(w))
     preferredVariableId.current = w.getVariableMap().getAllVariables()[0]?.getId()
     report(w)
+    readyRef.current?.()
     void Blockly.renderManagement.finishQueuedRenders().then(() => {
       if (workspace.current !== w) return
       const target = w.getAllBlocks(false).filter(b => b.type === focusType).at(-1)
@@ -136,12 +158,14 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
       setSelection(selected instanceof Blockly.BlockSvg && selected.workspace === w)
       report(w)
       if (event.type === 'change' && event.recordUndo) actionRef.current?.('edit_value')
-      if (!event.isUiEvent) { onChangeRef.current(workspaceToProgram(w)); saveDraft(lesson.id, Blockly.serialization.workspaces.save(w)) }
+      if (!event.isUiEvent) { onChangeRef.current(workspaceToProgram(w)); saveDraft(lesson.id, serialize(w)) }
     }
     w.addChangeListener(changed)
     const observer = new ResizeObserver(() => Blockly.svgResize(w))
     observer.observe(host.current)
-    return () => { saveDraft(lesson.id, Blockly.serialization.workspaces.save(w)); observer.disconnect(); w.dispose(); workspace.current = null }
+    const saveBeforeUnload = () => saveDraft(lesson.id, serialize(w))
+    window.addEventListener('pagehide', saveBeforeUnload)
+    return () => { saveBeforeUnload(); window.removeEventListener('pagehide', saveBeforeUnload); observer.disconnect(); w.dispose(); workspace.current = null }
   }, [lesson.id])
 
   return <>

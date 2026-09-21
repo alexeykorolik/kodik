@@ -42,13 +42,35 @@ for (const width of [360,390,430,1366]) test(`новичок: первые пя�
 
 test('черновик, шаг обучения и попытки восстанавливаются после перезагрузки',async ({page})=>{
   await page.goto('/'); await page.getByRole('button',{name:/Начать бесплатно/}).click()
-  await add(page,'Напечатать'); await page.reload(); await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await add(page,'Напечатать')
+  await expect(page.locator('.blocklyBlockCanvas .blocklyBlock')).toHaveCount(1)
+  expect(await page.evaluate(()=>localStorage.getItem('kodik-progress-v1'))).toContain('text_print')
+  await page.reload(); await page.getByRole('button',{name:/Продолжить обучение/}).click()
   await expect(page.locator('.coach')).toContainText('ЧТО показать')
   await add(page,'Текст'); await edit(page,'Привет!'); await check(page); await page.getByRole('dialog').getByRole('button',{name:'Продолжить',exact:true}).click()
   await page.getByRole('button',{name:'Проверить',exact:true}).click(); await page.getByRole('button',{name:'Исправить',exact:true}).click()
   await page.reload(); await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toBeVisible(); await page.getByRole('dialog').getByRole('button',{name:'Исправить',exact:true}).click()
   await greeting(page,'Мне нравится Python'); await check(page)
   await expect(page.getByRole('dialog').getByLabel('2 из 3 звёзд')).toBeVisible()
+})
+
+test('подсказка, текст редактора и последний результат проверки восстанавливаются',async ({page})=>{
+  const prior = lessons.slice(0,lessons.findIndex(l=>l.id===20))
+  await page.addInitScript(data=>{ if (!localStorage.getItem('kodik-progress-v1')) localStorage.setItem('kodik-progress-v1',JSON.stringify(data)) }, {version:2,completed:prior.map(l=>l.id),bestStars:Object.fromEntries(prior.filter(l=>!l.tutorial).map(l=>[l.id,3])),introducedConcepts:prior.flatMap(l=>l.tutorial||[]),currentLesson:20,started:true})
+  await page.goto('/'); await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await page.getByRole('button',{name:'Подсказка по решению'}).click()
+  await page.getByLabel('Твой Python',{exact:true}).fill('имя = "Мира\nprint(имя)')
+  await page.getByRole('button',{name:'Проверить',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toBeVisible()
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions?.['20']?.lastCheck?.passed)).toBe(false)
+  await page.reload(); await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toBeVisible()
+  await expect(page.getByRole('dialog')).toContainText('синтаксис')
+  await page.getByRole('dialog').getByRole('button',{name:'Закрыть'}).click()
+  await expect(page.getByLabel('Твой Python',{exact:true})).toHaveValue('имя = "Мира\nprint(имя)')
+  await expect(page.locator('.hint-text')).toBeVisible()
+  await expect(page.locator('.primary-action')).toContainText('Проверок: 1 · подсказок: 1')
 })
 
 for(const [width,height] of [[360,800],[390,844],[430,932],[768,1024],[1366,768],[1920,1080]]) test(`новый интерфейс ${width}`,async({page})=>{

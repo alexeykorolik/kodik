@@ -1,5 +1,6 @@
 import { lessons as base } from './courseBase'
 import type { Lesson } from './learningEngine'
+import { supportForMode, type LessonSkills, type SkillId } from './skills'
 const original = (id: number) => base.find(l => l.id === id)!
 export const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } }
 const text = (value: string) => ({ type: 'text', fields: { TEXT: value } })
@@ -32,11 +33,62 @@ const newLessons: Lesson[] = [
   { ...original(5), id: 17, chapter: 3, review: true, title: 'Проверь пропуск', instruction: 'Проверь всё вместе: запомнить 12 баллов, сравнить с порогом 10, показать поздравление только при выполнении условия.', codeNote: 'Сохранение → сравнение → действие внутри if.' },
   { ...original(4), chapter: 4, tutorial: ['loop'], codeNote: 'for … in range(3): повторяет действие три раза. Отступ показывает, что именно повторяется.' },
   { ...original(4), id: 18, chapter: 4, title: 'Повтори самостоятельно', starter: emptyWorkspace, instruction: 'На тренировке нужно три раза сказать «Учусь!». Собери повторение самостоятельно.', codeNote: 'Один print внутри цикла заменяет три одинаковые строки.' },
-  { ...greeting(19, 'Собери строку Python', 'Учусь!'), chapter: 4, review: true, mode: 'tokens', instruction: 'Ты уже видел эту строку внутри цикла. Теперь собери её из настоящих частей Python.', goal: 'Составь команду, которая напечатает «Учусь!».', tokens: [')', '"Учусь!"', 'print', '('], answer: 'print("Учусь!")', hint: 'Сначала имя команды, затем открывающая скобка, текст в кавычках и закрывающая скобка.' },
+  { ...original(4), id: 19, chapter: 4, review: true, mode: 'tokens', title: 'Собери цикл на Python', instruction: 'Блок повторения превращается в заголовок for. Собери его из настоящих частей Python.', goal: 'Составь строку, которая начинает цикл из трёх повторений.', tokens: ['range(3)', ':', 'for ', 'i ', 'in '], answer: 'for i in range(3):', prefix: '', suffix: '\n    print("Учусь!")', hint: 'Порядок такой: for, имя счётчика, in, range с числом повторений, двоеточие.', expectedOutput: ['Учусь!','Учусь!','Учусь!'], validate: p => p.statements.some(s => s.kind === 'repeat') ? null : 'Собери заголовок цикла for с range(3).', codeNote: 'for i in range(3): — заголовок цикла. Отступ показывает повторяемое действие.' },
   { ...original(11), chapter: 5, tutorial: ['function'], codeNote: 'def даёт группе команд имя. приветствие() запускает их. Без вызова определение ничего не печатает.' },
   { ...original(12), chapter: 5, review: true, codeNote: 'Определение хранит действие, цикл повторяет вызов. Нажми на заголовок функции, чтобы добавить цикл после неё.' },
-  { ...greeting(20, 'Твоя первая строка без блоков', 'Привет!'), chapter: 5, mode: 'text', instruction: 'Ты много раз собирал эту команду. Теперь набери её сам. При необходимости открой пример из блоков.', goal: 'Напиши одну строку Python, которая покажет «Привет!».', answer: 'print("Привет!")' },
-  { ...greeting(21, 'Две строки — твоя программа', 'Старт'), chapter: 5, mode: 'text', review: true, instruction: 'Объяви начало и конец гонки уже на Python. Каждую команду напиши на отдельной строке.', goal: 'Сначала выведи «Старт», затем «Финиш».', expectedOutput: ['Старт','Финиш'], answer: 'print("Старт")\nprint("Финиш")', solution: original(7).solution, codeNote: 'Теперь порядок действий задают строки твоего кода.' }
+  { ...original(2), id: 20, chapter: 5, mode: 'text', title: 'Переменная без блоков', instruction: 'Ты уже сохранял имя в блоках и узнавал его строку. Теперь напиши обе команды сам.', goal: 'Сохрани «Мира» в переменную имя и напечатай её значение.', expectedOutput: ['Мира'], answer: 'имя = "Мира"\nprint(имя)', validate: p => p.statements.some(s => s.kind === 'assign' && s.name === 'имя') && p.statements.some(s => s.kind === 'print' && s.value.kind === 'variable' && s.value.name === 'имя') ? null : 'Сначала сохрани текст в имя, затем передай имя в print без кавычек.', codeNote: 'Это те же присваивание и чтение переменной, но теперь блоки больше не нужны.' },
+  { ...original(12), id: 21, chapter: 5, mode: 'text', review: true, title: 'Функция и цикл — твой код', instruction: 'Собери знакомые идеи уже в настоящем Python: опиши функцию и вызови её три раза в цикле.', goal: 'Функция приветствие печатает «Привет!», а цикл вызывает её 3 раза.', expectedOutput: ['Привет!','Привет!','Привет!'], answer: 'def приветствие():\n    print("Привет!")\n\nfor i in range(3):\n    приветствие()', validate: p => { const hasFunction=p.statements.some(s=>s.kind==='define'&&s.name==='приветствие'); const hasLoop=p.statements.some(s=>s.kind==='repeat'&&s.body.some(c=>c.kind==='call'&&c.name==='приветствие')); return hasFunction&&hasLoop?null:'Определи функцию приветствие, затем вызови её внутри цикла for.' }, codeNote: 'Blockly исчез: структура осталась той же — определение, цикл и вложенный вызов с отступом.' }
 ]
-export const lessons: Lesson[] = newLessons.map(l => ({ ...l, mode: l.mode || 'blocks' }))
+const metadata: Record<number, LessonSkills> = {
+  1: { teaches: ['print','string'], practices: [], requires: [] },
+  13: { teaches: [], practices: ['print','string'], requires: ['print','string'] },
+  14: { teaches: ['text_syntax'], practices: ['print','string'], requires: ['print','string'] },
+  7: { teaches: ['sequence'], practices: ['print','string'], requires: ['print'] },
+  22: { teaches: [], practices: ['sequence','print','string'], requires: ['print','sequence'] },
+  6: { teaches: ['number'], practices: ['print'], requires: ['print'] },
+  2: { teaches: ['variable','assignment'], practices: ['print','string'], requires: ['print','string'] },
+  3: { teaches: ['arithmetic'], practices: ['number','print'], requires: ['number','print'] },
+  8: { teaches: [], practices: ['arithmetic','number','sequence','print'], requires: ['arithmetic','number'] },
+  15: { teaches: [], practices: ['variable','assignment','print','text_syntax'], requires: ['variable','assignment','print'] },
+  9: { teaches: ['comparison'], practices: ['number','print'], requires: ['number','print'] },
+  5: { teaches: ['if','indentation'], practices: ['comparison','assignment','variable','print'], requires: ['comparison','assignment'] },
+  10: { teaches: [], practices: ['if','comparison','indentation','print'], requires: ['if','comparison'] },
+  16: { teaches: [], practices: ['comparison','if','text_syntax'], requires: ['comparison','if'] },
+  17: { teaches: [], practices: ['variable','assignment','comparison','if','indentation','print'], requires: ['assignment','comparison','if'] },
+  4: { teaches: ['loop','indentation'], practices: ['sequence','number','print'], requires: ['sequence','number'] },
+  18: { teaches: [], practices: ['loop','indentation','sequence','number','print'], requires: ['loop','sequence'] },
+  19: { teaches: ['text_syntax'], practices: ['loop','indentation','number','print'], requires: ['loop','print'] },
+  11: { teaches: ['function','indentation'], practices: ['print','sequence'], requires: ['print','sequence'] },
+  12: { teaches: [], practices: ['function','loop','indentation','print','sequence'], requires: ['function','loop'] },
+  20: { teaches: [], practices: ['variable','assignment','print','string','text_syntax'], requires: ['variable','assignment','print'] },
+  21: { teaches: [], practices: ['function','loop','indentation','sequence','print','text_syntax'], requires: ['function','loop','print'] }
+}
+const codeAnswers: Partial<Record<number,string>> = {
+  1:'print("Привет!")',13:'print("Мне нравится Python")',14:'print("Привет!")',7:'print("Старт")\nprint("Финиш")',22:'print("Старт")\nprint("Финиш")',
+  6:'print(7)',2:'имя = "Мира"\nprint(имя)',3:'print(2 + 3)',8:'print((2 + 3) * 4)',15:'имя = "Мира"\nprint(имя)',
+  9:'print(12 >= 10)',5:'баллы = 12\nif баллы >= 10:\n    print("Уровень пройден!")',10:'if 3 >= 10:\n    print("Можно")\nelse:\n    print("Пока рано")',
+  16:'баллы = 12\nif баллы >= 10:\n    print("Можно пройти")',17:'баллы = 12\nif баллы >= 10:\n    print("Уровень пройден!")',
+  4:'for i in range(3):\n    print("Учусь!")',18:'for i in range(3):\n    print("Учусь!")',19:'for i in range(3):\n    print("Учусь!")',
+  11:'def приветствие():\n    print("Привет!")\nприветствие()',12:'def приветствие():\n    print("Привет!")\nfor i in range(3):\n    приветствие()',
+  20:'имя = "Мира"\nprint(имя)',21:'def приветствие():\n    print("Привет!")\nfor i in range(3):\n    приветствие()'
+}
+
+const hintsFor = (lesson: Lesson) => {
+  const concept = lesson.skills?.teaches[0] || lesson.skills?.practices[0]
+  const first: Partial<Record<SkillId,string>> = {
+    print: 'Подумай, какая команда показывает значение на экране.',
+    variable: 'Сначала реши, где программе нужно сохранить значение, а где прочитать его.',
+    comparison: 'Сформулируй проверку словами: какое отношение между левым и правым значением?',
+    if: 'Найди действие, которое должно выполняться только при верной проверке.',
+    loop: 'Найди действие, которое повторяется, и количество повторений.',
+    function: 'Отдели описание действия от места, где его нужно запустить.'
+  }
+  return [first[concept!] || lesson.starterHint, lesson.starterHint, lesson.hint]
+}
+
+export const lessons: Lesson[] = newLessons.map(source => {
+  const mode = source.mode || 'blocks'
+  const lesson: Lesson = { ...source, mode, codeAnswer:codeAnswers[source.id], skills: metadata[source.id], difficulty: Math.min(5, Math.max(1, source.chapter || 1)) as 1|2|3|4|5, supportLevel: source.tutorial?.length ? 'blocks' : supportForMode(mode) }
+  return { ...lesson, progressiveHints: hintsFor(lesson) }
+})
 export function chapterLessons(id: number) { return lessons.filter(l => l.chapter === id) }

@@ -7,7 +7,7 @@
     "dev": "node ./node_modules/vite/bin/vite.js",
     "build": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
-    "test:smoke": "node ./node_modules/tsx/dist/cli.mjs tests/learningEngine.smoke.ts && node ./node_modules/tsx/dist/cli.mjs tests/blockly-adapter.smoke.ts && node ./node_modules/tsx/dist/cli.mjs tests/runtime.regression.ts && node ./node_modules/tsx/dist/cli.mjs tests/learningProgress.smoke.ts",
+    "test:smoke": "node ./node_modules/tsx/dist/cli.mjs tests/learningEngine.smoke.ts && node ./node_modules/tsx/dist/cli.mjs tests/blockly-adapter.smoke.ts && node ./node_modules/tsx/dist/cli.mjs tests/runtime.regression.ts && node ./node_modules/tsx/dist/cli.mjs tests/learningProgress.smoke.ts && node ./node_modules/tsx/dist/cli.mjs tests/adaptiveEngine.smoke.ts",
     "test:ui": "playwright test",
     "local": "node scripts/start-local.mjs"
   },

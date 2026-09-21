@@ -1,4 +1,6 @@
 import type * as Blockly from 'blockly'
+import type { LessonSkills, SkillId, SupportLevel } from './skills'
+import { issue, type ErrorType, type ValidationIssue } from './validation'
 
 /**
  * Stable, language-neutral program representation. Blockly is only an input
@@ -29,11 +31,17 @@ export type Lesson = {
   mode?: 'blocks' | 'recognition' | 'completion' | 'tokens' | 'text'
   choices?: string[]
   answer?: string
+  codeAnswer?: string
   prefix?: string
   suffix?: string
   tokens?: string[]
   codeNote?: string
   review?: boolean
+  adaptiveOnly?: boolean
+  skills?: LessonSkills
+  difficulty?: 1 | 2 | 3 | 4 | 5
+  supportLevel?: SupportLevel
+  progressiveHints?: string[]
   allowed?: string[]
   success?: string
   title: string
@@ -46,7 +54,7 @@ export type Lesson = {
   /** A deliberately incomplete workspace for gradual release of responsibility. */
   starter: object
   solution: object
-  validate: (program: Program) => string | null
+  validate: (program: Program) => string | ValidationIssue | null
 }
 
 const str = (value: string): Expr => ({ kind: 'string', value })
@@ -271,7 +279,7 @@ function bounded(value: number, real: boolean): Value {
   if (!Number.isFinite(value) || Math.abs(value) > 1e12) throw new LearningError('Число слишком большое для учебного запуска. Используй значения от −1 000 000 000 000 до 1 000 000 000 000.')
   return real ? { kind: 'real', value } : value
 }
-export type RunResult = { output: string[]; error?: string; systemError?: boolean }
+export type RunResult = { output: string[]; error?: string; systemError?: boolean; errorType?: ErrorType; affectedSkills?: SkillId[] }
 
 function evaluate(expr: Expr, memory: Map<string, Value>): Value {
   if (expr.kind === 'missing') throw new LearningError('В блоке осталось пустое место. Добавь туда значение.')
@@ -365,13 +373,16 @@ export function runProgram(program: Program): RunResult {
 }
 
 export function checkLesson(lesson: Lesson, program: Program) {
+  const practicedSkills = lesson.skills?.practices || lesson.skills?.teaches || []
   const result = runProgram(program)
-  if (result.error) return { passed: false, message: result.error, result }
-  if (!program.statements.length) return { passed: false, message: 'Поле пока пустое. Нажми «Добавить блок» и собери программу.', result: { output: [] } as RunResult }
+  if (result.error) { const details = issue(result.error, practicedSkills); return { passed: false, message: result.error, result: { ...result, errorType: details.errorType, affectedSkills: details.affectedSkills } } }
+  if (!program.statements.length) return { passed: false, message: 'Поле пока пустое. Нажми «Добавить блок» и собери программу.', result: { output: [], errorType: 'missing_block', affectedSkills: practicedSkills } as RunResult }
   const requiredError = lesson.validate(program)
-  if (requiredError) return { passed: false, message: requiredError, result }
+  if (requiredError) { const details = typeof requiredError === 'string' ? issue(requiredError, practicedSkills) : requiredError; return { passed: false, message: details.message, result: { ...result, errorType: details.errorType, affectedSkills: details.affectedSkills } } }
   const correct = result.output.length === lesson.expectedOutput.length && result.output.every((line, index) => line === lesson.expectedOutput[index])
-  return { passed: correct, message: correct ? (lesson.success || lesson.instruction) : `Сейчас вывод отличается от задания. Ожидаем: ${lesson.expectedOutput.join(' → ')}. Проверь значения и порядок блоков.`, result }
+  if (correct) return { passed: true, message: lesson.success || lesson.instruction, result }
+  const errorType: ErrorType = result.output.length === lesson.expectedOutput.length ? 'wrong_value' : 'wrong_order'
+  return { passed: false, message: `Сейчас вывод отличается от задания. Ожидаем: ${lesson.expectedOutput.join(' → ')}. Проверь значения и порядок блоков.`, result: { ...result, errorType, affectedSkills: practicedSkills } }
 }
 
 function hasExpression(program: Program, test: (expr: Expr) => boolean): boolean {

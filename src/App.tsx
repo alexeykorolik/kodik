@@ -5,6 +5,9 @@ import { chapterMax, chapterStars, gate, isUnlocked, newSession } from './achiev
 import { LearningLesson } from './LearningLesson'
 import { Stars } from './LearningUI'
 import { exportEvents, track } from './analytics'
+import { skills } from './skills'
+import { selectNextExercise } from './exerciseSelector'
+import { practicePool } from './practicePool'
 type Screen = 'home'|'path'|'lesson'|'finish'
 export default function App() {
   const [progress, setProgress] = useState(readLocalProgress)
@@ -33,6 +36,15 @@ export default function App() {
     })
     return () => { mounted = false; window.removeEventListener('online',network); window.removeEventListener('offline',network); window.removeEventListener('kodik-storage',storage) }
   }, [])
+  useEffect(() => {
+    const p=readLocalProgress()
+    if (!p.started || p.activePractice || p.recommendedPractice || !p.currentLesson || !p.completed.includes(p.currentLesson)) return
+    const selected=selectNextExercise({lessons,pool:practicePool,completed:p.completed,currentLessonId:p.currentLesson,skillStates:p.skillStates||{},practiceSequence:p.practiceSequence||0,completedPracticeIds:p.completedPracticeIds})
+    if (selected?.reason!=='review' || !selected.practiceId || !selected.message) return
+    const returnLesson=lessons.find(item=>!p.completed.includes(item.id)&&isUnlocked(item.id,p))
+    const updated={...p,recommendedPractice:{id:selected.practiceId,lessonId:selected.lessonId,returnLessonId:returnLesson?.id,message:selected.message,reason:'review' as const}}
+    saveProgress(updated,false);setProgress(updated)
+  }, [])
   useEffect(() => { window.scrollTo(0,0) }, [screen,lessonId,runKey])
   const open = (id: number) => {
     const p = readLocalProgress()
@@ -42,17 +54,42 @@ export default function App() {
     const sessions = { ...p.sessions }
     const drafts = { ...p.drafts }
     if (replay || !sessions[id]) { sessions[id] = newSession(); if (replay) delete drafts[id] }
-    persist({ ...p, sessions, drafts, started: true, currentLesson: id, currentChapter: target.chapter })
+    const practiced=[...(target.skills?.practices||[])]
+    const readyForCode=!p.supportOverrides?.[id] && target.mode==='blocks' && !!target.codeAnswer && !target.tutorial?.length && practiced.length>0 && practiced.every(skillId=>(p.skillStates?.[skillId]?.mastery||0)>=.6&&(p.skillStates?.[skillId]?.independentSuccesses||0)>=2)
+    const supportOverrides={...p.supportOverrides,...(readyForCode?{[id]:'free_code' as const}:{})}
+    persist({ ...p, sessions, drafts, supportOverrides, started: true, currentLesson: id, currentChapter: target.chapter })
     track(replay ? 'replay' : 'lesson_open', id)
     setLessonId(id); setRunKey(n => n + 1); setScreen('lesson')
   }
   const next = () => {
     const p = readLocalProgress()
+    if (p.activePractice) {
+      const returnLessonId=p.activePractice.returnLessonId
+      persist({ ...p, activePractice: undefined, recommendedPractice: undefined, completedPracticeIds: [...new Set([...(p.completedPracticeIds || []),p.activePractice.id])] })
+      if (returnLessonId && isUnlocked(returnLessonId,readLocalProgress())) { open(returnLessonId); return }
+      setScreen('path'); return
+    }
+    if (p.recommendedPractice) {
+      const recommendation=p.recommendedPractice
+      persist({ ...p, activePractice: recommendation })
+      open(recommendation.lessonId)
+      return
+    }
     const index = lessons.findIndex(l => l.id === lessonId)
     const candidate = lessons[index + 1]
     if (!candidate) { setScreen(lessons.every(l => p.completed.includes(l.id)) ? 'finish' : 'path'); return }
     if (candidate.chapter !== lesson.chapter || !isUnlocked(candidate.id,p)) { setScreen('path'); return }
     open(candidate.id)
+  }
+  const startOrResume = () => {
+    const p=readLocalProgress()
+    if (p.recommendedPractice) {
+      persist({...p,activePractice:p.recommendedPractice})
+      open(p.recommendedPractice.lessonId)
+      return
+    }
+    if (resume && !done) open(resume.id)
+    else setScreen('path')
   }
   return <main className={`app-shell screen-${screen}`}>
     <header className="lesson-header">
@@ -61,17 +98,17 @@ export default function App() {
       <div className="header-progress"><div className="progress-track" role="progressbar" aria-label="Прогресс курса" aria-valuemin={0} aria-valuemax={lessons.length} aria-valuenow={progress.completed.length}><i style={{ width: `${progress.completed.length / lessons.length * 100}%` }} /></div><b>{progress.completed.length}/{lessons.length}</b><span className="total-stars" aria-label={`Всего ${stars} звёзд`}>★ {stars}</span></div>
     </header>
     {offline && <p className="network-note" role="status">Ты не в сети. Открытое занятие работает, прогресс сохраняется на устройстве.</p>}
-    {screen === 'home' && <div className="home-layout"><section className="home-copy"><p className="eyebrow">Python · 5 глав · от блоков к своим строкам</p><h1>{done ? 'Начало положено.' : progress.started ? 'Продолжим собирать знания?' : <>Большой путь.<br />С маленького блока.</>}</h1><p className="home-description">{done ? 'Ты прошёл путь от первой команды до собственного кода. Можно повторить задания и улучшить результат.' : 'Никогда не программировал? Начнём вместе. Приложение покажет, куда нажать, а ты соберёшь свою первую команду и увидишь её на Python.'}</p>{progress.started && resume && <p className="resume-label">Твой следующий шаг<strong>{resume.title}</strong></p>}<button className="primary-button" onClick={() => resume && !done ? open(resume.id) : setScreen('path')}>{done ? 'Повторить пройденное' : progress.started ? resume ? 'Продолжить обучение' : 'К карте и повторению' : 'Начать бесплатно'} →</button><p className="small-note">Без регистрации. Ошибаться и пробовать — нормально.</p></section><div className="learning-illustration" aria-label="Блок печати превращается в Python"><div className="illustration-caption">Сначала — понятные блоки</div><div className="demo-block">напечатать <span>«Привет!»</span></div><div className="bridge-arrow" aria-hidden="true">↓</div><div className="demo-code"><span>print</span>(<b>"Привет!"</b>)</div><div className="illustration-caption bottom-caption">Затем — твоя первая строка Python</div><div className="illustration-seal" aria-hidden="true">&lt;/&gt;</div></div><div className="learning-steps"><p><b>01</b><strong>Попробуй с помощью</strong><span>Один понятный шаг за раз</span></p><p><b>02</b><strong>Закрепи самостоятельно</strong><span>Повторяй и улучшай результат</span></p><p><b>03</b><strong>Напиши код</strong><span>От узнавания строки к своей программе</span></p></div></div>}
-    {screen === 'path' && <section className="course-path"><p className="eyebrow">Твой маршрут · {stars} ★</p><h1>Python с нуля</h1><p className="path-intro">Сначала знакомимся, затем пробуем сами.<br />Повторение сохраняет лучший результат.</p><details className="rating-rules"><summary>Как получить звёзды?</summary><p>3 ★ — с первой проверки без подсказок. 2 ★ — со второй или третьей проверки, либо с одной подсказкой. 1 ★ — после четырёх проверок, двух подсказок или готового примера.</p><p>Изменять блоки и пользоваться справкой можно бесплатно. Знакомства не оцениваются. Звёзды не теряются при повторении.</p></details>{chapters.map(chapter => {
+    {screen === 'home' && <div className="home-layout"><section className="home-copy"><p className="eyebrow">Python · 5 глав · от блоков к своим строкам</p><h1>{done ? 'Начало положено.' : progress.started ? 'Продолжим собирать знания?' : <>Большой путь.<br />С маленького блока.</>}</h1><p className="home-description">{done ? 'Ты прошёл путь от первой команды до собственного кода. Можно повторить задания и улучшить результат.' : 'Никогда не программировал? Начнём вместе. Приложение покажет, куда нажать, а ты соберёшь свою первую команду и увидишь её на Python.'}</p>{progress.recommendedPractice ? <p className="resume-label">Короткое повторение перед продолжением<strong>{progress.recommendedPractice.message}</strong></p> : progress.started && resume && <p className="resume-label">Твой следующий шаг<strong>{resume.title}</strong></p>}<button className="primary-button" onClick={startOrResume}>{done ? 'Повторить пройденное' : progress.recommendedPractice ? 'Быстро вспомнить' : progress.started ? resume ? 'Продолжить обучение' : 'К карте и повторению' : 'Начать бесплатно'} →</button><p className="small-note">Без регистрации. Ошибаться и пробовать — нормально.</p></section><div className="learning-illustration" aria-label="Блок печати превращается в Python"><div className="illustration-caption">Сначала — понятные блоки</div><div className="demo-block">напечатать <span>«Привет!»</span></div><div className="bridge-arrow" aria-hidden="true">↓</div><div className="demo-code"><span>print</span>(<b>"Привет!"</b>)</div><div className="illustration-caption bottom-caption">Затем — твоя первая строка Python</div><div className="illustration-seal" aria-hidden="true">&lt;/&gt;</div></div><div className="learning-steps"><p><b>01</b><strong>Попробуй с помощью</strong><span>Один понятный шаг за раз</span></p><p><b>02</b><strong>Закрепи самостоятельно</strong><span>Повторяй и улучшай результат</span></p><p><b>03</b><strong>Напиши код</strong><span>От узнавания строки к своей программе</span></p></div></div>}
+    {screen === 'path' && <section className="course-path"><p className="eyebrow">Твой маршрут · {stars} ★</p><h1>Python с нуля</h1><p className="path-intro">Сначала знакомимся, затем пробуем сами.<br />Следующие темы открываются, когда основные навыки освоены.</p><details className="rating-rules"><summary>Звёзды и освоение — в чём разница?</summary><p>Звёзды показывают, насколько чисто пройдено конкретное упражнение. Подсказки и повторные проверки могут уменьшить результат, но не стирают понимание.</p><p>Освоение навыка считается отдельно по успешным решениям, самостоятельной практике и уровню поддержки. Именно оно открывает следующие темы.</p></details>{chapters.map(chapter => {
       const access = gate(chapter.id,progress)
       const count = chapterStars(chapter.id,progress)
       const max = chapterMax(chapter.id)
-      return <section className="chapter" key={chapter.id} aria-labelledby={`chapter-${chapter.id}`}><div className="chapter-heading"><div><p>Глава {chapter.id}</p><h2 id={`chapter-${chapter.id}`}>{chapter.title}</h2></div><span>{count}/{max} ★</span></div><p className="chapter-description">{chapter.description}</p>{!access.open && <p className="gate-message" role="status">Чтобы открыть главу: {access.unfinished ? `заверши ещё ${access.unfinished} заданий в главе ${access.chapter}` : `повтори практику главы ${access.chapter}`}{access.missing ? ` и добери ${access.missing} ★` : ''}. Идеальный результат не нужен.</p>}<ol>{chapterLessons(chapter.id).map(item => {
+      return <section className="chapter" key={chapter.id} aria-labelledby={`chapter-${chapter.id}`}><div className="chapter-heading"><div><p>Глава {chapter.id}</p><h2 id={`chapter-${chapter.id}`}>{chapter.title}</h2></div><span>{count}/{max} ★</span></div><p className="chapter-description">{chapter.description}</p>{!access.open && <p className="gate-message" role="status">Чтобы открыть главу: {access.unfinished ? `заверши ещё ${access.unfinished} заданий в главе ${access.chapter}` : 'закрепи необходимые навыки'}{access.missingSkills.length ? `. Стоит повторить: ${access.missingSkills.map(id => skills[id].title.toLowerCase()).join(', ')}` : ''}. Количество звёзд доступ не ограничивает.</p>}<ol>{chapterLessons(chapter.id).map(item => {
         const complete = progress.completed.includes(item.id), unlocked = isUnlocked(item.id,progress)
         return <li key={item.id} className={`${complete ? 'complete' : ''} ${unlocked && !complete ? 'current' : ''}`}><button disabled={!unlocked} onClick={() => open(item.id)}><span className="path-number">{complete ? '✓' : lessons.indexOf(item) + 1}</span><span><small>{item.tutorial?.length ? 'Знакомство · без оценки' : item.mode !== 'blocks' ? 'Ближе к коду' : item.review ? 'Практика главы' : 'Практика'}</small><strong>{item.title}</strong>{!item.tutorial?.length && <Stars value={progress.bestStars?.[item.id] || 0} />}<em>{complete ? 'Пройти ещё раз' : unlocked ? 'Можно начинать' : 'Пока закрыто'}</em></span><span className="path-arrow" aria-hidden="true">{unlocked ? '→' : '—'}</span></button></li>
-      })}</ol>{chapter.required > 0 && <p className="chapter-threshold">Следующая глава: все задания и {chapter.required} из {max} ★. {count >= chapter.required ? 'Звёзд уже достаточно.' : `Осталось ${chapter.required - count} ★.`}</p>}</section>
+      })}</ol>{chapter.id < chapters.length && <p className="chapter-threshold">Звёзды остаются твоим результатом за прохождение. Доступ дальше зависит от освоения навыков главы.</p>}</section>
     })}</section>}
-    {screen === 'lesson' && <LearningLesson key={`${lessonId}-${runKey}`} lesson={lesson} progress={progress} onProgress={setProgress} onContinue={next} />}
+    {screen === 'lesson' && <LearningLesson key={`${lessonId}-${runKey}`} lesson={lesson} progress={progress} onProgress={setProgress} onContinue={next} practiceMessage={progress.activePractice?.lessonId===lesson.id ? progress.activePractice.message : undefined} />}
     {screen === 'finish' && <section className="finish-screen"><div className="finish-mark">✓</div><p className="eyebrow">{lessons.length} заданий · {stars} ★</p><h1>От блоков — к своим строкам.</h1><p>Ты собрал команды, познакомился с переменными, условиями, циклами и функциями. А последние строки написал сам. Возвращайся к практике, чтобы закрепить понимание.</p><button className="primary-button" onClick={() => setScreen('path')}>К карте курса →</button></section>}
     {screen !== 'lesson' && <footer className="site-footer"><span>Кодик · от блоков к пониманию</span><span role="status">{status}</span><details><summary>Данные тестирования</summary><p>События хранятся только здесь. Записываются действия и время, без введённого текста.</p><button className="text-button" onClick={exportEvents}>Скачать события JSON</button></details></footer>}
     {screen === 'lesson' && <p className="lesson-storage" role="status">{status}</p>}
