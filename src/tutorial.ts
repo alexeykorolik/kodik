@@ -30,21 +30,31 @@ const steps: Record<string, GuideStep[]> = {
 export function tutorialSteps(lesson: Lesson, introduced: string[]) { return (lesson.tutorial || []).filter(c => !introduced.includes(c)).flatMap(c => steps[c] || []) }
 export function nextGuide(lesson: Lesson, introduced: string[], info: WorkspaceInfo, program: Program) { return tutorialSteps(lesson, introduced).find(step => !step.done(info, program)) }
 export function newBlocks(lesson: Lesson) { return [...new Set((lesson.tutorial || []).flatMap(c => (steps[c] || []).map(s => s.block).filter((b): b is string => !!b)))] }
-export function selectedLines(program: Program, type?: string): number[] {
-  // The same statement traversal and indentation rules as renderPython.
-  let line = 0
-  const result: number[] = []
-  const expressionType: Record<string, string> = { text: 'string', math_number: 'number', variables_get: 'variable', math_arithmetic: 'binary', logic_compare: 'comparison' }
-  const contains = (value: unknown): boolean => !!value && typeof value === 'object' && (('kind' in value && value.kind === expressionType[type || '']) || Object.values(value).some(v => typeof v === 'object' && contains(v)))
-  const visit = (items: Stmt[]) => {
-    if (!items.length) { line++; return }
+const expressionContains = (value: unknown, sourceId?: string): boolean => !!sourceId && !!value && typeof value === 'object' && (('sourceId' in value && value.sourceId === sourceId) || Object.values(value).some(nested => typeof nested === 'object' && expressionContains(nested, sourceId)))
+
+function pythonSourceLines(program: Program, selectedId?: string) {
+  const sources: Array<string | undefined> = []
+  const matches: boolean[] = []
+  const visit = (items: Stmt[], selectedId?: string, emptyOwner?: string) => {
+    if (!items.length) { sources.push(emptyOwner); matches.push(emptyOwner === selectedId); return }
     for (const item of items) {
-      const own = line++
-      const mapped: Record<string, string> = { text_print: 'print', variables_set: 'assign', controls_if: 'if', controls_repeat_ext: 'repeat', kodik_define: 'define', kodik_call: 'call' }
-      if (mapped[type || ''] === item.kind || ('value' in item && contains(item.value)) || (item.kind === 'if' && contains(item.condition)) || (item.kind === 'repeat' && contains(item.times))) result.push(own)
-      if ('body' in item) visit(item.body)
-      if (item.kind === 'if') { visit(item.then); if (item.otherwise.length) { line++; visit(item.otherwise) } }
+      const expressionMatch = ('value' in item && expressionContains(item.value, selectedId)) || (item.kind === 'if' && expressionContains(item.condition, selectedId)) || (item.kind === 'repeat' && expressionContains(item.times, selectedId))
+      sources.push(item.sourceId); matches.push(item.sourceId === selectedId || expressionMatch)
+      if ('body' in item) visit(item.body, selectedId, item.sourceId)
+      if (item.kind === 'if') {
+        visit(item.then, selectedId, item.sourceId)
+        if (item.otherwise.length) { sources.push(item.sourceId); matches.push(item.sourceId === selectedId); visit(item.otherwise, selectedId, item.sourceId) }
+      }
     }
   }
-  visit(program.statements); return result
+  visit(program.statements, selectedId)
+  return { sources, matches }
+}
+
+export function selectedLines(program: Program, selectedId?: string): number[] {
+  return pythonSourceLines(program, selectedId).matches.flatMap((selected, index) => selected ? [index] : [])
+}
+
+export function lineSources(program: Program): Array<string | undefined> {
+  return pythonSourceLines(program).sources
 }

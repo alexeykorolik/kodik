@@ -6,21 +6,23 @@ import { issue, type ErrorType, type ValidationIssue } from './validation'
  * Stable, language-neutral program representation. Blockly is only an input
  * adapter: renderers and the teaching runtime never depend on Blockly blocks.
  */
-export type Expr =
+export type Expr = ({ sourceId?: string } & (
   | { kind: 'missing' }
   | { kind: 'string'; value: string }
   | { kind: 'number'; value: number }
   | { kind: 'variable'; name: string }
   | { kind: 'binary'; operator: '+' | '-' | '*' | '/' | '**'; left: Expr; right: Expr }
   | { kind: 'comparison'; operator: '==' | '!=' | '>' | '>=' | '<' | '<='; left: Expr; right: Expr }
+))
 
-export type Stmt =
+export type Stmt = ({ sourceId?: string } & (
   | { kind: 'define'; name: string; body: Stmt[] }
   | { kind: 'call'; name: string }
   | { kind: 'print'; value: Expr }
   | { kind: 'assign'; name: string; value: Expr }
   | { kind: 'repeat'; times: Expr; body: Stmt[] }
   | { kind: 'if'; condition: Expr; then: Stmt[]; otherwise: Stmt[] }
+))
 
 export type Program = { statements: Stmt[]; issues?: string[] }
 
@@ -192,16 +194,16 @@ function fieldValue(block: Blockly.Block, field: string) {
 function expression(block: Blockly.Block | null): Expr {
   if (!block || !block.isEnabled()) return { kind: 'missing' }
   switch (block.type) {
-    case 'text': return str(fieldText(block, 'TEXT'))
-    case 'math_number': return num(Number(fieldText(block, 'NUM')) || 0)
-    case 'variables_get': return variable(fieldText(block, 'VAR'))
+    case 'text': return { ...str(fieldText(block, 'TEXT')), sourceId: block.id }
+    case 'math_number': return { ...num(Number(fieldText(block, 'NUM')) || 0), sourceId: block.id }
+    case 'variables_get': return { ...variable(fieldText(block, 'VAR')), sourceId: block.id }
     case 'math_arithmetic': {
       const op: Record<string, '+' | '-' | '*' | '/' | '**'> = { ADD: '+', MINUS: '-', MULTIPLY: '*', DIVIDE: '/', POWER: '**' }
-      return { kind: 'binary', operator: op[fieldValue(block, 'OP')] ?? '+', left: expression(block.getInputTargetBlock('A')), right: expression(block.getInputTargetBlock('B')) }
+      return { kind: 'binary', sourceId: block.id, operator: op[fieldValue(block, 'OP')] ?? '+', left: expression(block.getInputTargetBlock('A')), right: expression(block.getInputTargetBlock('B')) }
     }
     case 'logic_compare': {
       const op: Record<string, '==' | '!=' | '>' | '>=' | '<' | '<='> = { EQ: '==', NEQ: '!=', LT: '<', LTE: '<=', GT: '>', GTE: '>=' }
-      return { kind: 'comparison', operator: op[fieldValue(block, 'OP')] ?? '==', left: expression(block.getInputTargetBlock('A')), right: expression(block.getInputTargetBlock('B')) }
+      return { kind: 'comparison', sourceId: block.id, operator: op[fieldValue(block, 'OP')] ?? '==', left: expression(block.getInputTargetBlock('A')), right: expression(block.getInputTargetBlock('B')) }
     }
     default: return { kind: 'missing' }
   }
@@ -212,15 +214,15 @@ function statements(first: Blockly.Block | null): Stmt[] {
   let block = first
   while (block) {
     if (!block.isEnabled()) { block = block.getNextBlock(); continue }
-    if (block.type === 'text_print') result.push({ kind: 'print', value: expression(block.getInputTargetBlock('TEXT')) })
-    if (block.type === 'variables_set') result.push({ kind: 'assign', name: fieldText(block, 'VAR'), value: expression(block.getInputTargetBlock('VALUE')) })
-    if (block.type === 'controls_repeat_ext') result.push({ kind: 'repeat', times: expression(block.getInputTargetBlock('TIMES')), body: statements(block.getInputTargetBlock('DO')) })
-    if (block.type === 'kodik_define') result.push({ kind: 'define', name: fieldText(block, 'NAME'), body: statements(block.getInputTargetBlock('BODY')) })
-    if (block.type === 'kodik_call') result.push({ kind: 'call', name: fieldText(block, 'NAME') })
+    if (block.type === 'text_print') result.push({ kind: 'print', sourceId: block.id, value: expression(block.getInputTargetBlock('TEXT')) })
+    if (block.type === 'variables_set') result.push({ kind: 'assign', sourceId: block.id, name: fieldText(block, 'VAR'), value: expression(block.getInputTargetBlock('VALUE')) })
+    if (block.type === 'controls_repeat_ext') result.push({ kind: 'repeat', sourceId: block.id, times: expression(block.getInputTargetBlock('TIMES')), body: statements(block.getInputTargetBlock('DO')) })
+    if (block.type === 'kodik_define') result.push({ kind: 'define', sourceId: block.id, name: fieldText(block, 'NAME'), body: statements(block.getInputTargetBlock('BODY')) })
+    if (block.type === 'kodik_call') result.push({ kind: 'call', sourceId: block.id, name: fieldText(block, 'NAME') })
     if (block.type === 'controls_if') {
       let tail = statements(block.getInputTargetBlock('ELSE'))
       const count = block.inputList.filter(input => /^IF\d+$/.test(input.name)).length
-      for (let index = count - 1; index >= 0; index--) tail = [{ kind: 'if', condition: expression(block.getInputTargetBlock(`IF${index}`)), then: statements(block.getInputTargetBlock(`DO${index}`)), otherwise: tail }]
+      for (let index = count - 1; index >= 0; index--) tail = [{ kind: 'if', sourceId: block.id, condition: expression(block.getInputTargetBlock(`IF${index}`)), then: statements(block.getInputTargetBlock(`DO${index}`)), otherwise: tail }]
       result.push(...tail)
     }
     block = block.getNextBlock()

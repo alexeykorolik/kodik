@@ -19,7 +19,7 @@ const theme = Blockly.Theme.defineTheme('kodik', {
   componentStyles: { workspaceBackgroundColour: '#f6f4ee', scrollbarColour: '#b7c5bf', insertionMarkerColour: '#b44f29', insertionMarkerOpacity: 0.4 },
   fontStyle: { family: 'Arial, sans-serif', weight: '600', size: 15 }
 })
-export type EditorHandle = { showSolution: () => void; clear: () => void; addBlock: (type: string) => void; createVariable: (name: string) => void; getProgram: () => Program }
+export type EditorHandle = { showSolution: () => void; clear: () => void; addBlock: (type: string) => void; createVariable: (name: string) => void; focusBlock: (id: string) => void; getProgram: () => Program }
 type Props = { lesson: Lesson; onChange: (program: Program) => void; onInfo?: (info: WorkspaceInfo) => void; onAction?: (kind: string) => void; onReady?: () => void; focusType?: string; hideTools?: boolean }
 
 export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEditor({ lesson, onChange, onInfo, onAction, onReady, focusType, hideTools }, ref) {
@@ -37,9 +37,9 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
   const [selection, setSelection] = useState(false)
   const [notice, setNotice] = useState('')
   onChangeRef.current = onChange
-  const report = (w: Blockly.WorkspaceSvg) => {
+  const report = (w: Blockly.WorkspaceSvg, explicitId?: string | null) => {
     const selected = Blockly.common.getSelected()
-    const active = selected instanceof Blockly.BlockSvg && selected.workspace === w ? selected : null
+    const active = explicitId !== undefined ? (explicitId ? w.getBlockById(explicitId) : null) : selected instanceof Blockly.BlockSvg && selected.workspace === w ? selected : null
     if (active) selectedId.current = active.id
     infoRef.current?.({ blocks: w.getAllBlocks(false).map(b => ({ id: b.id, type: b.type, fields: Object.fromEntries(b.inputList.flatMap(i => i.fieldRow.filter(f => f.name).map(f => [f.name!, String(f.getValue())]))) })), variables: w.getVariableMap().getAllVariables().map(v => v.getName()), selectedType: active?.type, selectedId: active?.id })
   }
@@ -74,6 +74,13 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
     showSolution: () => load(lesson.solution),
     clear: () => { workspace.current?.clear(); publish() },
     createVariable: name => { preferredVariableId.current = workspace.current?.getVariableMap().createVariable(name).getId(); publish() },
+    focusBlock: id => {
+      const w = workspace.current, block = w?.getBlockById(id)
+      if (!w || !block) return
+      block.select(); w.centerOnBlock(id, true); report(w)
+      block.getSvgRoot()?.classList.add('python-focus')
+      window.setTimeout(() => block.getSvgRoot()?.classList.remove('python-focus'), 650)
+    },
     getProgram: () => workspace.current ? workspaceToProgram(workspace.current) : { statements: [] },
     addBlock: type => {
       const w = workspace.current
@@ -154,9 +161,13 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
       else w.scrollCenter()
     })
     const changed = (event: Blockly.Events.Abstract) => {
-      const selected = Blockly.common.getSelected()
+      const eventSelection = event.type === 'selected' ? (event as Blockly.Events.Selected).newElementId : undefined
+      const selected = eventSelection !== undefined ? (eventSelection ? w.getBlockById(eventSelection) : null) : Blockly.common.getSelected()
       setSelection(selected instanceof Blockly.BlockSvg && selected.workspace === w)
-      report(w)
+      report(w, eventSelection)
+      // Blockly applies selection after dispatching some UI events. Report once
+      // more on the next frame so the Python mirror always receives the exact id.
+      window.requestAnimationFrame(() => { if (workspace.current === w) report(w) })
       if (event.type === 'change' && event.recordUndo) actionRef.current?.('edit_value')
       if (!event.isUiEvent) { onChangeRef.current(workspaceToProgram(w)); saveDraft(lesson.id, serialize(w)) }
     }
@@ -171,11 +182,11 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
   return <>
     <div className="blockly-host" ref={host} aria-label="Редактор блоков" />
     <div className={`editor-tools ${hideTools ? 'tools-compact' : ''}`} aria-label="Управление блоками">
-      <button onClick={() => workspace.current?.undo(false)} aria-label="Отменить изменение">↶</button>
-      <button onClick={() => workspace.current?.zoomToFit()} aria-label="Показать все блоки">Вписать</button>
-      <button onClick={() => workspace.current?.zoomCenter(1)} aria-label="Увеличить блоки">+</button>
-      <button onClick={() => workspace.current?.zoomCenter(-1)} aria-label="Уменьшить блоки">−</button>
-      <button disabled={!selection} onClick={() => { const b = Blockly.common.getSelected(); if (b instanceof Blockly.BlockSvg && b.workspace === workspace.current) { b.dispose(true); publish() } }}>Удалить блок</button>
+      <button className="undo-button" onClick={() => workspace.current?.undo(false)} aria-label="Отменить изменение">↶ <span>Отменить</span></button>
+      <details className="editor-menu"><summary aria-label="Другие действия">•••</summary><div>
+        <button onClick={() => workspace.current?.zoomToFit()}>Показать все блоки</button>
+        <button disabled={!selection} onClick={() => { const b = Blockly.common.getSelected(); if (b instanceof Blockly.BlockSvg && b.workspace === workspace.current) { b.dispose(true); publish() } }}>Удалить выбранный блок</button>
+      </div></details>
     </div>
     <p className="editor-note" aria-live="polite">{notice || 'Нажми на значение, чтобы изменить его. Новые блоки заполняют свободные места.'}</p>
   </>
