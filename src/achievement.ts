@@ -1,6 +1,6 @@
 import { chapters, chapterLessons, lessons } from './course'
 import type { SkillState } from './mastery'
-import type { SkillId } from './skills'
+import type { SkillId, SupportLevel } from './skills'
 import type { ErrorType } from './validation'
 export type SavedCheck = {
   passed: boolean
@@ -13,7 +13,7 @@ export type SavedCheck = {
   stars?: number
   code: string
 }
-export type Session = { attempts: number; hintsUsed: number; solutionUsed: boolean; referenceUsed?: boolean; finished?: boolean; answer?: string; tokens?: number[]; firstActionAt?: number; startedAt: number; lastCheck?: SavedCheck }
+export type Session = { attempts: number; hintsUsed: number; solutionUsed: boolean; referenceUsed?: boolean; finished?: boolean; answer?: string; tokens?: number[]; firstActionAt?: number; startedAt: number; lastCheck?: SavedCheck; supportLevel?: SupportLevel; supportMessage?: string; checkedFingerprints?: string[]; meaningfulErrors?: number; recoveryOffered?: boolean }
 export type LearningProgress = { bestStars?: Record<string, number>; sessions?: Record<string, Session>; introducedConcepts?: string[]; tutorialSteps?: Record<string, string>; attempts?: Record<string, number>; hintsUsed?: Record<string, number>; skillStates?: Partial<Record<SkillId, SkillState>>; practiceSequence?: number; currentChapter?: number; version?: number }
 export const newSession = (): Session => ({ attempts: 0, hintsUsed: 0, solutionUsed: false, startedAt: Date.now() })
 export function starsFor(s: Session) { return s.solutionUsed || s.hintsUsed >= 2 || s.attempts >= 4 ? 1 : s.hintsUsed === 1 || s.attempts >= 2 ? 2 : 3 }

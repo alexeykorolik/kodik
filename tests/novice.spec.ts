@@ -50,7 +50,7 @@ test('черновик, шаг обучения и попытки восстан
   await add(page,'Текст'); await edit(page,'Привет!'); await check(page); await page.getByRole('button',{name:'Продолжить',exact:true}).click()
   await page.getByRole('button',{name:'Проверить',exact:true}).click(); await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
   await page.reload(); await page.getByRole('button',{name:/Продолжить обучение/}).click()
-  await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toBeVisible(); await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toHaveCount(0)
   await greeting(page,'Мне нравится Python'); await check(page)
   await expect(page.locator('.feedback-panel').getByLabel('2 из 3 звёзд')).toBeVisible()
 })
@@ -73,7 +73,7 @@ test('подсказка, текст редактора и последний р
   await expect(page.locator('.primary-action')).toContainText('Проверок: 1 · подсказок: 1')
 })
 
-for(const [width,height] of [[360,800],[375,812],[390,844],[430,932],[768,1024],[1366,768],[1920,1080]]) test(`новый интерфейс ${width}`,async({page})=>{
+for(const [width,height] of [[360,800],[375,812],[390,844],[430,932],[768,1024],[1366,768],[1440,900],[1920,1080]]) test(`новый интерфейс ${width}`,async({page})=>{
   mkdirSync('artifacts',{recursive:true}); await page.setViewportSize({width,height}); await page.goto('/'); await page.getByRole('button',{name:/Начать бесплатно/}).click(); await expect(page.locator('.blocklySvg')).toBeVisible()
   await page.screenshot({path:`artifacts/novice-${width}.png`,fullPage:true})
   expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true)

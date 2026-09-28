@@ -4,12 +4,15 @@ import type { LearningProgress, Session } from './achievement'
 import { emptySkillState, type SkillState } from './mastery'
 import { skillIds, type SkillId } from './skills'
 import type { SupportLevel } from './skills'
+import { getPracticeLesson, practiceLessonId, practiceLessons, practicePool } from './practicePool'
+import { materializeSupport } from './supportVariants'
+import { supportLevels, type SupportCheckpoint } from './adaptiveSupport'
 
-export type PracticeRecommendation = { id: string; lessonId: number; returnLessonId?: number; message: string; reason: 'corrective'|'review' }
-export type Progress = LearningProgress & { completed: number[]; currentLesson?: number; started?: boolean; drafts?: Record<string, object>; recommendedPractice?: PracticeRecommendation; activePractice?: PracticeRecommendation; completedPracticeIds?: string[]; supportOverrides?: Record<string,SupportLevel> }
+export type PracticeRecommendation = { id: string; lessonId: number; returnLessonId?: number; message: string; reason: 'corrective'|'review'; supportLevel?: SupportLevel }
+export type Progress = LearningProgress & { completed: number[]; currentLesson?: number; started?: boolean; drafts?: Record<string, object>; recommendedPractice?: PracticeRecommendation; activePractice?: PracticeRecommendation; completedPracticeIds?: string[]; supportOverrides?: Record<string,SupportLevel>; skillSupport?: Partial<Record<SkillId, SupportLevel>>; supportCheckpoint?: SupportCheckpoint }
 const storageKey = 'kodik-progress-v1'
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const url = typeof import.meta.env === 'undefined' ? undefined : import.meta.env.VITE_SUPABASE_URL as string | undefined
+const key = typeof import.meta.env === 'undefined' ? undefined : import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 const supabase = url && key ? createClient(url, key) : null
 let memory: Progress = { completed: [] }
 let storageUnavailable = false
@@ -19,10 +22,10 @@ export function cleanProgress(value: unknown): Progress {
   const p = value as Progress
   const completed = [...new Set(Array.isArray(p.completed) ? p.completed.filter(id => lessons.some(l => l.id === id)) : [])]
   const bestStars: Record<string,number> = {}
-  for (const l of lessons) if (!l.tutorial?.length) { const n = p.bestStars?.[l.id]; if (typeof n === 'number' && n >= 1 && n <= 3) bestStars[l.id] = Math.floor(n); else if (p.version !== 2 && completed.includes(l.id)) bestStars[l.id] = 2 }
+  for (const l of lessons) if (!l.tutorial?.length) { const n = p.bestStars?.[l.id]; if (typeof n === 'number' && n >= 1 && n <= 3) bestStars[l.id] = Math.floor(n); else if ((!p.version || p.version < 2) && completed.includes(l.id)) bestStars[l.id] = 2 }
   const sessions: Record<string, Session> = {}
   const count = (n: unknown) => typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0
-  for (const l of lessons) {
+  for (const l of [...lessons, ...practiceLessons]) {
     const s = p.sessions?.[l.id]
     if (!s || typeof s !== 'object') continue
     const rawCheck = s.lastCheck
@@ -39,7 +42,10 @@ export function cleanProgress(value: unknown): Progress {
           code: typeof rawCheck.code === 'string' ? rawCheck.code.slice(0, 10000) : ''
         }
       : undefined
-    sessions[l.id] = { attempts: count(s.attempts), hintsUsed: count(s.hintsUsed), solutionUsed: s.solutionUsed === true, referenceUsed: s.referenceUsed === true, finished: s.finished === true, startedAt: count(s.startedAt), firstActionAt: typeof s.firstActionAt === 'number' ? s.firstActionAt : undefined, answer: typeof s.answer === 'string' ? s.answer : '', tokens: Array.isArray(s.tokens) ? [...new Set(s.tokens.filter(n => Number.isInteger(n) && n >= 0 && n < (l.tokens?.length || 0)))] : [], lastCheck }
+    const supportLevel = supportLevels.includes(s.supportLevel!) ? s.supportLevel : undefined
+    const practice = practicePool.find(item => practiceLessonId(item.id) === l.id)
+    const variant = practice ? getPracticeLesson(practice.id, supportLevel)! : materializeSupport(l, supportLevel || p.supportOverrides?.[l.id])
+    sessions[l.id] = { attempts: count(s.attempts), hintsUsed: count(s.hintsUsed), solutionUsed: s.solutionUsed === true, referenceUsed: s.referenceUsed === true, finished: s.finished === true, startedAt: count(s.startedAt), firstActionAt: typeof s.firstActionAt === 'number' ? s.firstActionAt : undefined, answer: typeof s.answer === 'string' ? s.answer.slice(0,10000) : '', tokens: Array.isArray(s.tokens) ? [...new Set(s.tokens.filter(n => Number.isInteger(n) && n >= 0 && n < (variant.tokens?.length || 0)))] : [], lastCheck, supportLevel, supportMessage: typeof s.supportMessage === 'string' ? s.supportMessage : undefined, checkedFingerprints: Array.isArray(s.checkedFingerprints) ? s.checkedFingerprints.filter(value => typeof value === 'string').slice(-100) : [], meaningfulErrors: count(s.meaningfulErrors), recoveryOffered: s.recoveryOffered === true }
   }
   const concepts = lessons.flatMap(l => l.tutorial || [])
   const introducedConcepts = [...new Set([...(Array.isArray(p.introducedConcepts) ? p.introducedConcepts.filter(c => concepts.includes(c)) : []), ...completed.flatMap(id => lessons.find(l => l.id === id)?.tutorial || [])])]
@@ -49,7 +55,7 @@ export function cleanProgress(value: unknown): Progress {
   for (const skillId of skillIds) {
     const raw = p.skillStates?.[skillId]
     if (!raw || typeof raw !== 'object') continue
-    skillStates[skillId] = { ...emptySkillState(skillId), mastery: Math.max(0, Math.min(1, typeof raw.mastery === 'number' ? raw.mastery : 0)), attempts: count(raw.attempts), successes: count(raw.successes), independentSuccesses: count(raw.independentSuccesses), hintsUsed: count(raw.hintsUsed), consecutiveErrors: count(raw.consecutiveErrors), lastPracticedAt: typeof raw.lastPracticedAt === 'string' ? raw.lastPracticedAt : undefined, lastPracticedSequence: typeof raw.lastPracticedSequence === 'number' ? count(raw.lastPracticedSequence) : undefined }
+    skillStates[skillId] = { ...emptySkillState(skillId), mastery: Math.max(0, Math.min(1, typeof raw.mastery === 'number' && Number.isFinite(raw.mastery) ? raw.mastery : 0)), attempts: count(raw.attempts), successes: count(raw.successes), independentSuccesses: count(raw.independentSuccesses), hintsUsed: count(raw.hintsUsed), consecutiveErrors: count(raw.consecutiveErrors), lastPracticedAt: typeof raw.lastPracticedAt === 'string' ? raw.lastPracticedAt : undefined, lastPracticedSequence: typeof raw.lastPracticedSequence === 'number' ? count(raw.lastPracticedSequence) : undefined }
   }
   // Version-2 progress predates mastery. Infer conservative evidence from
   // completed exercises so existing learners are not locked out after update.
@@ -60,12 +66,12 @@ export function cleanProgress(value: unknown): Progress {
       skillStates[skillId] = { ...prior, mastery: Math.min(0.8, prior.mastery + (lesson?.tutorial?.length ? 0.14 : 0.2)), attempts: prior.attempts + 1, successes: prior.successes + 1, independentSuccesses: prior.independentSuccesses + (lesson?.tutorial?.length ? 0 : 1) }
     }
   }
-  return { completed, version: 3, bestStars, sessions, introducedConcepts,
+  return { completed, version: 4, bestStars, sessions, introducedConcepts,
     attempts: p.attempts && typeof p.attempts === 'object' ? p.attempts : {}, hintsUsed: p.hintsUsed && typeof p.hintsUsed === 'object' ? p.hintsUsed : {}, tutorialSteps: p.tutorialSteps || {}, currentChapter: lessons.find(l => l.id === p.currentLesson)?.chapter || 1,
     currentLesson: lessons.some(l => l.id === p.currentLesson) ? p.currentLesson : undefined,
     started: p.started === true || (Array.isArray(p.completed) && p.completed.length > 0),
     drafts, skillStates, practiceSequence: count(p.practiceSequence),
-    recommendedPractice: cleanPractice(p.recommendedPractice), activePractice: cleanPractice(p.activePractice), completedPracticeIds: Array.isArray(p.completedPracticeIds) ? p.completedPracticeIds.filter(id=>typeof id==='string').slice(-100) : [], supportOverrides: cleanSupportOverrides(p.supportOverrides) }
+    recommendedPractice: cleanPractice(p.recommendedPractice), activePractice: cleanPractice(p.activePractice), completedPracticeIds: Array.isArray(p.completedPracticeIds) ? p.completedPracticeIds.filter(id=>practicePool.some(item=>item.id===id)).slice(-100) : [], supportOverrides: cleanSupportOverrides(p.supportOverrides), skillSupport: Object.fromEntries(Object.entries(cleanSupportOverrides(p.skillSupport)).filter(([id])=>skillIds.includes(id as SkillId))), supportCheckpoint: { successes: Object.fromEntries(skillIds.map(id=>[id,count(p.supportCheckpoint?.successes?.[id])])), errors: {} } }
 }
 function cleanSupportOverrides(value: unknown) {
   const result: Record<string,SupportLevel>={}
@@ -77,7 +83,8 @@ function cleanPractice(value: unknown): PracticeRecommendation | undefined {
   if (!value || typeof value !== 'object') return undefined
   const item=value as Partial<PracticeRecommendation>
   if (typeof item.id!=='string' || typeof item.lessonId!=='number' || typeof item.message!=='string' || (item.reason!=='corrective'&&item.reason!=='review')) return undefined
-  return { id:item.id,lessonId:item.lessonId,returnLessonId:typeof item.returnLessonId==='number'?item.returnLessonId:undefined,message:item.message,reason:item.reason }
+  if (!practicePool.some(candidate => candidate.id === item.id)) return undefined
+  return { id:item.id,lessonId:practiceLessonId(item.id)!,returnLessonId:lessons.some(lesson=>lesson.id===item.returnLessonId)?item.returnLessonId:undefined,message:item.message,reason:item.reason,supportLevel:supportLevels.includes(item.supportLevel!)?item.supportLevel:undefined }
 }
 export function readLocalProgress(): Progress {
   if (storageUnavailable) return memory

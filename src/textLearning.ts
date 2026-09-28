@@ -136,10 +136,10 @@ export function checkTextLesson(lesson: Lesson, answer: string) {
   const passed = answer === lesson.answer
   let program: Program = { statements: [] }
   try {
-    const source = lesson.mode === 'completion' ? `${lesson.prefix || ''}${answer}${lesson.suffix || ''}` : lesson.answer || ''
+    const source = lesson.mode === 'completion' ? `${lesson.prefix || ''}${answer}${lesson.suffix || ''}` : lesson.codeAnswer || lesson.answer || ''
     program = parsePythonProgram(source)
   } catch { /* Wrong choices are reported pedagogically below. */ }
   const message = passed ? (lesson.codeNote || lesson.success || lesson.instruction) : !answer ? 'Сначала выбери ответ, затем нажми «Проверить».' : lesson.mode === 'completion' ? 'Выбранный фрагмент не выполняет условие задания. Попробуй другой вариант.' : 'Сравни запись с визуальной командой и обрати внимание на имя, скобки и кавычки.'
-  const details = passed ? null : issue(message, lesson.skills?.practices || [])
+  const details = passed ? null : { ...issue(message, lesson.skills?.practices || []), affectedSkills: [...new Set([...(lesson.skills?.teaches || []),...(lesson.skills?.practices || [])])] }
   return { passed, message, result: passed ? runProgram(program) : { output: [], errorType: details!.errorType, affectedSkills: details!.affectedSkills }, program }
 }

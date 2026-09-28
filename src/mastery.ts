@@ -19,6 +19,7 @@ export type MasteryEvent = {
   supportLevel: SupportLevel
   hintsUsed: number
   solutionUsed: boolean
+  guided?: boolean
   at: string
   sequence: number
 }
@@ -29,7 +30,7 @@ export const emptySkillState = (skillId: SkillId): SkillState => ({ skillId, mas
 // The scorer is deliberately replaceable. Course definitions and persistence
 // depend on the event contract, not on these first-version weights.
 export const deterministicMasteryScorer: MasteryScorer = (state, event) => {
-  const independent = event.success && !event.solutionUsed && event.hintsUsed === 0 && supportRank[event.supportLevel] >= supportRank.blocks_with_code
+  const independent = event.success && !event.solutionUsed && !event.guided && event.hintsUsed === 0
   const support = supportRank[event.supportLevel]
   const gain = event.success
     ? independent ? 0.18 + support * 0.035 : event.solutionUsed ? 0.035 : 0.09 + support * 0.02
@@ -42,7 +43,7 @@ export function applyMasteryEvent(states: Partial<Record<SkillId, SkillState>>, 
   const next = { ...states }
   for (const skillId of event.skills) {
     const prior = next[skillId] || emptySkillState(skillId)
-    const independent = event.success && !event.solutionUsed && event.hintsUsed === 0 && supportRank[event.supportLevel] >= supportRank.blocks_with_code
+    const independent = event.success && !event.solutionUsed && !event.guided && event.hintsUsed === 0
     const prepared = { ...prior, consecutiveErrors: event.success ? 0 : prior.consecutiveErrors + 1 }
     next[skillId] = {
       ...prepared,

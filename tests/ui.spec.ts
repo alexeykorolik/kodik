@@ -42,25 +42,35 @@ test('звёзды не блокируют освоенные навыки',asyn
   await expect(page.getByRole('button').filter({hasText:'Число или текст?'})).toBeEnabled()
 })
 
-test('две ошибки вставляют короткую corrective-практику и возвращают на маршрут',async({page})=>{
+test('две разные ошибки вставляют corrective и возвращают в тот же незавершённый урок',async({page})=>{
   await seed(page,13)
+  await add(page,'Напечатать');await add(page,'Текст');await text(page,'Неверное сообщение')
   for(let attempt=0;attempt<2;attempt++){
+    if (attempt) await text(page,'Другая ошибка')
     await page.getByRole('button',{name:'Проверить',exact:true}).click()
     await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toBeVisible()
-    await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
+    if (!attempt) await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
   }
-  await add(page,'Напечатать');await add(page,'Текст');await text(page,'Мне нравится Python');await passed(page)
-  await page.getByRole('button',{name:'Продолжить',exact:true}).click()
+  await page.getByRole('button',{name:'Закрепить на примере',exact:true}).click()
   await expect(page.locator('.practice-intro')).toContainText('короткое повторение')
-  await expect(page.getByRole('heading',{name:'Узнай свою строку',exact:true})).toBeVisible()
-  await page.getByRole('radio',{name:'print("Привет!")',exact:true}).check();await passed(page)
+  await expect(page.getByRole('heading',{name:'Сообщение и кавычки',exact:true})).toBeVisible()
+  await add(page,'Напечатать');await add(page,'Текст');await text(page,'Мне нравится Python');await passed(page)
+  const practiceState = await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!))
+  expect(practiceState.completed).toEqual([1]);expect(practiceState.bestStars['13']).toBeUndefined()
   await page.getByRole('button',{name:'Продолжить',exact:true}).click()
-  await expect(page.getByRole('heading',{name:'Сначала — начало',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Теперь — твоё сообщение',exact:true})).toBeVisible()
+  await expect(page.locator('.text .blocklyInputField')).toContainText(['Другая ошибка'])
+  await text(page,'Мне нравится Python');await passed(page)
+  await page.getByRole('button',{name:'Продолжить',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Узнай свою строку',exact:true})).toBeVisible()
+  const events = await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-events-v1')!))
+  for (const event of ['adaptive_decision','support_changed','corrective_inserted','corrective_completed']) expect(events.some((item:{name:string})=>item.name===event)).toBe(true)
+  expect(JSON.stringify(events)).not.toContain('Другая ошибка')
 })
 
 test('при возвращении давно не использованный навык получает короткий review',async({page})=>{
   const throughComparison=lessons.slice(0,lessons.findIndex(l=>l.id===9)+1)
-  const state=(skillId:string,lastPracticedSequence:number)=>({skillId,mastery:.7,attempts:4,successes:4,independentSuccesses:3,hintsUsed:0,consecutiveErrors:0,lastPracticedSequence,lastPracticedAt:'2026-01-01T00:00:00.000Z'})
+  const state=(skillId:string,lastPracticedSequence:number)=>({skillId,mastery:.7,attempts:4,successes:4,independentSuccesses:3,hintsUsed:0,consecutiveErrors:0,lastPracticedSequence,lastPracticedAt:lastPracticedSequence===1?'2026-01-01T00:00:00.000Z':new Date().toISOString()})
   await page.addInitScript(data=>localStorage.setItem('kodik-progress-v1',JSON.stringify(data)),{version:3,completed:throughComparison.map(l=>l.id),bestStars:{},introducedConcepts:throughComparison.flatMap(l=>l.tutorial||[]),currentLesson:9,started:true,practiceSequence:10,skillStates:{print:state('print',1),string:state('string',9),sequence:state('sequence',9),variable:state('variable',9),assignment:state('assignment',9),arithmetic:state('arithmetic',9),comparison:state('comparison',9)}})
   await page.goto('/')
   await expect(page.getByRole('button',{name:/Быстро вспомнить/})).toBeVisible()
@@ -71,16 +81,24 @@ test('при возвращении давно не использованный
   await expect(page.getByRole('heading',{name:'Открой уровень',exact:true})).toBeVisible()
 })
 
-test('уверенное освоение быстрее переводит повторяющийся навык в free code',async({page})=>{
+test('уверенное освоение переводит только на один шаг; ошибки возвращают на один шаг',async({page})=>{
   const prior=lessons.slice(0,lessons.findIndex(l=>l.id===22))
   const mastered=(skillId:string)=>({skillId,mastery:.8,attempts:5,successes:5,independentSuccesses:3,hintsUsed:0,consecutiveErrors:0,lastPracticedSequence:5})
   await page.addInitScript(data=>localStorage.setItem('kodik-progress-v1',JSON.stringify(data)),{version:3,completed:prior.map(l=>l.id),bestStars:{},introducedConcepts:prior.flatMap(l=>l.tutorial||[]),currentLesson:22,started:true,practiceSequence:5,skillStates:{print:mastered('print'),string:mastered('string'),sequence:mastered('sequence')}})
   await page.goto('/');await page.getByRole('button',{name:/Продолжить обучение/}).click()
   await expect(page.locator('.blocklySvg')).toHaveCount(0)
-  await page.getByText('Подробнее о задании').click()
-  await expect(page.getByText(/блоки убраны/)).toBeVisible()
-  for(let attempt=0;attempt<2;attempt++){await page.getByRole('button',{name:'Проверить',exact:true}).click();await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()}
+  await expect(page.locator('.support-message')).toContainText('следующий шаг')
+  await expect(page.locator('textarea')).toHaveCount(0)
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['22'].supportLevel)).toBe('guided_code')
+  for(const [index,choice] of ['"Другое сообщение"','Старт'].entries()){
+    await page.getByRole('radio',{name:choice,exact:true}).check();await page.getByRole('button',{name:'Проверить',exact:true}).click()
+    if (!index) await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
+  }
+  await expect(page.getByRole('button',{name:'Закрепить на примере',exact:true})).toBeVisible()
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).supportOverrides?.['22'])).toBe('blocks_with_code')
+  await page.getByRole('button',{name:'Закрепить на примере',exact:true}).click()
+  await add(page,'Напечатать');await add(page,'Текст');await text(page,'Мне нравится Python');await passed(page)
+  await page.getByRole('button',{name:'Продолжить',exact:true}).click()
   await expect(page.locator('.blocklySvg')).toBeVisible()
   await add(page,'Напечатать');await add(page,'Текст');await text(page,'Старт');await add(page,'Напечатать');await add(page,'Текст');await text(page,'Финиш',1);await passed(page)
 })
@@ -123,7 +141,7 @@ test('локальное занятие не загружает внешние �
 test('блок и строка Python синхронизируют фокус в обе стороны',async({page})=>{
   await seed(page,13)
   await add(page,'Напечатать');await add(page,'Текст');await text(page,'Мне нравится Python')
-  await page.getByRole('button',{name:'Показать код',exact:true}).click()
+  if (await page.getByRole('button',{name:'Показать код',exact:true}).isVisible()) await page.getByRole('button',{name:'Показать код',exact:true}).click()
   await page.locator('.text_print').click({position:{x:18,y:18}})
   const line=page.locator('.interactive-code .code-line[data-source-id]').first()
   await expect(line).toContainText('print')
@@ -133,7 +151,7 @@ test('блок и строка Python синхронизируют фокус в
   await expect(page.locator('.text_print.blocklySelected')).toBeVisible()
 })
 
-test('все 22 задания подряд, звёзды открывают главы, финал',async({page})=>{
+test('все 22 задания подряд, mastery открывает главы, финал',async({page})=>{
   test.setTimeout(120000)
   await page.setViewportSize({width:390,height:844})
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))

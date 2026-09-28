@@ -7,7 +7,9 @@ import { Stars } from './LearningUI'
 import { exportEvents, track } from './analytics'
 import { skills } from './skills'
 import { selectNextExercise } from './exerciseSelector'
-import { practicePool } from './practicePool'
+import { getPracticeLesson, practicePool } from './practicePool'
+import { openLessonVariant } from './learningFlow'
+import { materializeSupport } from './supportVariants'
 type Screen = 'home'|'path'|'lesson'|'finish'
 export default function App() {
   const [progress, setProgress] = useState(readLocalProgress)
@@ -16,10 +18,13 @@ export default function App() {
   const [runKey, setRunKey] = useState(0)
   const [offline, setOffline] = useState(!navigator.onLine)
   const [status, setStatus] = useState('Прогресс сохраняется на этом устройстве')
-  const lesson = lessons.find(l => l.id === lessonId) || lessons[0]
-  const lessonChapter = chapterLessons(lesson.chapter || 1)
-  const lessonPosition = Math.max(1, lessonChapter.findIndex(item => item.id === lesson.id) + 1)
-  const activeSupport = progress.supportOverrides?.[lesson.id] || lesson.supportLevel || 'blocks_with_code'
+  const practice = progress.activePractice
+  const sourceLesson = (practice?.lessonId === lessonId ? getPracticeLesson(practice.id, practice.supportLevel) : lessons.find(l => l.id === lessonId)) || lessons[0]
+  const lesson = materializeSupport(sourceLesson, progress.sessions?.[lessonId]?.supportLevel)
+  const contextLesson = practice?.lessonId === lessonId ? lessons.find(item=>item.id===practice.returnLessonId) || lesson : lesson
+  const lessonChapter = chapterLessons(contextLesson.chapter || 1)
+  const lessonPosition = Math.max(1, lessonChapter.findIndex(item => item.id === contextLesson.id) + 1)
+  const activeSupport = lesson.supportLevel || 'blocks_with_code'
   const done = lessons.every(l => progress.completed.includes(l.id))
   const stars = chapters.reduce((n,c) => n + chapterStars(c.id, progress), 0)
   const resume = lessons.find(l => l.id === progress.currentLesson && !progress.sessions?.[l.id]?.finished && isUnlocked(l.id, progress)) || lessons.find(l => !progress.completed.includes(l.id) && isUnlocked(l.id, progress))
@@ -50,31 +55,46 @@ export default function App() {
   }, [])
   useEffect(() => { window.scrollTo(0,0) }, [screen,lessonId,runKey])
   const open = (id: number) => {
-    const p = readLocalProgress()
-    if (!isUnlocked(id,p)) { setScreen('path'); return }
-    const target = lessons.find(l => l.id === id)!
-    const replay = p.completed.includes(id)
+    let p = readLocalProgress()
+    const active = p.activePractice?.lessonId === id ? p.activePractice : undefined
+    if (!active && p.activePractice) p = { ...p, activePractice: undefined }
+    if (!active && !isUnlocked(id,p)) { setScreen('path'); return }
+    const target = (active ? getPracticeLesson(active.id, active.supportLevel) : lessons.find(l => l.id === id))!
+    const replay = !active && p.completed.includes(id)
     const sessions = { ...p.sessions }
     const drafts = { ...p.drafts }
-    if (replay || !sessions[id]) { sessions[id] = newSession(); if (replay) delete drafts[id] }
-    const practiced=[...(target.skills?.practices||[])]
-    const readyForCode=!p.supportOverrides?.[id] && target.mode==='blocks' && !!target.codeAnswer && !target.tutorial?.length && practiced.length>0 && practiced.every(skillId=>(p.skillStates?.[skillId]?.mastery||0)>=.6&&(p.skillStates?.[skillId]?.independentSuccesses||0)>=2)
-    const supportOverrides={...p.supportOverrides,...(readyForCode?{[id]:'free_code' as const}:{})}
-    persist({ ...p, sessions, drafts, supportOverrides, started: true, currentLesson: id, currentChapter: target.chapter })
+    // Evaluate before starting a replay; do not clear an unfinished resumed session.
+    const opened = active ? { lesson: target, progress: p, message: active.reason === 'corrective' ? 'Давай закрепим это ещё на одном примере.' : undefined, decision: undefined } : openLessonVariant(target,p)
+    p = opened.progress
+    if (opened.decision) track('adaptive_decision', id, { ...opened.decision, skillId: opened.decision.skillId || '' })
+    if (opened.decision?.reason === 'advance') track('support_changed', id, { previousSupport: opened.decision.previousSupport, nextSupport: opened.decision.nextSupport, reason: 'advance' })
+    if (replay || !sessions[id]) { sessions[id] = { ...newSession(), supportLevel: opened.lesson.supportLevel, supportMessage: opened.message }; if (replay) delete drafts[id] }
+    else sessions[id] = { ...sessions[id], supportLevel: opened.lesson.supportLevel, supportMessage: opened.message }
+    persist({ ...p, sessions, drafts, started: true, currentLesson: active ? active.returnLessonId : id, currentChapter: target.chapter })
     track(replay ? 'replay' : 'lesson_open', id)
     setLessonId(id); setRunKey(n => n + 1); setScreen('lesson')
   }
   const next = () => {
     const p = readLocalProgress()
     if (p.activePractice) {
+      if (!p.sessions?.[p.activePractice.lessonId]?.finished) return
       const returnLessonId=p.activePractice.returnLessonId
-      persist({ ...p, activePractice: undefined, recommendedPractice: undefined, completedPracticeIds: [...new Set([...(p.completedPracticeIds || []),p.activePractice.id])] })
+      if (p.activePractice.reason === 'corrective') track('corrective_completed', lessonId, { practiceId: p.activePractice.id, returnLessonId: returnLessonId || 0 })
+      const sessions = { ...p.sessions }
+      if (returnLessonId && p.activePractice.reason === 'corrective' && sessions[returnLessonId]) {
+        const old = sessions[returnLessonId], supportLevel = p.supportOverrides?.[returnLessonId] || old.supportLevel
+        sessions[returnLessonId] = { ...old, supportLevel, answer: supportLevel !== old.supportLevel ? '' : old.answer, tokens: supportLevel !== old.supportLevel ? [] : old.tokens, lastCheck: undefined, meaningfulErrors: 0, recoveryOffered: false, supportMessage: 'Закрепили. Вернёмся к тому же заданию — твой прогресс сохранён.' }
+      }
+      persist({ ...p, sessions, activePractice: undefined, recommendedPractice: undefined, completedPracticeIds: [...new Set([...(p.completedPracticeIds || []),p.activePractice.id])] })
       if (returnLessonId && isUnlocked(returnLessonId,readLocalProgress())) { open(returnLessonId); return }
       setScreen('path'); return
     }
     if (p.recommendedPractice) {
       const recommendation=p.recommendedPractice
       persist({ ...p, activePractice: recommendation })
+      const cleared = readLocalProgress(); const sessions = { ...cleared.sessions }; delete sessions[recommendation.lessonId]
+      const drafts = { ...cleared.drafts }; delete drafts[recommendation.lessonId]
+      persist({ ...cleared, sessions, drafts })
       open(recommendation.lessonId)
       return
     }
@@ -86,8 +106,11 @@ export default function App() {
   }
   const startOrResume = () => {
     const p=readLocalProgress()
+    if (p.activePractice) { open(p.activePractice.lessonId); return }
     if (p.recommendedPractice) {
-      persist({...p,activePractice:p.recommendedPractice})
+      const sessions = { ...p.sessions }; delete sessions[p.recommendedPractice.lessonId]
+      const drafts = { ...p.drafts }; delete drafts[p.recommendedPractice.lessonId]
+      persist({...p,sessions,drafts,activePractice:p.recommendedPractice})
       open(p.recommendedPractice.lessonId)
       return
     }
@@ -97,7 +120,7 @@ export default function App() {
   return <main className={`app-shell screen-${screen} ${screen === 'lesson' ? `support-${activeSupport}` : ''}`}>
     <header className="lesson-header">
       {screen === 'lesson' ? <button className="back-button" onClick={() => setScreen('path')} aria-label="К карте курса">←</button> : <button className="brand" onClick={() => setScreen('home')} aria-label="Кодик — главная"><span aria-hidden="true">к.</span>Кодик</button>}
-      {screen === 'lesson' ? <div className="lesson-position"><span>Задание</span><strong>{lessonPosition}/{lessonChapter.length}</strong></div> : <button className="nav-link" onClick={() => setScreen('path')}>Карта курса ↗</button>}
+      {screen === 'lesson' ? <div className="lesson-position"><span>{practice ? 'Короткая практика' : 'Задание'}</span><strong>{practice ? '↺' : `${lessonPosition}/${lessonChapter.length}`}</strong></div> : <button className="nav-link" onClick={() => setScreen('path')}>Карта курса ↗</button>}
       <div className={`header-progress ${screen === 'lesson' ? 'lesson-progress' : ''}`}><div className="progress-track" role="progressbar" aria-label={screen === 'lesson' ? 'Прогресс главы' : 'Прогресс курса'} aria-valuemin={0} aria-valuemax={screen === 'lesson' ? lessonChapter.length : lessons.length} aria-valuenow={screen === 'lesson' ? lessonPosition : progress.completed.length}><i style={{ width: `${(screen === 'lesson' ? lessonPosition / lessonChapter.length : progress.completed.length / lessons.length) * 100}%` }} /></div>{screen !== 'lesson' && <><b>{progress.completed.length}/{lessons.length}</b><span className="total-stars" aria-label={`Всего ${stars} звёзд`}>★ {stars}</span></>}</div>
     </header>
     {offline && <p className="network-note" role="status">Ты не в сети. Открытое занятие работает, прогресс сохраняется на устройстве.</p>}
@@ -108,7 +131,7 @@ export default function App() {
       const max = chapterMax(chapter.id)
       return <section className="chapter" key={chapter.id} aria-labelledby={`chapter-${chapter.id}`}><div className="chapter-heading"><div><p>Глава {chapter.id}</p><h2 id={`chapter-${chapter.id}`}>{chapter.title}</h2></div><span>{count}/{max} ★</span></div><p className="chapter-description">{chapter.description}</p>{!access.open && <p className="gate-message" role="status">Чтобы открыть главу: {access.unfinished ? `заверши ещё ${access.unfinished} заданий в главе ${access.chapter}` : 'закрепи необходимые навыки'}{access.missingSkills.length ? `. Стоит повторить: ${access.missingSkills.map(id => skills[id].title.toLowerCase()).join(', ')}` : ''}. Количество звёзд доступ не ограничивает.</p>}<ol>{chapterLessons(chapter.id).map(item => {
         const complete = progress.completed.includes(item.id), unlocked = isUnlocked(item.id,progress)
-        return <li key={item.id} className={`${complete ? 'complete' : ''} ${unlocked && !complete ? 'current' : ''}`}><button disabled={!unlocked} onClick={() => open(item.id)}><span className="path-number">{complete ? '✓' : lessons.indexOf(item) + 1}</span><span><small>{item.tutorial?.length ? 'Знакомство · без оценки' : item.mode !== 'blocks' ? 'Ближе к коду' : item.review ? 'Практика главы' : 'Практика'}</small><strong>{item.title}</strong>{!item.tutorial?.length && <Stars value={progress.bestStars?.[item.id] || 0} />}<em>{complete ? 'Пройти ещё раз' : unlocked ? 'Можно начинать' : 'Пока закрыто'}</em></span><span className="path-arrow" aria-hidden="true">{unlocked ? '→' : '—'}</span></button></li>
+        return <li key={item.id} className={`${complete ? 'complete' : ''} ${unlocked && !complete ? 'current' : ''}`}><button disabled={!unlocked} onClick={() => open(item.id)}><span className="path-number">{complete ? '✓' : lessons.indexOf(item) + 1}</span><span><small>{item.tutorial?.length ? 'Знакомство · без оценки' : item.mode !== 'blocks' ? 'Ближе к коду' : item.review ? 'Практика главы' : 'Практика'}</small><strong>{item.title}</strong>{!item.tutorial?.length && <Stars value={progress.bestStars?.[item.id] || 0} />}<em>{complete ? 'Пройти ещё раз' : unlocked ? 'Текущий шаг · можно начинать' : 'Пока закрыто'}</em></span><span className="path-arrow" aria-hidden="true">{unlocked ? '→' : '—'}</span></button>{!unlocked && <p className="lesson-lock-reason">{access.open ? 'Сначала выполни предыдущие задания этой главы.' : 'Сначала заверши и закрепи предыдущую главу.'}</p>}</li>
       })}</ol>{chapter.id < chapters.length && <p className="chapter-threshold">Звёзды остаются твоим результатом за прохождение. Доступ дальше зависит от освоения навыков главы.</p>}</section>
     })}</section>}
     {screen === 'lesson' && <LearningLesson key={`${lessonId}-${runKey}`} lesson={lesson} lessonPosition={lessonPosition} lessonTotal={lessonChapter.length} progress={progress} onProgress={setProgress} onContinue={next} practiceMessage={progress.activePractice?.lessonId===lesson.id ? progress.activePractice.message : undefined} />}
