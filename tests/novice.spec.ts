@@ -3,8 +3,18 @@ import { lessons } from '../src/course'
 import { mkdirSync } from 'node:fs'
 const add = async (page: Page, name: string) => { await page.getByRole('button',{name:/Добавить блок/}).click(); await page.locator('.block-options button').filter({has:page.getByText(name,{exact:true})}).click() }
 const edit = async (page: Page, value: string, index = 0) => { await page.locator('.blocklyInputField').nth(index).click(); await page.locator('.blocklyHtmlInput').fill(value); await page.locator('.blocklyHtmlInput').press('Enter') }
-const check = async (page: Page) => { await page.getByRole('button',{name:'Проверить',exact:true}).click(); await expect(page.getByRole('heading',{name:'Получилось!',exact:true})).toBeVisible() }
+const check = async (page: Page) => { await page.getByRole('button',{name:/^Проверить(?: снова)?$/}).click(); await expect(page.getByRole('heading',{name:'Получилось!',exact:true})).toBeVisible() }
 async function greeting(page: Page, message: string) { await add(page,'Напечатать'); await add(page,'Текст'); await edit(page,message) }
+async function expectPython(page:Page,code:string,width:number) {
+  if (width < 768) {
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.locator('.live-mirror .code-reveal')).not.toBeVisible()
+    await page.getByRole('button',{name:'Показать код',exact:true}).click()
+    await expect(page.getByRole('dialog').locator('.python-code')).toContainText(code)
+    await page.getByRole('dialog').getByRole('button',{name:'Закрыть',exact:true}).click()
+    await expect(page.getByRole('button',{name:'Показать код',exact:true})).toBeFocused()
+  } else await expect(page.locator('.live-mirror .python-code')).toContainText(code)
+}
 
 for (const width of [360,390,430,1366]) test(`новичок: первые пять упражнений ${width}`,async ({page}) => {
   await page.setViewportSize({width,height:width === 360 ? 800 : width === 430 ? 932 : width === 1366 ? 768 : 844})
@@ -16,10 +26,10 @@ for (const width of [360,390,430,1366]) test(`новичок: первые пя�
   await expect(page.locator('.block-options button')).toHaveCount(1)
   await page.locator('.block-options button').click()
   await expect(page.locator('.coach')).toContainText('ЧТО показать')
-  await expect(page.locator('.live-mirror')).toContainText('print(...)')
+  await expectPython(page,'print(...)',width)
   await add(page,'Текст'); await expect(page.locator('.coach')).toContainText('белое поле')
   await edit(page,'Привет!')
-  await expect(page.locator('.live-mirror')).toContainText('print("Привет!")')
+  await expectPython(page,'print("Привет!")',width)
   await check(page); await expect(page.getByText('Знакомство завершено · без оценки')).toBeVisible()
   await page.getByRole('button',{name:'Продолжить',exact:true}).click()
   await expect(page.locator('.coach')).toHaveCount(0)
@@ -48,11 +58,15 @@ test('черновик, шаг обучения и попытки восстан
   await page.reload(); await page.getByRole('button',{name:/Продолжить обучение/}).click()
   await expect(page.locator('.coach')).toContainText('ЧТО показать')
   await add(page,'Текст'); await edit(page,'Привет!'); await check(page); await page.getByRole('button',{name:'Продолжить',exact:true}).click()
-  await page.getByRole('button',{name:'Проверить',exact:true}).click(); await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
+  await page.getByRole('button',{name:'Проверить',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Почти получилось',exact:true})).toBeVisible()
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['13'].attempts)).toBe(1)
   await page.reload(); await page.getByRole('button',{name:/Продолжить обучение/}).click()
-  await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toHaveCount(0)
+  await expect(page.getByRole('heading',{name:'Почти получилось',exact:true})).toBeVisible()
+  await expect(page.getByRole('button',{name:'Проверить снова',exact:true})).toBeVisible()
   await greeting(page,'Мне нравится Python'); await check(page)
   await expect(page.locator('.feedback-panel').getByLabel('2 из 3 звёзд')).toBeVisible()
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['13'].attempts)).toBe(2)
 })
 
 test('подсказка, текст редактора и последний результат проверки восстанавливаются',async ({page})=>{
@@ -62,15 +76,24 @@ test('подсказка, текст редактора и последний р
   await page.getByRole('button',{name:'Нужна подсказка?'}).click()
   await page.getByLabel('Твой Python',{exact:true}).fill('имя = "Мира\nprint(имя)')
   await page.getByRole('button',{name:'Проверить',exact:true}).click()
-  await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Почти получилось',exact:true})).toBeVisible()
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions?.['20']?.lastCheck?.passed)).toBe(false)
   await page.reload(); await page.getByRole('button',{name:/Продолжить обучение/}).click()
-  await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Почти получилось',exact:true})).toBeVisible()
   await expect(page.locator('.feedback-panel')).toContainText('синтаксис')
-  await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
   await expect(page.getByLabel('Твой Python',{exact:true})).toHaveValue('имя = "Мира\nprint(имя)')
   await expect(page.locator('.hint-text')).toBeVisible()
-  await expect(page.locator('.primary-action')).toContainText('Проверок: 1 · подсказок: 1')
+  const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['20'])
+  expect(restored.attempts).toBe(1);expect(restored.hintsUsed).toBe(1);expect(restored.meaningfulErrors).toBe(1)
+  await page.getByRole('button',{name:'Проверить снова',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Почти получилось',exact:true})).toBeVisible()
+  await expect.poll(async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['20'].attempts)).toBe(2)
+  const retried=await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['20'])
+  expect(retried.meaningfulErrors).toBe(1);expect(retried.checkedFingerprints).toEqual(restored.checkedFingerprints)
+  await page.getByLabel('Твой Python',{exact:true}).fill(lessons.find(l=>l.id===20)!.answer!)
+  await check(page)
+  await expect(page.locator('.feedback-panel').getByLabel('2 из 3 звёзд')).toBeVisible()
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['20'].attempts)).toBe(3)
 })
 
 for(const [width,height] of [[360,800],[375,812],[390,844],[430,932],[768,1024],[1366,768],[1440,900],[1920,1080]]) test(`новый интерфейс ${width}`,async({page})=>{
@@ -78,6 +101,18 @@ for(const [width,height] of [[360,800],[375,812],[390,844],[430,932],[768,1024],
   await page.screenshot({path:`artifacts/novice-${width}.png`,fullPage:true})
   expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   expect(await page.evaluate(()=>document.querySelector('.add-block-button')!.getBoundingClientRect().bottom <= document.querySelector('.primary-action')!.getBoundingClientRect().top)).toBe(true)
+  if (width<768) {
+    await expect(page.locator('.live-mirror .code-reveal')).not.toBeVisible()
+    await expect(page.locator('.task-intro h1')).toBeVisible()
+    const bounds=await page.evaluate(()=>{
+      const workspace=document.querySelector('.blockly-host')!.getBoundingClientRect(),footer=document.querySelector('.primary-action')!.getBoundingClientRect()
+      return {header:document.querySelector('.lesson-header')!.getBoundingClientRect().height,workspace:{top:workspace.top,bottom:workspace.bottom},footer:{top:footer.top,bottom:footer.bottom}}
+    })
+    expect(bounds.header).toBeLessThanOrEqual(64)
+    expect(bounds.workspace.top).toBeGreaterThanOrEqual(0)
+    expect(bounds.workspace.bottom).toBeLessThanOrEqual(bounds.footer.top)
+    expect(bounds.footer.bottom).toBeLessThanOrEqual(height+1)
+  }
   await page.getByRole('button',{name:/Добавить блок/}).click(); await expect(page.getByRole('dialog')).toBeVisible(); await page.keyboard.press('Escape'); await expect(page.getByRole('button',{name:/Добавить блок/})).toBeFocused()
   await page.getByRole('button',{name:'К карте курса'}).click(); await page.screenshot({path:`artifacts/chapters-${width}.png`,fullPage:true})
 })

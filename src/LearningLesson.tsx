@@ -15,6 +15,9 @@ import { selectNextExercise } from './exerciseSelector'
 import { getPracticeLesson } from './practicePool'
 import { answerFingerprint, applySupportDecision, decideLessonSupport, meaningfulAnswer } from './learningFlow'
 import { supportExplanation } from './supportVariants'
+import { useLessonViewport } from './useLessonViewport'
+import { mobileGoal, mobileGuide } from './mobileLesson'
+import { MinimalCodeEditor } from './MinimalCodeEditor'
 const BlocklyEditor = lazy(() => import('./BlocklyEditor').then(m => ({ default: m.BlocklyEditor })))
 type Result = { passed: boolean; message: string; result: RunResult; stars?: number; code: string }
 function solvedTokenOrder(tokens: string[], answer = '') {
@@ -35,7 +38,8 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
   const [session, setSession] = useState<Session>(initialSession)
   const [program, setProgram] = useState<Program>({ statements: [] })
   const [info, setInfo] = useState(emptyInfo)
-  const [modal, setModal] = useState<'blocks'|'variable'|'clear'|'help'|'example'|null>(null)
+  const [pythonSource, setPythonSource] = useState<string | undefined>(undefined)
+  const [modal, setModal] = useState<'blocks'|'variable'|'clear'|'help'|'example'|'python'|'result'|null>(null)
   const [outcome, setOutcome] = useState<Result | null>(() => initialSession.lastCheck ? {
     passed: initialSession.lastCheck.passed,
     message: initialSession.lastCheck.message,
@@ -47,6 +51,10 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
   const [editorReady, setEditorReady] = useState(false)
   const [codeExpanded, setCodeExpanded] = useState(() => lesson.supportLevel !== 'blocks' && window.matchMedia('(min-width: 768px)').matches)
   const editor = useRef<EditorHandle>(null)
+  const verifyTimer = useRef<number | undefined>(undefined)
+  const pendingSource = useRef<string | undefined>(undefined)
+  const feedback = useRef<HTMLElement>(null)
+  const { mobile, actionRef } = useLessonViewport()
   const tutorial = !!lesson.tutorial?.length
   const guide = nextGuide(lesson, progress.introducedConcepts || [], info, program)
   const steps = tutorialSteps(lesson, progress.introducedConcepts || [])
@@ -64,12 +72,33 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
   const action = (kind: string) => { if (!session.firstActionAt) { const now = Date.now(); track('first_action', lesson.id, { kind, elapsedMs: now - session.startedAt }); persistSession({ ...session, firstActionAt: now }) } }
   const guideId = guide?.id || 'ready'
   useEffect(() => {
+    // Opening a sheet moves DOM focus away from Blockly. Retain the exact
+    // source context for the mirror until that block is removed or replaced.
+    setPythonSource(previous => info.selectedId || (info.blocks.some(block => block.id === previous) ? previous : undefined))
+  }, [info])
+  useEffect(() => () => window.clearTimeout(verifyTimer.current), [])
+  useEffect(() => {
+    if (modal || !pendingSource.current) return
+    const sourceId = pendingSource.current
+    pendingSource.current = undefined
+    // Passive modal cleanup (including native focus restoration) runs before
+    // this next-frame selection. Otherwise it can clear the chosen block.
+    const frame = requestAnimationFrame(() => editor.current?.focusBlock(sourceId))
+    return () => cancelAnimationFrame(frame)
+  }, [modal])
+  useEffect(() => {
     if (!guided || guide) return
+    if (mobile) return
     const reveal = () => { setCodeExpanded(true); document.querySelector('.live-mirror')?.scrollIntoView({ block: 'nearest', behavior: 'instant' }) }
     const field = document.querySelector('.blocklyHtmlInput')
     if (field) { field.addEventListener('blur', reveal, { once: true }); return () => field.removeEventListener('blur', reveal) }
     reveal()
-  }, [guideId, guided])
+  }, [guideId, guided, mobile])
+  useEffect(() => {
+    if (!outcome) return
+    const frame = requestAnimationFrame(() => feedback.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' }))
+    return () => cancelAnimationFrame(frame)
+  }, [outcome?.passed, session.attempts])
   useEffect(() => {
     if (!guided) return
     track('tutorial_step', lesson.id, { step: guideId })
@@ -90,7 +119,7 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
   const verify = () => {
     if (checking || session.finished) return
     setChecking(true)
-    window.setTimeout(() => {
+    verifyTimer.current = window.setTimeout(() => {
       try {
         const currentProgram = editor.current?.getProgram() || program
         const checked = blocksMode ? { ...checkLesson(lesson, currentProgram), program: currentProgram } : checkTextLesson(lesson, currentAnswer)
@@ -139,54 +168,72 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
       finally { setChecking(false) }
     }, 80)
   }
-  const answer = (value: string) => { persistSession({ ...session, answer: value }) }
+  const editSession = (next: Session) => {
+    if (outcome && !outcome.passed) {
+      setOutcome({ ...outcome, message: 'Решение изменено. Проверь ещё раз.', result: { output: [] }, code: '' })
+      persistSession({ ...next, lastCheck: undefined })
+    } else persistSession(next)
+  }
+  const answer = (value: string) => editSession({ ...session, answer: value })
+  const changeProgram = (next: Program) => {
+    if (editorReady && outcome && !outcome.passed && renderPython(next) !== renderPython(program)) editSession(session)
+    setProgram(next)
+  }
   const allowed = guide?.target === 'add' ? [guide.block!] : lesson.chapter === 1 ? ['text_print', 'text'] : lesson.allowed || []
   const assistance = guide?.text || (guided ? 'Ты собрал программу. Ниже видно, как она записывается на Python. Нажми «Проверить», чтобы увидеть результат.' : lesson.starterHint)
-  const focusSource = (sourceId: string) => editor.current?.focusBlock(sourceId)
+  const focusSource = (sourceId: string) => {
+    if (modal === 'python') {
+      pendingSource.current = sourceId
+      setModal(null)
+    } else editor.current?.focusBlock(sourceId)
+  }
   const primaryAction = () => {
     if (outcome?.passed || session.finished) { onContinue(); return }
     if (outcome && progress.recommendedPractice?.reason === 'corrective' && !progress.activePractice) { onContinue(); return }
-    if (outcome) { setOutcome(null); persistSession({...session,lastCheck:undefined}); return }
     verify()
   }
-  const primaryLabel = checking ? 'Проверяем…' : outcome?.passed || session.finished ? 'Продолжить' : outcome && progress.recommendedPractice?.reason === 'corrective' && !progress.activePractice ? 'Закрепить на примере' : outcome ? 'Попробовать снова' : 'Проверить'
+  const primaryLabel = checking ? 'Проверяем…' : outcome?.passed || session.finished ? 'Продолжить' : outcome && progress.recommendedPractice?.reason === 'corrective' && !progress.activePractice ? 'Закрепить на примере' : outcome ? 'Проверить снова' : 'Проверить'
+  const pythonPreview = <CodePreview code={renderPython(program)} highlights={selectedLines(program, pythonSource)} sourceIds={lineSources(program)} onLineSelect={focusSource} />
+  const resultDetails = outcome && <>{outcome.code && <CodePreview code={outcome.code} />}{outcome.result.output.length > 0 && <div className="output-preview"><span>Программа показала</span><pre>{outcome.result.output.join('\n')}</pre></div>}</>
 
   return <>
-    <article className={`lesson-flow novice-flow support-${lesson.supportLevel || 'blocks_with_code'} ${guided ? 'is-guided' : ''}`} aria-label={practiceMessage ? 'Короткая практика' : `Задание ${lessonPosition} из ${lessonTotal}`}>
+    <article className={`lesson-flow novice-flow support-${lesson.supportLevel || 'blocks_with_code'} ${guided ? 'is-guided' : ''}`} data-lesson-id={lesson.id} aria-label={practiceMessage ? 'Короткая практика' : `Задание ${lessonPosition} из ${lessonTotal}`}>
       <section className="task-intro" aria-labelledby="lesson-title">
         {practiceMessage && <p className="practice-intro" role="status">{practiceMessage}. Это короткое повторение, не откат назад.</p>}
         {session.supportMessage && <p className="support-message" role="status">{session.supportMessage}</p>}
         <div className="exercise-meta"><span>{tutorial ? 'Знакомство · без оценки' : lesson.review ? 'Практика главы' : 'Самостоятельная практика'}</span>{!tutorial && <Stars value={progress.bestStars?.[lesson.id] || 0} />}</div>
-        <h1 id="lesson-title">{lesson.title}</h1><p className="task-copy">{lesson.goal}</p>
+        <h1 id="lesson-title" aria-label={lesson.title}>{mobile ? 'Задание' : lesson.title}</h1><p className="task-copy">{mobile ? mobileGoal(lesson.goal) : lesson.goal}</p>
         <p className="format-explanation">{supportExplanation[lesson.supportLevel || 'blocks_with_code']}</p>
         <details className="task-details"><summary>Подробнее о задании</summary><p className="instruction">{lesson.instruction}</p>{!guided && <p className="next-action">{assistance}</p>}</details>
-        <div className="lesson-help"><button className="text-button" onClick={() => setModal('help')}>{blocksMode ? 'Как работать с блоками' : 'Как выполнить задание'}</button>{!guided && <button className="text-button hint-button" onClick={() => useHint()} disabled={session.hintsUsed >= 3}>{session.hintsUsed ? 'Ещё подсказка' : 'Нужна подсказка?'}</button>}</div>
+        <div className="lesson-help"><button disabled={checking} className="text-button help-button" aria-label={mobile ? 'Помощь с заданием' : undefined} onClick={() => setModal('help')}>{mobile ? 'Подробнее' : blocksMode ? 'Как работать с блоками' : 'Как выполнить задание'}</button>{!guided && <button className="text-button hint-button" aria-label={session.hintsUsed ? 'Ещё подсказка' : 'Нужна подсказка?'} onClick={() => useHint()} disabled={checking || session.hintsUsed >= 3}>{mobile ? session.hintsUsed ? 'Ещё подсказка' : '? Подсказка' : session.hintsUsed ? 'Ещё подсказка' : 'Нужна подсказка?'}</button>}</div>
         {!guided && session.hintsUsed > 0 && <div className="hint-area"><p className="hint-text" role="status"><span>Подсказка {Math.min(session.hintsUsed, 3)}/3</span>{lesson.progressiveHints?.[Math.min(session.hintsUsed - 1, lesson.progressiveHints.length - 1)] || (session.hintsUsed === 1 ? firstHint : lesson.hint)}</p>{session.hintsUsed >= 3 && <button className="text-button" onClick={solution}>Показать готовый вариант{!tutorial ? ' · 1 ★' : ''}</button>}</div>}
       </section>
       <section className={`learning-work ${lesson.id === 1 ? 'first-command' : ''}`} aria-label="Собери решение">
-        {guided && <div className="coach" role="status"><span>Шаг {guide ? steps.indexOf(guide) + 1 : steps.length + 1} из {steps.length + 1}</span><p>{assistance}</p></div>}
+        {guided && <div className="coach" role="status"><span>Шаг {guide ? steps.indexOf(guide) + 1 : steps.length + 1} из {steps.length + 1}</span><p className="desktop-only">{assistance}</p><p className="mobile-only">{mobileGuide(guide)}</p></div>}
         {blocksMode ? <>
-          <div className="block-workspace-grid"><div className="workspace-section"><div className="workspace-heading"><h2>Программа</h2><details className="workspace-menu"><summary aria-label="Действия с программой">•••</summary><button onClick={() => setModal('clear')}>Очистить программу</button></details></div>
-            <Suspense fallback={<div className="blockly-host editor-loading" role="status">Готовим блоки…</div>}><BlocklyEditor ref={editor} lesson={lesson} onChange={setProgram} onInfo={setInfo} onAction={action} onReady={() => setEditorReady(true)} focusType={guide?.target === 'field' ? guide.block : guide?.block === 'text' ? 'text_print' : undefined} hideTools={guided} /></Suspense>
-            <div className="workspace-actions"><button disabled={!editorReady} className={`add-block-button ${guide?.target === 'add' || guide?.target === 'variable' ? 'coach-target' : ''}`} onClick={showBlocks}><span>+</span> {editorReady ? 'Добавить блок' : 'Готовим блоки…'}</button></div>
+          <div className="block-workspace-grid"><div className="workspace-section" inert={checking}><div className="workspace-heading"><h2>Программа</h2><details className="workspace-menu"><summary aria-label="Действия с программой">•••</summary><button onClick={() => setModal('clear')}>Очистить программу</button></details></div>
+            <Suspense fallback={<div className="blockly-host editor-loading" role="status">Готовим блоки…</div>}><BlocklyEditor ref={editor} lesson={lesson} onChange={changeProgram} onInfo={setInfo} onAction={action} onReady={() => setEditorReady(true)} focusType={guide?.target === 'field' ? guide.block : guide?.block === 'text' ? 'text_print' : undefined} hideTools={guided} /></Suspense>
+            <div className="workspace-actions"><button aria-label={editorReady ? 'Добавить блок' : 'Готовим блоки…'} disabled={!editorReady} className={`add-block-button ${guide?.target === 'add' || guide?.target === 'variable' ? 'coach-target' : ''}`} onClick={showBlocks}><span>+</span> {editorReady ? mobile ? 'Блок' : 'Добавить блок' : 'Готовим блоки…'}</button></div>
           </div>
-          <section className={`live-mirror ${codeExpanded ? 'code-expanded' : 'code-compact'}`} aria-label="Твой Python" data-selected-id={info.selectedId || ''}><div><h2>Python</h2><button className="text-button compact-code-toggle" aria-expanded={codeExpanded} onClick={() => { setCodeExpanded(value=>!value); track('python_view', lesson.id) }}>{codeExpanded ? 'Свернуть' : 'Показать код'}</button></div><div className="code-reveal"><CodePreview code={renderPython(program)} highlights={selectedLines(program, info.selectedId)} sourceIds={lineSources(program)} onLineSelect={focusSource} /><p>{lesson.codeNote || 'Те же действия на языке Python. Когда меняются блоки, меняется и код.'}</p>{guide?.id === 'value' && <p className="slot-explanation">Многоточие … — пустое место. Команда ждёт, что ей показать.</p>}</div></section></div>
-        </> : <section className="text-exercise">
+          <section className={`live-mirror ${codeExpanded ? 'code-expanded' : 'code-compact'} ${guided && !guide ? 'python-cue' : ''}`} aria-label="Твой Python" data-selected-id={info.selectedId || ''}><div><h2>Python</h2><button className="text-button compact-code-toggle" aria-label={mobile ? 'Показать код' : undefined} aria-expanded={mobile ? modal === 'python' : codeExpanded} onClick={() => { if (mobile) setModal('python'); else setCodeExpanded(value=>!value); track('python_view', lesson.id) }}>{mobile ? 'Посмотреть' : codeExpanded ? 'Свернуть' : 'Показать код'}</button></div>{lesson.id === 1 && info.blocks.length > 0 && <p className="mobile-only python-nudge">Твои блоки уже записаны на Python</p>}<div className="code-reveal">{pythonPreview}<p>{lesson.codeNote || 'Те же действия на языке Python. Когда меняются блоки, меняется и код.'}</p>{guide?.id === 'value' && <p className="slot-explanation">Многоточие … — пустое место. Команда ждёт, что ей показать.</p>}</div></section></div>
+        </> : <section className="text-exercise" inert={checking}>
           {lesson.mode === 'recognition' && <div className="block-meaning">Напечатать <span>{lesson.skills?.practices.includes('variable') ? 'значение из «имя»' : '«Привет!»'}</span></div>}
           {lesson.mode === 'completion' && <CodePreview code={`${lesson.prefix}${currentAnswer || '___'}${lesson.suffix}`} />}
           {(lesson.mode === 'recognition' || lesson.mode === 'completion') && <fieldset className="code-choices"><legend>{lesson.mode === 'completion' ? 'Выбери пропущенный фрагмент' : 'Выбери строку Python'}</legend>{lesson.choices!.map(choice => <label key={choice} className={currentAnswer === choice ? 'chosen' : ''}><input type="radio" name="code-choice" value={choice} checked={currentAnswer === choice} onChange={() => answer(choice)} /><code>{choice}</code></label>)}</fieldset>}
-          {lesson.mode === 'tokens' && <><p>Нажимай части в нужном порядке. Нажми выбранную часть, чтобы вернуть её.</p><div className="token-result" aria-label="Собранная строка">{(session.tokens || []).map((i,pos) => <button key={i} onClick={() => persistSession({ ...session, tokens: session.tokens!.filter((_,n) => n !== pos) })}>{lesson.tokens![i]}</button>)}{!session.tokens?.length && <span>Здесь появится твоя строка</span>}</div><div className="token-options">{lesson.tokens!.map((token,i) => <button key={i} disabled={session.tokens?.includes(i)} onClick={() => persistSession({ ...session, tokens: [...(session.tokens || []), i] })}>{token}</button>)}</div><CodePreview code={`${lesson.prefix || ''}${currentAnswer || '___'}${lesson.suffix || ''}`} /></>}
-          {lesson.mode === 'text' && <><label className="code-label" htmlFor="python-answer">Твой Python</label><textarea id="python-answer" spellCheck={false} autoCapitalize="off" autoCorrect="off" value={currentAnswer} onChange={e => answer(e.target.value)} rows={lesson.id === 21 ? 5 : 3} placeholder="Напиши команду здесь" /></>}
+          {lesson.mode === 'tokens' && <><p>Нажимай части по порядку. Чтобы убрать часть, нажми её ещё раз.</p><div className="token-result" aria-label="Собранная строка">{(session.tokens || []).map((i,pos) => <button key={i} onClick={() => editSession({ ...session, tokens: session.tokens!.filter((_,n) => n !== pos) })}>{lesson.tokens![i]}</button>)}{!session.tokens?.length && <span>Здесь появится твоя строка</span>}</div><div className="token-options">{lesson.tokens!.map((token,i) => <button key={i} disabled={session.tokens?.includes(i)} onClick={() => editSession({ ...session, tokens: [...(session.tokens || []), i] })}>{token}</button>)}</div><CodePreview code={`${lesson.prefix || ''}${currentAnswer || '___'}${lesson.suffix || ''}`} /></>}
+          {lesson.mode === 'text' && <><label className="code-label" htmlFor="python-answer">Твой Python</label><MinimalCodeEditor value={currentAnswer} onChange={answer} rows={lesson.id === 21 ? 5 : 3} /></>}
           <button className="text-button" onClick={() => { if (!session.referenceUsed) useHint({ referenceUsed: true }); setModal('example') }}>Вспомнить по блокам{!tutorial ? ' · подсказка' : ''}</button>
         </section>}
       </section>
     </article>
-    {outcome && <section className={`feedback-panel ${outcome.passed ? 'feedback-success' : 'feedback-error'}`} role="status" aria-live="polite"><div className="feedback-summary"><span className="feedback-mark" aria-hidden="true">{outcome.passed ? '✓' : '!'}</span><div><h2>{outcome.result.systemError ? 'Не удалось проверить' : outcome.passed ? 'Получилось!' : 'Давай исправим'}</h2><p className="feedback-message">{outcome.message}</p></div>{outcome.passed && !tutorial && <Stars value={outcome.stars || 1} />}</div>{outcome.passed && tutorial && <p className="intro-complete">Знакомство завершено · без оценки</p>}{(outcome.code || outcome.result.output.length > 0) && <details className="feedback-details"><summary>{outcome.passed ? 'Посмотреть результат' : 'Подробности проверки'}</summary>{outcome.code && <CodePreview code={outcome.code} />}{outcome.result.output.length > 0 && <div className="output-preview"><span>Программа показала</span><pre>{outcome.result.output.join('\n')}</pre></div>}</details>}</section>}
-    <footer className={`primary-action ${outcome ? outcome.passed ? 'action-success' : 'action-retry' : ''}`}><span>{outcome ? outcome.passed ? tutorial ? 'Знакомство завершено' : `${outcome.stars || 1} из 3 звёзд` : 'Исправь решение и проверь ещё раз' : tutorial ? 'Можно пробовать сколько угодно' : `Проверок: ${session.attempts} · подсказок: ${session.hintsUsed}`}</span><button className={guided && !guide ? 'coach-target' : ''} disabled={checking || (guided && !!guide)} onClick={primaryAction}>{primaryLabel}</button></footer>
+    {outcome && <section ref={feedback} className={`feedback-panel ${outcome.passed ? 'feedback-success' : 'feedback-error'}`} role="status" aria-live="polite"><div className="feedback-summary"><span className="feedback-mark" aria-hidden="true">{outcome.passed ? '✓' : '!'}</span><div><h2>{outcome.result.systemError ? 'Не удалось проверить' : outcome.passed ? 'Получилось!' : 'Почти получилось'}</h2><p className="feedback-message">{outcome.message}</p></div>{outcome.passed && !tutorial && <Stars value={outcome.stars || 1} />}</div>{outcome.passed && tutorial && <p className="intro-complete">Знакомство завершено · без оценки</p>}{(outcome.code || outcome.result.output.length > 0) && (mobile ? <button className="text-button feedback-result-button" onClick={() => setModal('result')}>{outcome.passed ? 'Посмотреть результат' : 'Подробности проверки'}</button> : <details className="feedback-details"><summary>{outcome.passed ? 'Посмотреть результат' : 'Подробности проверки'}</summary>{resultDetails}</details>)}</section>}
+    <footer ref={actionRef} className={`primary-action ${outcome ? outcome.passed ? 'action-success' : 'action-retry' : ''}`}><span>{outcome ? outcome.passed ? tutorial ? 'Знакомство завершено' : `${outcome.stars || 1} из 3 звёзд` : 'Исправь решение и проверь ещё раз' : tutorial ? 'Можно пробовать сколько угодно' : `Проверок: ${session.attempts} · подсказок: ${session.hintsUsed}`}</span><button className={guided && !guide ? 'coach-target' : ''} disabled={checking || (guided && !!guide)} onClick={primaryAction}>{primaryLabel}</button></footer>
     {modal === 'blocks' && <Modal title={guide?.target === 'variable' ? 'Создать переменную' : guide?.target === 'add' ? `Выбери «${blockOptions.find(b => b.type === guide.block)?.label}»` : 'Добавить блок'} onClose={() => setModal(null)}><Picker allowed={allowed} fresh={guided ? newBlocks(lesson) : []} canCreateVariable={lesson.allowed?.includes('variables_set') || guide?.target === 'variable'} variableOnly={guide?.target === 'variable'} onVariable={() => setModal('variable')} onAdd={type => { editor.current?.addBlock(type); track('block_added', lesson.id, { type, first: info.blocks.length === 0 }); setModal(null) }} /><p className="sheet-note">Доступны только элементы, которые нужны на этом шаге.</p></Modal>}
     {modal === 'variable' && <Modal title="Подпишем коробку" onClose={() => setModal(null)}><p>Название поможет программе найти сохранённое значение.</p><VariableForm onCreate={name => { action('create_variable'); editor.current?.createVariable(name); setModal(null) }} /></Modal>}
     {modal === 'clear' && <Modal title="Очистить программу?" onClose={() => setModal(null)}><p>Блоки можно вернуть кнопкой «Отменить изменение». Попытка проверки за очистку не расходуется.</p><button className="sheet-primary" onClick={() => { editor.current?.clear(); setModal(null) }}>Очистить</button></Modal>}
-    {modal === 'help' && <Modal title={blocksMode ? 'Как собирать программу' : 'Как выполнить задание'} onClose={() => setModal(null)}>{blocksMode ? <ol className="ui-help"><li>«Добавить блок» открывает команды и значения.</li><li>Сначала добавь команду. Например, «Напечатать».</li><li>В её пустое место добавь значение: текст или число.</li><li>Нажми белое поле, чтобы изменить значение. Новая команда соединится снизу; внутри условия или цикла — займёт свободное место.</li><li>Выбери внешний блок, чтобы продолжить после него. Блоки можно перетаскивать, отменять изменения и удалять.</li></ol> : <><p>{supportExplanation[lesson.supportLevel || 'free_code']}</p><p>{lesson.mode === 'tokens' ? 'Нажатие добавляет часть справа. Нажми часть в собранной строке, чтобы убрать её. Ниже видно всю программу.' : lesson.mode === 'text' ? 'Введи команды по одной на строке. Вложенные действия начинаются с четырёх пробелов. Проверка покажет, что исправить.' : 'Нажми один вариант, затем «Проверить». Можно изменить выбор до проверки.'}</p></>}<p>Это помощь с интерфейсом. Она не уменьшает звёзды.</p></Modal>}
+    {modal === 'help' && <Modal title={blocksMode ? 'Как собирать программу' : 'Как выполнить задание'} onClose={() => setModal(null)}><p>{lesson.instruction}</p>{guided && <p>{assistance}</p>}<p>{supportExplanation[lesson.supportLevel || 'free_code']}</p>{blocksMode ? <ol className="ui-help"><li>«Добавить блок» открывает команды и значения.</li><li>Сначала добавь команду. Например, «Напечатать».</li><li>В её пустое место добавь значение: текст или число.</li><li>Нажми белое поле, чтобы изменить значение. Новая команда соединится снизу; внутри условия или цикла — займёт свободное место.</li><li>Выбери внешний блок, чтобы продолжить после него. Блоки можно перетаскивать, отменять изменения и удалять.</li></ol> : <p>{lesson.mode === 'tokens' ? 'Нажатие добавляет часть справа. Нажми часть в собранной строке, чтобы убрать её. Ниже видно всю программу.' : lesson.mode === 'text' ? 'Введи команды по одной на строке. Вложенные действия начинаются с четырёх пробелов. Проверка покажет, что исправить.' : 'Нажми один вариант, затем «Проверить». Можно изменить выбор до проверки.'}</p>}<p>Это помощь с интерфейсом. Она не уменьшает звёзды.</p></Modal>}
+    {modal === 'python' && <Modal title="Твой Python" onClose={() => setModal(null)}>{pythonPreview}<p>Те же действия, что в блоках. Нажми строку, чтобы найти её блок.</p>{guide?.id === 'value' && <p>Многоточие … — место для текста или числа.</p>}</Modal>}
+    {modal === 'result' && outcome && <Modal title={outcome.passed ? 'Результат программы' : 'Подробности проверки'} onClose={() => setModal(null)}>{resultDetails}</Modal>}
     {modal === 'example' && <Modal title="Вспомним связь с блоками" onClose={() => setModal(null)}><ReferenceExample lesson={lesson} /></Modal>}
   </>
 }
@@ -206,5 +253,5 @@ function Picker({ allowed, fresh, canCreateVariable, variableOnly, onVariable, o
 }
 function VariableForm({ onCreate }: { onCreate: (name:string) => void }) {
   const [name,setName] = useState(''), [error,setError] = useState('')
-  return <form className="variable-form" onSubmit={e => { e.preventDefault(); if (!validName(name.trim())) { setError('Начни с буквы. Используй буквы, цифры и подчёркивание без пробелов.'); return } onCreate(name.trim()) }}><label htmlFor="variable-name">Название переменной</label><div><input id="variable-name" value={name} onChange={e => setName(e.target.value)} placeholder="Например, имя" maxLength={40} autoComplete="off" /><button type="submit">Создать</button></div><p role="status">{error}</p></form>
+  return <form className="variable-form" onSubmit={e => { e.preventDefault(); if (!validName(name.trim())) { setError('Начни с буквы. Используй буквы, цифры и подчёркивание без пробелов.'); return } onCreate(name.trim()) }}><label htmlFor="variable-name">Название переменной</label><div><input id="variable-name" autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Например, имя" maxLength={40} autoComplete="off" /><button type="submit">Создать</button></div><p role="status">{error}</p></form>
 }

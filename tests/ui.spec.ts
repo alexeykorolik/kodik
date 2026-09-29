@@ -10,7 +10,7 @@ async function createVariable(page:Page,name:string) { await page.getByRole('but
 async function text(page:Page,value:string,index=0) { await page.locator('.text .blocklyInputField').nth(index).click(); await page.locator('.blocklyHtmlInput').fill(value); await page.locator('.blocklyHtmlInput').press('Enter') }
 async function number(page:Page,value:string,index=0) { await page.locator('.math_number .blocklyInputField').nth(index).click(); await page.locator('.blocklyHtmlInput').fill(value); await page.locator('.blocklyHtmlInput').press('Enter') }
 async function greater(page:Page) { await page.locator('.logic_compare > .blocklyDropdownField').click(); await page.getByRole('option',{name:/≥/}).click() }
-async function passed(page:Page) { await page.getByRole('button',{name:'Проверить',exact:true}).click(); await expect(page.getByRole('heading',{name:'Получилось!',exact:true})).toBeVisible() }
+async function passed(page:Page) { await page.getByRole('button',{name:/^Проверить(?: снова)?$/}).click(); await expect(page.getByRole('heading',{name:'Получилось!',exact:true})).toBeVisible() }
 
 test.describe('новые механики пальцем',()=>{
   test.use({viewport:{width:390,height:844},isMobile:true,hasTouch:true})
@@ -27,7 +27,10 @@ test.describe('новые механики пальцем',()=>{
     if(id===11) await add(page,'Вызвать функцию')
     await expect(page.locator('.coach')).toContainText('Нажми «Проверить»')
     await passed(page); await expect(page.getByText('Знакомство завершено · без оценки')).toBeVisible()
-    await page.getByText('Посмотреть результат').click(); await expect(page.locator('.feedback-panel .python-code')).toBeVisible()
+    await page.getByText('Посмотреть результат').click()
+    await expect(page.getByRole('dialog',{name:'Результат программы',exact:true}).locator('.python-code')).toBeVisible()
+    await page.getByRole('dialog').getByRole('button',{name:'Закрыть',exact:true}).click()
+    await expect(page.getByRole('button',{name:'Посмотреть результат',exact:true})).toBeFocused()
   })
 })
 
@@ -47,9 +50,9 @@ test('две разные ошибки вставляют corrective и возв
   await add(page,'Напечатать');await add(page,'Текст');await text(page,'Неверное сообщение')
   for(let attempt=0;attempt<2;attempt++){
     if (attempt) await text(page,'Другая ошибка')
-    await page.getByRole('button',{name:'Проверить',exact:true}).click()
-    await expect(page.getByRole('heading',{name:'Давай исправим',exact:true})).toBeVisible()
-    if (!attempt) await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
+    await page.getByRole('button',{name:/^Проверить(?: снова)?$/}).click()
+    await expect(page.getByRole('heading',{name:'Почти получилось',exact:true})).toBeVisible()
+    await expect.poll(async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['13'].attempts)).toBe(attempt+1)
   }
   await page.getByRole('button',{name:'Закрепить на примере',exact:true}).click()
   await expect(page.locator('.practice-intro')).toContainText('короткое повторение')
@@ -91,8 +94,9 @@ test('уверенное освоение переводит только на �
   await expect(page.locator('textarea')).toHaveCount(0)
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['22'].supportLevel)).toBe('guided_code')
   for(const [index,choice] of ['"Другое сообщение"','Старт'].entries()){
-    await page.getByRole('radio',{name:choice,exact:true}).check();await page.getByRole('button',{name:'Проверить',exact:true}).click()
-    if (!index) await page.getByRole('button',{name:'Попробовать снова',exact:true}).click()
+    await page.getByRole('radio',{name:choice,exact:true}).check();await page.getByRole('button',{name:/^Проверить(?: снова)?$/}).click()
+    await expect(page.getByRole('heading',{name:'Почти получилось',exact:true})).toBeVisible()
+    await expect.poll(async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions['22'].attempts)).toBe(index+1)
   }
   await expect(page.getByRole('button',{name:'Закрепить на примере',exact:true})).toBeVisible()
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kodik-progress-v1')!).supportOverrides?.['22'])).toBe('blocks_with_code')

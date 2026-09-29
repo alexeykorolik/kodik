@@ -77,6 +77,7 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
     focusBlock: id => {
       const w = workspace.current, block = w?.getBlockById(id)
       if (!w || !block) return
+      Blockly.getFocusManager().focusNode(block)
       block.select(); w.centerOnBlock(id, true); report(w)
       block.getSvgRoot()?.classList.add('python-focus')
       window.setTimeout(() => block.getSvgRoot()?.classList.remove('python-focus'), 650)
