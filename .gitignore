@@ -8,3 +8,4 @@ artifacts/
 *.tsbuildinfo
 initial-review.png
 local-server.pid
+.vercel/
