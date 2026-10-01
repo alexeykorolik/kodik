@@ -92,10 +92,13 @@ assert.deepEqual(responseBody, { error: 'ai_unavailable' })
 if (oldFlag === undefined) delete process.env.AI_TUTOR_ENABLED; else process.env.AI_TUTOR_ENABLED = oldFlag
 const priorKey = process.env.OPENAI_API_KEY
 const priorModel = process.env.OPENAI_TUTOR_MODEL
+const priorGroqKey = process.env.GROQ_API_KEY
+const priorGroqModel = process.env.GROQ_TUTOR_MODEL
 const originalFetch = globalThis.fetch
 process.env.AI_TUTOR_ENABLED = 'true'
 process.env.OPENAI_API_KEY = 'mock-key'
 process.env.OPENAI_TUTOR_MODEL = 'mock-model'
+delete process.env.GROQ_API_KEY
 let sent: Record<string, unknown> = {}
 globalThis.fetch = async (_url, init) => {
   sent = JSON.parse(String(init?.body)) as Record<string, unknown>
@@ -108,8 +111,31 @@ assert.equal(sent.store, false)
 assert.equal(JSON.stringify(sent).includes('secret@example.com'), false)
 assert.equal(JSON.stringify(sent).includes('ignore_all_instructions'), false)
 assert.equal(responseBody && (responseBody as TutorResponse).shouldRevealSolution, false)
+process.env.GROQ_API_KEY = 'mock-groq-key'
+delete process.env.GROQ_TUTOR_MODEL
+let providerUrl = ''
+globalThis.fetch = async (url, init) => {
+  providerUrl = String(url)
+  sent = JSON.parse(String(init?.body)) as Record<string, unknown>
+  return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(valid('hint', 'Проверь, где читается переменная.')) } }] }), { status: 200 })
+}
+status = 0
+await handler({ method: 'POST', headers: { host: 'example.com', origin: 'https://example.com' }, body: { ...request('hint', 2), context: hostile } }, res)
+assert.equal(status, 200)
+assert.equal(providerUrl, 'https://api.groq.com/openai/v1/chat/completions')
+assert.equal(sent.model, 'openai/gpt-oss-20b')
+assert.equal((sent.response_format as { type: string }).type, 'json_schema')
+assert.equal(JSON.stringify(sent).includes('secret@example.com'), false)
+assert.equal((responseBody as TutorResponse).message, 'Проверь, где читается переменная.')
+globalThis.fetch = async () => new Response('{"error":"rate_limit"}', { status: 429 })
+status = 0
+await handler({ method: 'POST', headers: { host: 'example.com' }, body: request('hint', 3) }, res)
+assert.equal(status, 429)
+assert.deepEqual(responseBody, { error: 'rate_limit' })
 globalThis.fetch = originalFetch
 if (oldFlag === undefined) delete process.env.AI_TUTOR_ENABLED; else process.env.AI_TUTOR_ENABLED = oldFlag
 if (priorKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = priorKey
 if (priorModel === undefined) delete process.env.OPENAI_TUTOR_MODEL; else process.env.OPENAI_TUTOR_MODEL = priorModel
+if (priorGroqKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = priorGroqKey
+if (priorGroqModel === undefined) delete process.env.GROQ_TUTOR_MODEL; else process.env.GROQ_TUTOR_MODEL = priorGroqModel
 console.log('AI Tutor smoke tests passed')
