@@ -4,7 +4,7 @@
 
 Проект `D:/projects/pleducator`. Новый аудит из attachments/93db4934-2ff1-481f-9d34-0e95f5aadce9/Вставленный текст.txt выполнен в его узком объёме: initial support, stable IDs/keys, curriculum/app version, skill-specific scaffolds. Также закрыт P2 whitespace evidence и подготовлены Support Independence Rate/Transfer Success, чистый архив.
 
-Код:3531851 +15dc1d7 (второй включает define SHA сборки). GitHub main: https://github.com/alexeykorolik/kodik . Production: https://kodiknew.vercel.app — deployment https://kodiknew-dmxg4vxqb-zhoper.vercel.app, Ready, appVersion=15dc1d7c... (точный полный SHA проверить `git show 15dc1d7`), curriculumVersion=`2026-10-01.2`. Следующий коммит меняет только отчёты и проверку точного SHA в тесте; повторного деплоя приложения не требует.
+Код:3531851 +15dc1d7 (второй включает define SHA сборки). GitHub main: https://github.com/alexeykorolik/kodik . Production: https://kodiknew.vercel.app — deployment https://kodiknew-dmxg4vxqb-zhoper.vercel.app, Ready, appVersion=`15dc1d7db785fe7a3fe8091342a2646c05b4b768`, curriculumVersion=`2026-10-01.2`. Последующие коммиты меняют только отчёты и проверку точного SHA в тесте; повторного деплоя приложения не требуют.
 
 Выполнено и проверено:
 
