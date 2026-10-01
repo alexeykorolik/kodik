@@ -1,11 +1,11 @@
-# Продолжение: полный программный аудит — 1 октября 2026
+# Точка продолжения — полный аудит завершён
 
-Проект D:/projects/pleducator; main; GitHub alexeykorolik/kodik; production https://kodiknew.vercel.app (ce50ab3 / код8444de0). Публикация разрешена пользователем.
+Проект D:/projects/pleducator. GitHub main https://github.com/alexeykorolik/kodik . Код d6764bc. Production https://kodiknew.vercel.app (Ready, https://kodiknew-h2qs895g0-zhoper.vercel.app).
 
-Текущий запрос: ВСЕ программные изменения аудита P0/P1/P2. Источник C:/Users/leha/.codex/attachments/200459a8-8774-40c6-9173-ce5cbeefdccd/Вставленный текст.txt. Прежний мобильный редизайн завершён; его не начинать заново.
+Пользователь подтвердил ВСЕ программные изменения P0/P1/P2 из аудита. Выполнены: адаптация23–100 guided→tokens→free безBlockly; индивидуальные навыки; AST/effect checker+скрытыепробы; безопасныйadvancedsummaryAI; corrective/review list/input/drawing; теориябезштрафа; progressskillsпервым; anonymouseventsSupabase; durableatomicAIbudget+signedcookie; codehighlight/accessory; cleanupCourse100/README; протокол10новичков/50–100пилота/физическихтелефонов.
 
-Незакоммичено: безопасный Python AST runtime с отслеживанием зависимостей результата, структурные ограничения вместо regex и скрытые пробы, точные навыки78упражнений, адаптация guided→tokens→free без Blockly, короткая практика новых навыков, бесплатная теория, приватный AI summary расширенного Python. 78эталонов и все варианты поддержки приняты smoke. Редактор получает подсветку и панель символов; сейчас доводится.
+Подробности docs/AUDIT_IMPLEMENTATION.md. Протокол docs/PILOT_PROTOCOL.md, пустой docs/pilot-results.csv, агрегаты supabase/pilot_report.sql. Миграция003 выполнена в настоящейSupabase.20конкурентныхclaims:8разрешены,12отклонены; anon не может читатьсобытия/вызыватьlimiter.
 
-Осталось: регрессии на обход проверки/адаптацию/AI; навыки главным экраном прогресса с сохранением истории и первых оценок; централизованные анонимные события Supabase+очередь; постоянный атомарный серверный лимитAI; удалить старый Course100; README/протокол реальных10новичков и физическихтелефонов; полная сборка/UI100/публикацияGitHubVercel/productionпроверки.
+Проверены: сборка, весьsmoke, все94UIсценария (91вобщемпрогоне+исправленный100-tasktest+2AIвключённыхотдельно),16productionUI,2настоящихGroqответа while/function,доставка событий избраузера/ackqueue/reload,DBидемпотентность/отсутствиеcode/email/message. Временные4deploymentпровижининга удалены, вproduction2APIфункции. СерверныеVercelключи нельзяскачать,невыводить. ProductionAIквоты8наурок/сутки,30/минIP,80/суткиlearner,200/суткиIP,1000/суткиglobal;clientreloadнесбрасываетлимит.
 
-Доступы: VercelCLI авторизован, .vercel/.env.production.local содержит Supabase server keys и POSTGRES_URL. Значения НЕ выводить; применять миграцию Node pg через --env-file. pg уже devdependency. Лимит должен failclosed при недоступной БД, AI fallback сохранён. Реальных новичков/телефонов не проверяли, результаты не выдумывать. Голосовойсеанс закончился, capture_screen_context не вызывать. Подагенты не разрешены.
+Текущий программный запрос завершён. Не начинать заново прежние100задач/мобильныйредизайн/Groq/audit. Реальныхновичков и физическихiPhone/Android не проверяли; следующая работа по новымзамечаниям или протоколутестирования. Голосовойсеанс закончился; capture_screen_context не использовать. Подагенты не запрошены.
