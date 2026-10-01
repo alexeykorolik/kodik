@@ -24,7 +24,7 @@ export type Stmt = ({ sourceId?: string } & (
   | { kind: 'if'; condition: Expr; then: Stmt[]; otherwise: Stmt[] }
 ))
 
-export type Program = { statements: Stmt[]; issues?: string[] }
+export type Program = { statements: Stmt[]; issues?: string[]; normalizedStructure?: string }
 
 export type Lesson = {
   id: number
@@ -34,7 +34,7 @@ export type Lesson = {
   choices?: string[]
   answer?: string
   codeAnswer?: string
-  extended?: { inputs: string[][]; required: RegExp[]; drawing?: boolean }
+  extended?: { inputs: string[][]; rules: string[]; drawing?: boolean }
   prefix?: string
   suffix?: string
   tokens?: string[]

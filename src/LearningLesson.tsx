@@ -9,7 +9,9 @@ import { track } from './analytics'
 import { checkTextLesson } from './textLearning'
 import { parsePythonProgram } from './textLearning'
 import { CodePreview, DrawingPreview, Modal, Stars } from './LearningUI'
-import { runCourseProgram } from './course100Runtime'
+import { runCourseProgram } from './pythonRuntime'
+import { parseCourseProgram } from './pythonRuntime'
+import { summarizePython } from './pythonStructure'
 import { courseMaterials } from './courseMaterials'
 import { recordLearningCheck } from './learningHistory'
 import { Icon } from './Icon'
@@ -134,7 +136,11 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
     setTutorLoading(true)
     setTutorAnswer(null)
     let currentProgram = editor.current?.getProgram() || program
-    if (lesson.mode === 'text') { try { currentProgram = parsePythonProgram(currentAnswer) } catch { currentProgram = { statements: [] } } }
+    if (lesson.extended) {
+      const source = lesson.mode === 'completion' || lesson.mode === 'tokens' ? `${lesson.prefix || ''}${currentAnswer}${lesson.suffix || ''}` : currentAnswer
+      try { currentProgram = { statements: [], normalizedStructure: summarizePython(parseCourseProgram(source)) } }
+      catch { currentProgram = { statements: [], normalizedStructure: 'syntax_error' } }
+    } else if (lesson.mode === 'text') { try { currentProgram = parsePythonProgram(currentAnswer) } catch { currentProgram = { statements: [] } } }
     const request = { action: kind, hintLevel: level as 1 | 2 | 3,
       context: buildTutorContext(lesson, progress, { ...session, hintsUsed: kind === 'hint' ? level : session.hintsUsed }, currentProgram, outcome && !outcome.passed ? outcome.result.errorType : undefined) }
     const metadata = { action: kind, level, skillId: request.context.skill.id, supportLevel: request.context.task.supportLevel, errorType: request.context.lastError?.type || '' }
@@ -174,7 +180,8 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
         }
         if (checked.result.systemError) { setOutcome({ ...checked, code: '' }); return }
         const rawAnswer = blocksMode ? currentProgram.statements.length ? renderPython(currentProgram) : '' : currentAnswer
-        const evidenceAnswer = (lesson.mode === 'text' || lesson.mode === 'tokens') && checked.program.statements.length ? renderPython(checked.program) : rawAnswer.trimEnd()
+        let evidenceAnswer = (lesson.mode === 'text' || lesson.mode === 'tokens') && checked.program.statements.length ? renderPython(checked.program) : rawAnswer.trimEnd()
+        if (lesson.extended) try { evidenceAnswer = JSON.stringify(parseCourseProgram(lesson.mode === 'completion' ? (lesson.prefix || '') + rawAnswer + (lesson.suffix || '') : rawAnswer)) } catch { /* Invalid syntax still counts only once per answer. */ }
         const fingerprint = answerFingerprint(evidenceAnswer)
         const meaningful = meaningfulAnswer(rawAnswer) && !(session.checkedFingerprints || []).includes(fingerprint)
         const nextBase = { ...session, attempts: session.attempts + 1, finished: checked.passed, checkedFingerprints: meaningful ? [...(session.checkedFingerprints || []),fingerprint] : session.checkedFingerprints,
@@ -188,7 +195,7 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
         const observedSkills = checked.passed ? targetSkills : affected.length ? affected : targetSkills
         const skillStates = meaningful || checked.passed ? applyMasteryEvent(p.skillStates || {}, { skills: observedSkills, success: checked.passed, supportLevel: lesson.supportLevel || 'blocks_with_code', hintsUsed: session.hintsUsed, solutionUsed: session.solutionUsed, guided, at: new Date().toISOString(), sequence: practiceSequence }) : p.skillStates || {}
         const extra: Partial<Progress> = { ...recordLearningCheck(p, { lessonId: lesson.id, passed: checked.passed, message: checked.message, errorType: checked.result.errorType, skills: observedSkills, attempt: nextBase.attempts, stars, tutorial, practice: !!p.activePractice, at: Date.now() }), attempts: { ...p.attempts, [lesson.id]: (p.attempts?.[lesson.id] || 0) + 1 }, skillStates, practiceSequence }
-        if (!lesson.extended && !checked.passed && meaningful && nextBase.meaningfulErrors >= 2 && !session.recoveryOffered && !p.activePractice) {
+        if (!checked.passed && meaningful && nextBase.meaningfulErrors >= 2 && !session.recoveryOffered && !p.activePractice) {
           const decision = decideLessonSupport(lesson,{...p,skillStates},true,lesson.supportLevel)
           const updated = applySupportDecision(lesson,{...p,skillStates},decision)
           extra.supportOverrides = updated.supportOverrides; extra.skillSupport = updated.skillSupport; extra.supportCheckpoint = updated.supportCheckpoint
@@ -213,6 +220,7 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
         persistSession(next, extra)
         setOutcome({ ...checked, stars, code })
         track('check', lesson.id, { passed: checked.passed, attempt: next.attempts, stars: stars || 0 })
+        if (checked.passed && !session.finished) track('lesson_completed', lesson.id, { completionMs: Date.now() - session.startedAt, attempt: next.attempts, stars: stars || 0, supportLevel: lesson.supportLevel || 'blocks_with_code' })
       } catch { setOutcome({ passed: false, message: 'Не удалось проверить. Прогресс сохранён. Попробуй ещё раз.', result: { output: [], systemError: true }, code: '' }) }
       finally { setChecking(false) }
     }, 80)
@@ -274,7 +282,7 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
           {lesson.mode === 'tokens' && <><p>Нажимай части по порядку. Чтобы убрать часть, нажми её ещё раз.</p><div className="token-result" aria-label="Собранная строка">{(session.tokens || []).map((i,pos) => <button key={i} onClick={() => editSession({ ...session, tokens: session.tokens!.filter((_,n) => n !== pos) })}>{lesson.tokens![i]}</button>)}{!session.tokens?.length && <span>Здесь появится твоя строка</span>}</div><div className="token-options">{lesson.tokens!.map((token,i) => <button key={i} disabled={session.tokens?.includes(i)} onClick={() => editSession({ ...session, tokens: [...(session.tokens || []), i] })}>{token}</button>)}</div><CodePreview code={`${lesson.prefix || ''}${currentAnswer || '___'}${lesson.suffix || ''}`} /></>}
           {lesson.mode === 'text' && <><label className="code-label" htmlFor="python-answer">Твой Python</label><MinimalCodeEditor value={currentAnswer} onChange={answer} rows={lesson.extended ? Math.min(8, Math.max(4, lesson.codeAnswer?.split('\n').length || 4)) : lesson.id === 21 ? 5 : 3} /></>}
           {lesson.extended && lesson.extended.inputs[0]?.length > 0 && <p className="lesson-test-inputs">Пример ввода: {lesson.extended.inputs[0].join(' → ')}. Проверим и с другими данными.</p>}
-          <button className="text-button" onClick={() => { if (!session.referenceUsed) useHint({ referenceUsed: true }); setModal('example') }}>{lesson.extended ? 'Разбор темы и пример' : 'Вспомнить по блокам'}{!tutorial ? ' · подсказка' : ''}</button>
+          <button className="text-button" onClick={() => { if (!lesson.extended && !session.referenceUsed) useHint({ referenceUsed: true }); track('theory_open', lesson.id); setModal('example') }}>{lesson.extended ? 'Разбор темы и пример' : 'Вспомнить по блокам'}{!tutorial && !lesson.extended ? ' · подсказка' : ''}</button>
         </section>}
       </section>
     </article>

@@ -1,6 +1,6 @@
 import { checkLesson, runProgram, validName, type Lesson, type Program, type Expr, type Stmt } from './learningEngine'
 import { issue } from './validation'
-import { runCourseProgram } from './course100Runtime'
+import { checkExtendedLesson } from './extendedChecker'
 
 type Token = { kind: 'number'|'string'|'name'|'operator'|'paren'; value: string }
 
@@ -112,7 +112,7 @@ export function parsePythonProgram(source: string): Program {
         statements.push({kind:'define',name:match[1],body}); continue
       }
       if ((match=/^([\p{L}_][\p{L}\p{N}_]*)\s*\(\s*\)$/u.exec(line.text))) { statements.push({kind:'call',name:match[1]}); continue }
-      throw new Error(`Строка ${line.number}: пока поддерживаются присваивание, print, if/else, for range и функции без параметров.`)
+      throw new Error(`Строка ${line.number}: проверь команду, скобки и двоеточие. Используй конструкции из примера этого задания.`)
     }
     return statements
   }
@@ -124,31 +124,7 @@ export function parsePythonProgram(source: string): Program {
 export const parsePrintProgram = parsePythonProgram
 
 export function checkTextLesson(lesson: Lesson, answer: string) {
-  if (lesson.extended) {
-    const source = lesson.mode === 'completion' || lesson.mode === 'tokens' ? `${lesson.prefix || ''}${answer}${lesson.suffix || ''}` : answer
-    const primary = runCourseProgram(source, lesson.extended.inputs[0] || [])
-    const program: Program = { statements: [] }
-    const failed = (message: string, output = primary.output) => {
-      const details = issue(message, lesson.skills?.practices || [])
-      return { passed: false, message, result: { output, segments: primary.segments, error: primary.error, systemError: false, errorType: details.errorType, affectedSkills: details.affectedSkills }, program }
-    }
-    if (primary.error) return failed(primary.error)
-    const visibleSource = source.split(/\r?\n/).filter(line => !line.trimStart().startsWith('#')).join('\n')
-    if (lesson.extended.required.some(pattern => { pattern.lastIndex = 0; return !pattern.test(visibleSource) })) return failed('Используй изученную конструкцию из условия, затем проверь результат.')
-    const same = (inputs: string[]) => {
-      const actual = runCourseProgram(source, inputs)
-      const reference = runCourseProgram(lesson.codeAnswer || '', inputs)
-      if (actual.error || reference.error) return false
-      if (actual.output.length !== reference.output.length || actual.output.some((line, index) => line !== reference.output[index])) return false
-      if (!lesson.extended?.drawing) return true
-      return actual.segments.length === reference.segments.length && actual.segments.every((part, index) => {
-        const target = reference.segments[index]
-        return (['x1', 'y1', 'x2', 'y2'] as const).every(key => Math.abs(part[key] - target[key]) < .02)
-      })
-    }
-    if (!lesson.extended.inputs.every(same)) return failed(lesson.extended.drawing ? 'Рисунок отличается. Проверь длины, повороты и порядок линий.' : 'Программа пока даёт другой результат. Проверь значения и порядок действий.')
-    return { passed: true, message: lesson.success || 'Получилось!', result: { output: primary.output, segments: primary.segments, systemError: false }, program }
-  }
+  if (lesson.extended) return checkExtendedLesson(lesson, answer)
   if (lesson.mode === 'text' || lesson.mode === 'tokens') {
     try {
       const source = lesson.mode === 'tokens' && (lesson.prefix !== undefined || lesson.suffix !== undefined) ? `${lesson.prefix || ''}${answer}${lesson.suffix || ''}` : answer

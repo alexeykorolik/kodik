@@ -1,7 +1,7 @@
 export const skillIds = ['print','string','number','sequence','variable','assignment','arithmetic','comparison','if','loop','function','indentation','text_syntax','list','input','drawing'] as const
 export type SkillId = typeof skillIds[number]
 export type SupportLevel = 'blocks' | 'blocks_with_code' | 'guided_code' | 'code_tokens' | 'free_code'
-export type LessonSkills = { teaches: SkillId[]; practices: SkillId[]; requires: SkillId[] }
+export type LessonSkills = { primarySkill?: SkillId; teaches: SkillId[]; practices: SkillId[]; requires: SkillId[] }
 
 export type SkillDefinition = {
   id: SkillId

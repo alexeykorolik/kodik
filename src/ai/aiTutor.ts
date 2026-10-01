@@ -16,9 +16,12 @@ export class AITutor {
     const key = JSON.stringify(request)
     const cached = this.cache.get(key)
     if (cached) return { ...cached, latencyMs: 0 }
-    const count = this.count.get(lesson.id) || 0
+    const countKey = `kodik-ai-count:${Math.floor(Date.now() / 86400000)}:${lesson.id}`
+    let count = this.count.get(lesson.id) || 0
+    try { if (typeof localStorage !== 'undefined') count = Math.max(count, Number(localStorage.getItem(countKey)) || 0) } catch { /* Server quota remains authoritative. */ }
     if (count >= maxTutorRequestsPerLesson) return fallback('rate_limit')
     this.count.set(lesson.id, count + 1)
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem(countKey, String(count + 1)) } catch { /* Local quota is only a convenience. */ }
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.timeoutMs)
     try {

@@ -5,10 +5,8 @@ import { makeTutorPrompt } from '../src/ai/aiPrompt'
 import { validateTutorResponse } from '../src/ai/aiResponseValidator'
 import type { TutorAction, TutorRequest } from '../src/ai/aiTypes'
 import { configuredTutorProvider, ProviderError } from './aiProvider'
+import { bucket, claim, dailyLimit, identity, type Request, type Response } from './storage'
 
-type Request = { method?: string; body?: unknown; headers: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }
-type Response = { status: (code: number) => Response; json: (value: unknown) => void; setHeader: (key: string, value: string) => void }
-const hits = new Map<string, { count: number; expires: number }>()
 const actions: TutorAction[] = ['hint','error_explanation','concept','example']
 const maxBody = 4096
 
@@ -23,13 +21,6 @@ export default async function handler(req: Request, res: Response) {
   }
   const provider = configuredTutorProvider()
   if (process.env.AI_TUTOR_ENABLED !== 'true' || !provider) return res.status(503).json({ error: 'ai_unavailable' })
-  const address = req.socket?.remoteAddress || 'unknown'
-  const now = Date.now()
-  const hit = hits.get(address) || { count: 0, expires: now + 60_000 }
-  if (now >= hit.expires) { hit.count = 0; hit.expires = now + 60_000 }
-  if (++hit.count > 30) return res.status(429).json({ error: 'rate_limit' })
-  hits.set(address, hit)
-  if (hits.size > 1000) for (const [key, value] of hits) if (value.expires < now) hits.delete(key)
   let body: TutorRequest
   try {
     const serialized = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
@@ -41,6 +32,17 @@ export default async function handler(req: Request, res: Response) {
   if ((body.action === 'concept' || body.action === 'error_explanation') && process.env.AI_EXPLANATIONS_ENABLED !== 'true') return res.status(503).json({ error: 'ai_unavailable' })
   const lesson = [...lessons, ...practiceLessons].find(item => item.id === body.context?.lessonId)
   if (!lesson) return res.status(400).json({ error: 'unknown_lesson' })
+  try {
+    const user = identity(req, res), day = 86400000
+    const allowed = await claim([
+      bucket(`ai:learner:${user.learner}:lesson:${lesson.id}`, 8, day),
+      bucket(`ai:ip:${user.address}:minute`, 30, 60000),
+      bucket(`ai:learner:${user.learner}:day`, dailyLimit('AI_LEARNER_DAILY_LIMIT', 80), day),
+      bucket(`ai:ip:${user.address}:day`, dailyLimit('AI_IP_DAILY_LIMIT', 200), day),
+      bucket('ai:global:day', dailyLimit('AI_DAILY_REQUEST_LIMIT', 1000), day),
+    ])
+    if (!allowed) return res.status(429).json({ error: 'rate_limit' })
+  } catch { return res.status(503).json({ error: 'budget_unavailable' }) }
   const request = { action: body.action, hintLevel: body.hintLevel, context: sanitizeTutorContext(lesson, body.context) }
   const prompt = makeTutorPrompt(request)
   const controller = new AbortController()

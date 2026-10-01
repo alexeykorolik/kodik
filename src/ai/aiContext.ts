@@ -4,6 +4,8 @@ import type { Progress } from '../progress'
 import { skills, type SkillId } from '../skills'
 import type { ErrorType } from '../validation'
 import type { TutorContext } from './aiTypes'
+import { supportLevels } from '../adaptiveSupport'
+import { materializeSupport } from '../supportVariants'
 
 const errorLabels: Record<ErrorType, string> = {
   wrong_order: 'Неверный порядок действий', wrong_value: 'Неверное значение', missing_block: 'Не хватает команды',
@@ -22,9 +24,9 @@ const bounded = (value: number, max: number) => Math.min(max, Math.max(0, Math.f
 
 export function buildTutorContext(lesson: Lesson, progress: Progress, session: Session, program: Program, errorType?: ErrorType): TutorContext {
   const allowedConcepts = [...new Set([...(lesson.skills?.teaches || []), ...(lesson.skills?.practices || [])])]
-  const skillId: SkillId = allowedConcepts[0] || 'print'
+  const skillId: SkillId = lesson.skills?.primarySkill || allowedConcepts[0] || 'print'
   const state = progress.skillStates?.[skillId]
-  const representation = lesson.mode === 'blocks' ? 'blocks' : lesson.mode === 'text' ? 'code' : 'choice'
+  const representation = lesson.extended || lesson.mode === 'text' ? 'code' : lesson.mode === 'blocks' ? 'blocks' : 'choice'
   return {
     lessonId: lesson.id,
     lessonTitle: lesson.title,
@@ -32,7 +34,7 @@ export function buildTutorContext(lesson: Lesson, progress: Progress, session: S
     task: { description: lesson.goal, expectedConcept: skillId, supportLevel: lesson.supportLevel || 'blocks_with_code' },
     learner: { attempts: bounded(session.attempts, 100), consecutiveErrors: bounded(state?.consecutiveErrors || 0, 100), hintsUsed: bounded(session.hintsUsed, 3), independentSuccesses: bounded(state?.independentSuccesses || 0, 100) },
     ...(errorType ? { lastError: { type: errorType, message: errorLabels[errorType] } } : {}),
-    currentSolution: { representation, normalizedStructure: representation === 'choice' ? 'not_shared' : program.statements.slice(0, 12).map(stmt).join(',').slice(0, 160) || 'empty' },
+    currentSolution: { representation, normalizedStructure: program.normalizedStructure || (representation === 'choice' ? 'not_shared' : program.statements.slice(0, 12).map(stmt).join(',').slice(0, 160) || 'empty') },
     allowedConcepts,
   }
 }
@@ -40,8 +42,10 @@ export function buildTutorContext(lesson: Lesson, progress: Progress, session: S
 // The API rebuilds curriculum fields from its own copy of the lesson. It never
 // forwards arbitrary client text or a student's code to the model.
 export function sanitizeTutorContext(lesson: Lesson, raw: TutorContext): TutorContext {
+  const level = raw?.task?.supportLevel
+  if (supportLevels.includes(level)) lesson = materializeSupport(lesson, level)
   const safeSession = { attempts: bounded(raw?.learner?.attempts, 100), hintsUsed: bounded(raw?.learner?.hintsUsed, 3) } as Session
-  const skillId = lesson.skills?.teaches[0] || lesson.skills?.practices[0] || 'print'
+  const skillId = lesson.skills?.primarySkill || lesson.skills?.teaches[0] || lesson.skills?.practices[0] || 'print'
   const progress = { skillStates: { [skillId]: { mastery: Number.isFinite(raw?.skill?.mastery) ? Math.max(0, Math.min(1, raw.skill.mastery)) : 0,
     consecutiveErrors: bounded(raw?.learner?.consecutiveErrors, 100), independentSuccesses: bounded(raw?.learner?.independentSuccesses, 100) } } } as Progress
   const errorType = raw?.lastError?.type
@@ -51,8 +55,8 @@ export function sanitizeTutorContext(lesson: Lesson, raw: TutorContext): TutorCo
   for (const output of lesson.expectedOutput) if (output.length >= 3) clean.task.description = clean.task.description.replaceAll(output, 'значение из задания')
   const structure = raw?.currentSolution?.normalizedStructure
   const tokens = typeof structure === 'string' ? structure.match(/[a-z_]+/g) || [] : []
-  const safeKinds = ['empty','not_shared','print','assign','call','define','repeat','if','binary','comparison','string','number','variable','missing']
-  if (clean.currentSolution.representation !== 'choice' && typeof structure === 'string' && structure.length <= 160 &&
+  const safeKinds = ['empty','not_shared','print','assign','call','define','repeat','if','binary','comparison','string','number','variable','missing','syntax_error','function','params_','for','while','return','list','index','expression','pass','unary','boolean','input','int','str','len','range','forward','right','left','more']
+  if (clean.currentSolution.representation !== 'choice' && typeof structure === 'string' && structure.length <= 512 &&
     /^[a-z0-9_,:() +*<>=!-]+$/.test(structure) && tokens.every(token => safeKinds.includes(token))) clean.currentSolution.normalizedStructure = structure
   return clean
 }

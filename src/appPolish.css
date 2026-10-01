@@ -155,7 +155,7 @@ body, button, input, select, summary { font-family: Nunito, 'Segoe UI', sans-ser
   .live-mirror { margin-top: 0; padding: 0 12px; }
   .live-mirror > div:first-child { min-height: 42px; }
   .live-mirror h2 { font-size: 15px; margin: 0; }
-  .live-mirror .compact-code-toggle { min-height: 42px; font-size: 13px; }
+  .live-mirror .compact-code-toggle { min-height: 44px; font-size: 13px; }
   .python-inline-preview, .live-mirror .python-nudge { display: none; }
   .block-workspace-grid { gap: 7px; }
   .block-workspace-grid.is-expanded { position: fixed; z-index: 25; top: calc(var(--lesson-viewport-top, 0px) + 12px); bottom: calc(var(--lesson-keyboard-bottom, 0px) + var(--lesson-action-height, 80px) + 12px); left: 14px; right: 14px; width: auto; padding: 0; border-radius: 20px; background: var(--surface); box-shadow: 0 0 0 80vmax var(--canvas); }
@@ -188,3 +188,44 @@ body, button, input, select, summary { font-family: Nunito, 'Segoe UI', sans-ser
   .account-identity { margin: 10px 0; }
   .account-avatar { width: 50px; height: 50px; border-radius: 18px; }
 }
+
+/* A small teaching editor: the textarea remains the native input and selection surface. */
+.minimal-code-editor { padding-bottom: 46px; }
+.minimal-code-editor .editor-highlight { position: absolute; pointer-events: none; inset: 0 0 46px; margin: 0; padding: 16px 12px 16px 42px; font: 16px/1.6 Consolas, monospace; white-space: pre; overflow: hidden; color: var(--ink); transform: translate(var(--editor-scroll-x, 0px), var(--editor-scroll, 0px)); }
+.minimal-code-editor textarea { color: transparent !important; caret-color: var(--ink); background: transparent; }
+.minimal-code-editor textarea::placeholder { color: var(--muted); }
+.minimal-code-editor textarea::selection { color: transparent; background: #acc8ad66; }
+.editor-highlight .syntax-keyword { color: #2c6a59; font-weight: bold; }
+.editor-highlight .syntax-string { color: #b6542d; }
+.editor-highlight .syntax-number { color: #8b6334; }
+.editor-highlight .syntax-comment { color: #85928a; }
+.code-accessory { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 46px; display: flex; gap: 7px; padding: 4px 7px; background: var(--surface-alt); border-top: 1px solid var(--line); }
+.code-accessory button { flex: 1; min-height: 36px; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; color: var(--ink); font: 16px/1 Consolas, monospace; }
+@media (forced-colors: active) { .minimal-code-editor textarea { color: CanvasText !important; } .editor-highlight { display: none; } }
+.progress-tabs { display: flex; gap: 6px; margin-top: 16px; flex: 0 0 auto; }
+.progress-tabs button { flex: 1; min-height: 44px; padding: 5px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); color: var(--muted); font-size: 13px; }
+.progress-tabs button[aria-pressed=true] { color: var(--green); background: var(--green-soft); font-weight: 800; }
+.skills-journey { display: flex; align-items: center; gap: 12px; padding: 14px; margin: 14px 0; background: var(--green-soft); border-radius: 18px; }
+.skills-journey strong { font-size: 15px; }
+.skills-journey p, .score-note { font-size: 13px; color: var(--muted); margin: 5px 0 0; }
+.skill-cards { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; }
+.skill-card { padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
+.skill-card > div { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.skill-card h2 { font-size: 16px; margin: 0; }
+.skill-card span { font-size: 12px; color: var(--green); }
+.skill-card meter { width: 100%; height: 12px; margin-top: 7px; }
+.skill-card p { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+.skill-pages { margin-top: 10px; }
+@media(max-width:767px) {
+ .skills-journey { flex: 0 0 auto; padding: 10px 12px; margin: 10px 0; }
+ .skill-card { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; padding: 8px 12px; }
+ .skill-card h2 { font-size: 15px; }
+ .skill-cards { gap: 7px; }
+ .skill-pages { flex: 0 0 auto; }
+ .score-note { line-height: 1.5; margin-top: 18px; }
+}
+@media(max-width:767px) and (max-height:620px) { .skills-journey p { display: none; } .skill-card p { display: none; } .skills-journey strong { font-size: 13px; } }
+.minimal-code-editor .editor-highlight { padding: 0; transform: none; }
+.minimal-code-editor .editor-highlight pre { width: max-content; min-width: 100%; margin: 0; padding: 16px 12px 16px 42px; font: 16px/1.6 Consolas, monospace; white-space: pre; transform: translate(var(--editor-scroll-x, 0px), var(--editor-scroll, 0px)); }
+.code-accessory { padding-top: 1px; padding-bottom: 1px; }
+.code-accessory button { min-height: 44px; }

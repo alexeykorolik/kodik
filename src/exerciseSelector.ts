@@ -30,7 +30,7 @@ export function selectNextExercise(input: SelectionInput): ExerciseSelection | n
   const eligible = (corrective: boolean) => input.pool.filter(item => {
     const source = input.lessons.find(lesson=>lesson.id===item.sourceLessonId)
     const required = [...new Set([...item.requires,...(source?.skills?.requires || [])])]
-    return !!source && required.every(id=>known(id) || (corrective && targetSkills.includes(id)))
+    return !!source && (!next.extended || !!source.extended) && required.every(id=>known(id) || (corrective && targetSkills.includes(id)))
   })
   const ordered = (ids: SkillId[]) => ids.sort((a,b) => Number(!relevant.includes(a)) - Number(!relevant.includes(b)) || (input.skillStates[a]?.mastery || 0) - (input.skillStates[b]?.mastery || 0) || a.localeCompare(b))
   const struggling = ordered(relevant.filter(id => (input.skillStates[id]?.consecutiveErrors || 0) >= adaptiveThresholds.meaningfulErrors))

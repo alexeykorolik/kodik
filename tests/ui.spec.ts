@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { lessons } from '../src/course'
+import { materializeSupport } from '../src/supportVariants'
 import { fillFieldEditor } from './fieldEditor'
 async function seed(page: Page,id: number,options: Record<string,unknown> = {}) {
   const prior = lessons.slice(0,lessons.findIndex(l=>l.id===id))
@@ -168,8 +169,12 @@ test('все 100 заданий основного курса подряд, от
     const l=lessons[i]
     await expect(page.getByRole('heading',{name:l.title,exact:true})).toBeVisible()
     if (l.extended) {
-      if (l.mode === 'completion') await page.getByRole('radio',{name:l.answer!,exact:true}).check()
-      else await page.getByLabel('Твой Python',{exact:true}).fill(l.answer!)
+      const className = await page.locator('.lesson-flow').getAttribute('class')
+      const support = className?.match(/support-(guided_code|code_tokens|free_code)/)?.[1] as 'guided_code'|'code_tokens'|'free_code'|undefined
+      const active = materializeSupport(l,support)
+      if (active.mode === 'completion') await page.getByRole('radio',{name:active.answer!,exact:true}).check()
+      else if (active.mode === 'tokens') { const buttons=page.locator('.token-options button'); for(let i=active.tokens!.length-1;i>=0;i--) await buttons.nth(i).click() }
+      else await page.getByLabel('Твой Python',{exact:true}).fill(active.answer!)
     }
     switch(l.id){
       case 1: await message('Привет!');break

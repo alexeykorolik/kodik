@@ -23,7 +23,7 @@ export function resolveAdaptiveSupport(lesson: Lesson, states: Partial<Record<Sk
   const rank = supportRank[previous]
   // First introductions stay intact. Repeated lessons can walk the entire ladder.
   const delta = restore && repeated ? -1 : !restore && strong && !lesson.tutorial?.length ? 1 : 0
-  const nextSupport = supportLevels[Math.max(0, Math.min(4, rank + delta))]
+  const nextSupport = supportLevels[Math.max(lesson.extended ? 2 : 0, Math.min(4, rank + delta))]
   const base = { previousSupport: previous, nextSupport, skillId, masteryBand }
   if (nextSupport === previous) return { ...base, reason: 'keep' }
   if (!createSupportVariant(lesson, nextSupport)) return { ...base, nextSupport: previous, reason: 'fallback' }

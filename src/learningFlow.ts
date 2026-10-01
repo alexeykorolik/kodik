@@ -7,10 +7,13 @@ import { lessons } from './course'
 
 export function previousSupport(lesson: Lesson, progress: Progress): SupportLevel {
   const override = progress.supportOverrides?.[lesson.id]
-  if (override) return override
+  if (override) return lesson.extended && supportRank[override] < 2 ? 'guided_code' : override
   const ids = lessonSkills(lesson)
   const inherited = ids.map(id => progress.skillSupport?.[id])
-  if (!lesson.tutorial?.length && ids.length && inherited.every(Boolean)) return (inherited as SupportLevel[]).sort((a,b)=>supportRank[a]-supportRank[b])[0]
+  if (!lesson.tutorial?.length && ids.length && inherited.every(Boolean)) {
+    const level = (inherited as SupportLevel[]).sort((a,b)=>supportRank[a]-supportRank[b])[0]
+    return lesson.extended && supportRank[level] < 2 ? lesson.supportLevel || 'free_code' : level
+  }
   return lesson.id === 1 ? 'blocks' : lesson.supportLevel || 'blocks_with_code'
 }
 export function decideLessonSupport(lesson: Lesson, progress: Progress, restore = false, current?: SupportLevel): SupportDecision {
@@ -25,7 +28,6 @@ export function applySupportDecision(lesson: Lesson, progress: Progress, decisio
     supportCheckpoint: { successes: { ...progress.supportCheckpoint?.successes, ...checkpoint.successes }, errors: {} } }
 }
 export function openLessonVariant(lesson: Lesson, progress: Progress) {
-  if (lesson.extended) return { lesson, progress }
   const saved = progress.sessions?.[lesson.id]
   // Resume keeps the actual editor format, including an unsent answer/draft.
   if (saved && !saved.finished && saved.supportLevel) return { lesson: materializeSupport(lesson, saved.supportLevel), progress, message: saved.supportMessage }

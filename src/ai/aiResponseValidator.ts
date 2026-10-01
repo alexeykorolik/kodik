@@ -24,7 +24,9 @@ export function validateTutorResponse(value: unknown, request: TutorRequest, les
     (result.example.explanation != null && !cleanText(result.example.explanation, 160)))) return reject('example_shape')
   const message = result.message!
   const exampleCode = result.example?.code || ''
-  if (python.test(`${message}\n${exampleCode}`)) return reject('unsupported_python')
+  const combined = `${message}\n${exampleCode}`
+  if (/\b(?:import|class|try|except|lambda)\b/i.test(combined)) return reject('unsupported_python')
+  if (python.test(combined) && (!lesson?.extended || /\bwhile\b/i.test(combined) && !request.context.allowedConcepts.includes('loop') || /\binput\b/i.test(combined) && !request.context.allowedConcepts.includes('input') || /\breturn\b/i.test(combined) && !request.context.allowedConcepts.includes('function'))) return reject('unsupported_python')
   if (request.hintLevel < 3 && request.action === 'hint' && (executableCode(message) || exampleCode)) return reject('hint_code')
   if (request.action === 'hint' && exampleCode && (request.hintLevel < 3 || !exampleCode.includes('...') || exampleCode.includes('\n'))) return reject('hint_full_code')
   if (request.context.task.supportLevel === 'blocks' && (code.test(message) || exampleCode)) return reject('blocks_code')

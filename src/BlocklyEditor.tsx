@@ -202,7 +202,10 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
       if (!event.isUiEvent) { onChangeRef.current(workspaceToProgram(w)); saveDraft(lesson.id, serialize(w)) }
     }
     w.addChangeListener(changed)
-    const observer = new ResizeObserver(() => Blockly.svgResize(w))
+    const observer = new ResizeObserver(() => {
+      Blockly.svgResize(w)
+      if (document.activeElement?.matches('.blocklyHtmlInput')) Blockly.WidgetDiv.repositionForWindowResize()
+    })
     observer.observe(host.current)
     const saveBeforeUnload = () => saveDraft(lesson.id, serialize(w))
     window.addEventListener('pagehide', saveBeforeUnload)

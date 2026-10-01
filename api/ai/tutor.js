@@ -18,15 +18,15 @@ var solution = (blocks) => {
   const visit = (value) => {
     if (Array.isArray(value)) return value.map(visit);
     if (!value || typeof value !== "object") return value;
-    const clone = Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, visit(nested)]));
-    if ((clone.type === "variables_set" || clone.type === "variables_get") && clone.fields && typeof clone.fields === "object") {
-      const fields = clone.fields;
+    const clone2 = Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, visit(nested)]));
+    if ((clone2.type === "variables_set" || clone2.type === "variables_get") && clone2.fields && typeof clone2.fields === "object") {
+      const fields = clone2.fields;
       if (typeof fields.VAR === "string") {
         names.add(fields.VAR);
         fields.VAR = { id: `lesson-variable-${fields.VAR}` };
       }
     }
-    return clone;
+    return clone2;
   };
   const preparedBlocks = visit(blocks);
   return {
@@ -35,7 +35,7 @@ var solution = (blocks) => {
   };
 };
 var textBlock = (text3) => ({ type: "text", fields: { TEXT: text3 } });
-var numberBlock = (number2) => ({ type: "math_number", fields: { NUM: number2 } });
+var numberBlock = (number3) => ({ type: "math_number", fields: { NUM: number3 } });
 var variableBlock = (name) => ({ type: "variables_get", fields: { VAR: name } });
 var lessons = [
   {
@@ -376,7 +376,211 @@ function supportForMode(mode = "blocks") {
   return "free_code";
 }
 
-// src/course100Runtime.ts
+// src/pythonExecution.ts
+var fail = (message) => {
+  throw new Error(message);
+};
+var number2 = (v) => typeof v === "number" && Number.isFinite(v) ? v : fail("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u043E \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u0430\u0432\u044B\u0447\u043A\u0438 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u0432\u0432\u043E\u0434\u0430 \u0447\u0435\u0440\u0435\u0437 int.");
+var list = (v) => Array.isArray(v) ? v : fail("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u0435\u043D \u0441\u043F\u0438\u0441\u043E\u043A.");
+var display2 = (v) => Array.isArray(v) ? `[${v.map((item) => typeof item === "string" ? JSON.stringify(item) : display2(item)).join(", ")}]` : typeof v === "boolean" ? v ? "True" : "False" : v === null ? "None" : String(v);
+var ReturnSignal = class {
+  constructor(result) {
+    this.result = result;
+  }
+};
+function runPythonAst(program, inputs = []) {
+  const output = [], segments = [], observed = /* @__PURE__ */ new Set(), reassigned = /* @__PURE__ */ new Set();
+  let operations = 0, inputCursor = 0, x = 0, y = 0, heading = 0;
+  const drawingTrail = /* @__PURE__ */ new Set();
+  const globals = /* @__PURE__ */ new Map(), functions = /* @__PURE__ */ new Map();
+  const tick = () => {
+    if (++operations > 1e4) fail("\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u043E\u043A\u043E\u043D\u0447\u0430\u043D\u0438\u044F \u0446\u0438\u043A\u043B\u0430.");
+  };
+  const track = (value, node, values = [], control = /* @__PURE__ */ new Set()) => ({ value, trail: /* @__PURE__ */ new Set([node, ...control, ...values.flatMap((item) => [...item.trail])]) });
+  const observe = (result) => {
+    for (const node of result.trail) observed.add(node);
+  };
+  const evaluate2 = (node, scope, depth, control) => {
+    tick();
+    const done = (value, children2 = []) => track(value, node, children2, control);
+    if (node.kind === "literal") return done(node.value);
+    if (node.kind === "name") {
+      const value = scope.get(node.name) || globals.get(node.name);
+      if (!value) return fail(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0437\u0430\u0434\u0430\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \xAB${node.name}\xBB.`);
+      return done(value.value, [value]);
+    }
+    if (node.kind === "list") {
+      if (node.items.length > 1e3) fail("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
+      const items = node.items.map((item) => evaluate2(item, scope, depth, control));
+      return done(items.map((item) => item.value), items);
+    }
+    if (node.kind === "unary") {
+      const child = evaluate2(node.value, scope, depth, control);
+      return done(node.operator === "not" ? !child.value : -number2(child.value), [child]);
+    }
+    if (node.kind === "index") {
+      const target = evaluate2(node.target, scope, depth, control), position = evaluate2(node.index, scope, depth, control), values2 = list(target.value), index = number2(position.value);
+      if (!Number.isInteger(index) || index < -values2.length || index >= values2.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043D\u0434\u0435\u043A\u0441: \u043F\u0435\u0440\u0432\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0438\u043C\u0435\u0435\u0442 \u0438\u043D\u0434\u0435\u043A\u0441 0.");
+      return done(values2[index < 0 ? values2.length + index : index], [target, position]);
+    }
+    if (node.kind === "binary") {
+      const left = evaluate2(node.left, scope, depth, control);
+      if (node.operator === "and" && !left.value || node.operator === "or" && left.value) return done(left.value, [left]);
+      const right = evaluate2(node.right, scope, depth, control), a = left.value, b = right.value, children2 = [left, right];
+      if (node.operator === "and" || node.operator === "or") return done(b, children2);
+      if (node.operator === "==") return done(JSON.stringify(a) === JSON.stringify(b), children2);
+      if (node.operator === "!=") return done(JSON.stringify(a) !== JSON.stringify(b), children2);
+      if (["<", "<=", ">", ">="].includes(node.operator)) {
+        if (typeof a !== typeof b || typeof a !== "number" && typeof a !== "string") fail("\u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0439 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0438\u043B\u0438 \u0434\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438.");
+        const lhs2 = a, rhs2 = b;
+        return done(node.operator === "<" ? lhs2 < rhs2 : node.operator === "<=" ? lhs2 <= rhs2 : node.operator === ">" ? lhs2 > rhs2 : lhs2 >= rhs2, children2);
+      }
+      if (node.operator === "+" && typeof a === "string" && typeof b === "string") return done(a + b, children2);
+      const lhs = number2(a), rhs = number2(b);
+      if (["/", "%"].includes(node.operator) && rhs === 0) fail("\u0414\u0435\u043B\u0438\u0442\u044C \u043D\u0430 \u043D\u043E\u043B\u044C \u043D\u0435\u043B\u044C\u0437\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C.");
+      const result = node.operator === "+" ? lhs + rhs : node.operator === "-" ? lhs - rhs : node.operator === "*" ? lhs * rhs : node.operator === "/" ? lhs / rhs : node.operator === "%" ? (lhs % rhs + rhs) % rhs : lhs ** rhs;
+      if (!Number.isFinite(result) || Math.abs(result) > 1e12) fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435.");
+      return done(result, children2);
+    }
+    const args = node.args.map((arg) => evaluate2(arg, scope, depth, control)), values = args.map((arg) => arg.value);
+    if (node.name === "print") {
+      if (output.length >= 500) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0441\u0442\u0440\u043E\u043A \u0432\u044B\u0432\u043E\u0434\u0430.");
+      output.push(values.map(display2).join(" "));
+      observe(done(null, args));
+      return done(null, args);
+    }
+    if (node.name === "input") {
+      if (args.length > 1) fail("\u0412 input \u0434\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E \u043E\u0434\u043D\u043E\u0439 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0438.");
+      if (inputCursor >= inputs.length) fail("\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043A\u043E\u043C\u0430\u043D\u0434 input: \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u044F \u0432\u0432\u043E\u0434 \u0443\u0436\u0435 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.");
+      return done(inputs[inputCursor++], args);
+    }
+    if (["int", "str", "len"].includes(node.name)) {
+      if (args.length !== 1) fail(`${node.name} \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.`);
+      if (node.name === "str") return done(display2(values[0]), args);
+      if (node.name === "len") return done(list(values[0]).length, args);
+      const value = Number(values[0]);
+      if (!Number.isInteger(value)) fail("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044C \u0432\u0432\u043E\u0434 \u0432 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C int(input()).");
+      return done(value, args);
+    }
+    if (node.name === "range") {
+      if (args.length < 1 || args.length > 3) fail("\u0423 range \u043D\u0443\u0436\u043D\u044B \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430 \u0438, \u0435\u0441\u043B\u0438 \u043D\u0443\u0436\u043D\u043E, \u0448\u0430\u0433.");
+      const numbers = values.map(number2), start = numbers.length === 1 ? 0 : numbers[0], end = numbers.length === 1 ? numbers[0] : numbers[1], step = numbers[2] ?? 1;
+      if (![start, end, step].every(Number.isInteger) || step === 0) fail("\u0412 range \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0446\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u0438 \u043D\u0435\u043D\u0443\u043B\u0435\u0432\u043E\u0439 \u0448\u0430\u0433.");
+      const result = [];
+      for (let current = start; step > 0 ? current < end : current > end; current += step) {
+        if (result.length >= 1e3) fail("\u0414\u0438\u0430\u043F\u0430\u0437\u043E\u043D \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0433\u0440\u0430\u043D\u0438\u0446\u044B range.");
+        result.push(current);
+      }
+      return done(result, args);
+    }
+    if (["forward", "right", "left"].includes(node.name)) {
+      if (args.length !== 1) fail("\u0414\u043B\u044F \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u0438\u043B\u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u0430 \u0443\u043A\u0430\u0436\u0438 \u043E\u0434\u043D\u043E \u0447\u0438\u0441\u043B\u043E.");
+      const amount = number2(values[0]);
+      if (Math.abs(amount) > 1e4) fail("\u0428\u0430\u0433 \u0438\u043B\u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0432\u0435\u043B\u0438\u043A. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0447\u0438\u0441\u043B\u043E.");
+      if (node.name === "forward") {
+        if (segments.length >= 500) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u043B\u0438\u043D\u0438\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0447\u0438\u0441\u043B\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0439.");
+        const nextX = x + Math.cos(heading * Math.PI / 180) * amount, nextY = y + Math.sin(heading * Math.PI / 180) * amount;
+        segments.push({ x1: x, y1: y, x2: nextX, y2: nextY });
+        x = nextX;
+        y = nextY;
+      } else heading += node.name === "left" ? amount : -amount;
+      const result = done(null, args);
+      for (const part of result.trail) drawingTrail.add(part);
+      if (node.name === "forward") observe({ value: null, trail: drawingTrail });
+      return result;
+    }
+    const fn = functions.get(node.name);
+    if (!fn) return fail(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u043E\u043F\u0438\u0448\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u044E \xAB${node.name}\xBB \u0447\u0435\u0440\u0435\u0437 def, \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0437\u043E\u0432\u0438 \u0435\u0451.`);
+    if (fn.params.length !== args.length) fail(`\u042D\u0442\u0430 \u0444\u0443\u043D\u043A\u0446\u0438\u044F \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 ${fn.params.length} \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0437\u043E\u0432 \u0438 \u0441\u0442\u0440\u043E\u043A\u0443 def.`);
+    if (depth >= 40) fail("\u0424\u0443\u043D\u043A\u0446\u0438\u044F \u0432\u044B\u0437\u044B\u0432\u0430\u0435\u0442 \u0441\u0435\u0431\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0440\u0430\u0437. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0438.");
+    const local = new Map(fn.params.map((name, index) => [name, args[index]])), inside = /* @__PURE__ */ new Set([...control, node, fn]);
+    try {
+      execute(fn.body, local, depth + 1, inside);
+    } catch (signal) {
+      if (signal instanceof ReturnSignal) return done(signal.result.value, [signal.result, ...args]);
+      throw signal;
+    }
+    return track(null, fn, args, inside);
+  };
+  const execute = (items, scope, depth, control) => {
+    for (const item of items) {
+      tick();
+      if (item.kind === "pass") continue;
+      if (item.kind === "function") {
+        functions.set(item.name, item);
+        continue;
+      }
+      if (item.kind === "return") {
+        if (!depth) fail("\u041F\u043E\u043C\u0435\u0441\u0442\u0438 return \u0432\u043D\u0443\u0442\u0440\u044C \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0441 \u043E\u0442\u0441\u0442\u0443\u043F\u043E\u043C.");
+        const result = evaluate2(item.value, scope, depth, control);
+        throw new ReturnSignal(track(result.value, item, [result], control));
+      }
+      if (item.kind === "expression") {
+        evaluate2(item.value, scope, depth, /* @__PURE__ */ new Set([...control, item]));
+        continue;
+      }
+      if (item.kind === "assign") {
+        const result = evaluate2(item.value, scope, depth, control), assigned = track(result.value, item, [result], control);
+        if (item.index) {
+          const owner = scope.get(item.name) || globals.get(item.name);
+          if (!owner) fail("\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u043E\u0437\u0434\u0430\u0439 \u0441\u043F\u0438\u0441\u043E\u043A, \u0437\u0430\u0442\u0435\u043C \u043C\u0435\u043D\u044F\u0439 \u0435\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442.");
+          const values = list(owner.value), position = evaluate2(item.index, scope, depth, control), index = number2(position.value);
+          if (!Number.isInteger(index) || index < -values.length || index >= values.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442.");
+          values[index < 0 ? values.length + index : index] = result.value;
+          for (const node of [...assigned.trail, ...position.trail]) owner.trail.add(node);
+        } else {
+          if (scope.has(item.name)) reassigned.add(item);
+          scope.set(item.name, assigned);
+        }
+        continue;
+      }
+      if (item.kind === "if") {
+        const tests = [];
+        let body = item.otherwise;
+        for (const branch of item.branches) {
+          const condition = evaluate2(branch.condition, scope, depth, control);
+          tests.push(condition);
+          if (condition.value) {
+            body = branch.body;
+            break;
+          }
+        }
+        execute(body, scope, depth, track(null, item, tests, control).trail);
+        continue;
+      }
+      if (item.kind === "for") {
+        const source = evaluate2(item.iterable, scope, depth, control), inside = track(null, item, [source], control).trail;
+        for (const value of list(source.value)) {
+          tick();
+          scope.set(item.name, track(value, item, [source], control));
+          execute(item.body, scope, depth, inside);
+        }
+        continue;
+      }
+      while (true) {
+        const condition = evaluate2(item.condition, scope, depth, control);
+        if (!condition.value) break;
+        tick();
+        execute(item.body, scope, depth, track(null, item, [condition], control).trail);
+      }
+    }
+  };
+  try {
+    execute(program, globals, 0, /* @__PURE__ */ new Set());
+    return { output, segments, operations, observed, reassigned };
+  } catch (error) {
+    return { output, segments, operations, observed, reassigned, error: error instanceof Error ? error.message : "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u044B \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B." };
+  }
+}
+function runCourseProgram(source, inputs = []) {
+  try {
+    return runPythonAst(parseCourseProgram(source), inputs);
+  } catch (error) {
+    return { output: [], segments: [], operations: 0, observed: /* @__PURE__ */ new Set(), reassigned: /* @__PURE__ */ new Set(), error: error instanceof Error ? error.message : "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0437\u0430\u043F\u0438\u0441\u044C Python." };
+  }
+}
+
+// src/pythonRuntime.ts
 var namePattern = /^[\p{L}_][\p{L}\p{N}_]*$/u;
 var forbidden = new Set("import from as class async await lambda global nonlocal exec eval open del yield try except finally with raise break continue".split(" "));
 function validName2(name) {
@@ -401,10 +605,10 @@ function tokenize(source) {
       position += string[0].length;
       continue;
     }
-    const number2 = /^\d+(?:\.\d+)?/.exec(rest);
-    if (number2) {
-      tokens.push(number2[0]);
-      position += number2[0].length;
+    const number3 = /^\d+(?:\.\d+)?/.exec(rest);
+    if (number3) {
+      tokens.push(number3[0]);
+      position += number3[0].length;
       continue;
     }
     const name = /^[\p{L}_][\p{L}\p{N}_]*/u.exec(rest);
@@ -481,7 +685,7 @@ var ExpressionParser = class {
     while (this.peek() === "(" || this.peek() === "[") {
       if (this.peek() === "(") {
         this.take();
-        if (value.kind !== "name") syntax("\u0412\u044B\u0437\u043E\u0432 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E \u0438\u043C\u0435\u043D\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
+        if (value.kind !== "name") syntax("\u041F\u0435\u0440\u0435\u0434 \u0441\u043A\u043E\u0431\u043A\u0430\u043C\u0438 \u0432\u044B\u0437\u043E\u0432\u0430 \u0437\u0430\u043F\u0438\u0448\u0438 \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
         const args = [];
         while (this.peek() !== ")") {
           if (!this.peek()) syntax("\u041D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442 \u0432\u044B\u0437\u043E\u0432 \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
@@ -566,6 +770,7 @@ function parseCourseProgram(source) {
         result.push({ kind: "assign", name: match[1], index: match[2] ? expression(match[2]) : void 0, value: expression(match[3]) });
         continue;
       }
+      if (/^(if|elif|else|while|for|def)\b/.test(line.text)) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u043E\u0441\u043B\u0435 \u0443\u0441\u043B\u043E\u0432\u0438\u044F, \u0446\u0438\u043A\u043B\u0430 \u0438\u043B\u0438 def \u043D\u0443\u0436\u043D\u044B \u0434\u0432\u043E\u0435\u0442\u043E\u0447\u0438\u0435 \u0438 \u0441\u0442\u0440\u043E\u043A\u0430 \u0441 \u043E\u0442\u0441\u0442\u0443\u043F\u043E\u043C.`);
       const value = expression(line.text);
       if (value.kind !== "call") syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u0437\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u0438\u043B\u0438 \u043F\u0440\u0438\u0441\u0432\u0430\u0438\u0432\u0430\u043D\u0438\u0435.`);
       result.push({ kind: "expression", value });
@@ -576,193 +781,90 @@ function parseCourseProgram(source) {
   if (cursor < lines.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${lines[cursor].number}: else \u0438\u043B\u0438 elif \u0434\u043E\u043B\u0436\u043D\u044B \u0438\u0434\u0442\u0438 \u0441\u0440\u0430\u0437\u0443 \u043F\u043E\u0441\u043B\u0435 if.`);
   return program;
 }
-var asNumber = (value) => {
-  if (typeof value !== "number" || !Number.isFinite(value)) syntax("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u043E \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u0430\u0432\u044B\u0447\u043A\u0438 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 input \u0447\u0435\u0440\u0435\u0437 int.");
-  return value;
-};
-var asList = (value) => {
-  if (!Array.isArray(value)) syntax("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u0435\u043D \u0441\u043F\u0438\u0441\u043E\u043A.");
-  return value;
-};
-var display2 = (value) => {
-  if (Array.isArray(value)) return `[${value.map((item) => typeof item === "string" ? JSON.stringify(item) : display2(item)).join(", ")}]`;
-  if (typeof value === "boolean") return value ? "True" : "False";
-  if (value === null) return "None";
-  return String(value);
-};
-var ReturnSignal = class {
-  constructor(value) {
-    this.value = value;
-  }
-};
-function runCourseProgram(source, inputs = []) {
-  const output = [], segments = [];
-  let operations = 0, inputCursor = 0, x = 0, y = 0, heading = 0;
-  try {
-    const program = parseCourseProgram(source);
-    const globals = /* @__PURE__ */ new Map();
-    const functions = /* @__PURE__ */ new Map();
-    const tick = () => {
-      if (++operations > 1e4) syntax("\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0446\u0438\u043A\u043B \u0438\u043B\u0438 \u0432\u044B\u0437\u043E\u0432\u044B \u0444\u0443\u043D\u043A\u0446\u0438\u0439.");
-    };
-    const evaluate2 = (node, scope, depth) => {
-      tick();
-      if (node.kind === "literal") return node.value;
-      if (node.kind === "name") {
-        if (scope.has(node.name)) return scope.get(node.name);
-        if (globals.has(node.name)) return globals.get(node.name);
-        syntax(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0437\u0430\u0434\u0430\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \xAB${node.name}\xBB.`);
-      }
-      if (node.kind === "list") {
-        if (node.items.length > 1e3) syntax("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
-        return node.items.map((item) => evaluate2(item, scope, depth));
-      }
-      if (node.kind === "unary") {
-        const value = evaluate2(node.value, scope, depth);
-        return node.operator === "not" ? !value : -asNumber(value);
-      }
-      if (node.kind === "index") {
-        const list = asList(evaluate2(node.target, scope, depth)), index = asNumber(evaluate2(node.index, scope, depth));
-        if (!Number.isInteger(index) || index < -list.length || index >= list.length) syntax("\u0418\u043D\u0434\u0435\u043A\u0441 \u0432\u043D\u0435 \u0441\u043F\u0438\u0441\u043A\u0430.");
-        return list[index < 0 ? list.length + index : index];
-      }
-      if (node.kind === "binary") {
-        const left = evaluate2(node.left, scope, depth);
-        if (node.operator === "and") return left ? evaluate2(node.right, scope, depth) : left;
-        if (node.operator === "or") return left ? left : evaluate2(node.right, scope, depth);
-        const right = evaluate2(node.right, scope, depth);
-        if (node.operator === "==") return JSON.stringify(left) === JSON.stringify(right);
-        if (node.operator === "!=") return JSON.stringify(left) !== JSON.stringify(right);
-        if (["<", "<=", ">", ">="].includes(node.operator)) {
-          if (typeof left !== typeof right || typeof left !== "number" && typeof left !== "string") syntax("\u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0439 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0438\u043B\u0438 \u0434\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438.");
-          const a2 = left, b2 = right;
-          if (node.operator === "<") return a2 < b2;
-          if (node.operator === "<=") return a2 <= b2;
-          if (node.operator === ">") return a2 > b2;
-          return a2 >= b2;
-        }
-        if (node.operator === "+" && typeof left === "string" && typeof right === "string") return left + right;
-        const a = asNumber(left), b = asNumber(right);
-        if (["/", "%"].includes(node.operator) && b === 0) syntax("\u0414\u0435\u043B\u0438\u0442\u044C \u043D\u0430 \u043D\u043E\u043B\u044C \u043D\u0435\u043B\u044C\u0437\u044F.");
-        const result = node.operator === "+" ? a + b : node.operator === "-" ? a - b : node.operator === "*" ? a * b : node.operator === "/" ? a / b : node.operator === "%" ? (a % b + b) % b : a ** b;
-        if (!Number.isFinite(result) || Math.abs(result) > 1e12) syntax("\u0427\u0438\u0441\u043B\u043E \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0435 \u0434\u043B\u044F \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0437\u0430\u043F\u0443\u0441\u043A\u0430.");
-        return result;
-      }
-      const args = node.args.map((arg) => evaluate2(arg, scope, depth));
-      if (node.name === "print") {
-        if (output.length >= 500) syntax("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0441\u0442\u0440\u043E\u043A \u0432\u044B\u0432\u043E\u0434\u0430.");
-        output.push(args.map(display2).join(" "));
-        return null;
-      }
-      if (node.name === "input") {
-        if (args.length > 1) syntax("input \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u043E\u0434\u043D\u043E\u0439 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0438.");
-        if (inputCursor >= inputs.length) syntax("\u0414\u043B\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0432\u0445\u043E\u0434\u043D\u044B\u0445 \u0434\u0430\u043D\u043D\u044B\u0445.");
-        return inputs[inputCursor++];
-      }
-      if (node.name === "int") {
-        if (args.length !== 1) syntax("int \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.");
-        const value = Number(args[0]);
-        if (!Number.isInteger(value)) syntax("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044C \u0432\u0432\u043E\u0434 \u0432 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E.");
-        return value;
-      }
-      if (node.name === "str") {
-        if (args.length !== 1) syntax("str \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.");
-        return display2(args[0]);
-      }
-      if (node.name === "len") {
-        if (args.length !== 1) syntax("len \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u0438\u043D \u0441\u043F\u0438\u0441\u043E\u043A.");
-        return asList(args[0]).length;
-      }
-      if (node.name === "range") {
-        if (args.length < 1 || args.length > 3) syntax("range \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0442 \u043E\u0434\u043D\u043E\u0433\u043E \u0434\u043E \u0442\u0440\u0451\u0445 \u0447\u0438\u0441\u0435\u043B.");
-        const numbers = args.map(asNumber), start = numbers.length === 1 ? 0 : numbers[0], end = numbers.length === 1 ? numbers[0] : numbers[1], step = numbers[2] ?? 1;
-        if (![start, end, step].every(Number.isInteger) || step === 0) syntax("range \u043D\u0443\u0436\u043D\u044B \u0446\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u0438 \u043D\u0435\u043D\u0443\u043B\u0435\u0432\u043E\u0439 \u0448\u0430\u0433.");
-        const values = [];
-        for (let current = start; step > 0 ? current < end : current > end; current += step) {
-          if (values.length >= 1e3) syntax("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439 \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D range.");
-          values.push(current);
-        }
-        return values;
-      }
-      if (node.name === "forward" || node.name === "right" || node.name === "left") {
-        if (args.length !== 1) syntax("\u041A\u043E\u043C\u0430\u043D\u0434\u0435 \u0447\u0435\u0440\u0435\u043F\u0430\u0448\u043A\u0438 \u043D\u0443\u0436\u043D\u043E \u043E\u0434\u043D\u043E \u0447\u0438\u0441\u043B\u043E.");
-        const amount = asNumber(args[0]);
-        if (Math.abs(amount) > 1e4) syntax("\u0428\u0430\u0433 \u0438\u043B\u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442 \u0447\u0435\u0440\u0435\u043F\u0430\u0448\u043A\u0438 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0432\u0435\u043B\u0438\u043A.");
-        if (node.name === "forward") {
-          const nextX = x + Math.cos(heading * Math.PI / 180) * amount, nextY = y + Math.sin(heading * Math.PI / 180) * amount;
-          if (segments.length >= 500) syntax("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u043B\u0438\u043D\u0438\u0439 \u043D\u0430 \u0440\u0438\u0441\u0443\u043D\u043A\u0435.");
-          segments.push({ x1: x, y1: y, x2: nextX, y2: nextY });
-          x = nextX;
-          y = nextY;
-        } else heading += node.name === "left" ? amount : -amount;
-        return null;
-      }
-      const fn = functions.get(node.name);
-      if (!fn) syntax(`\u0424\u0443\u043D\u043A\u0446\u0438\u044F \xAB${node.name}\xBB \u043D\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0430 \u0438\u043B\u0438 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F.`);
-      if (fn.params.length !== args.length) syntax(`\u0424\u0443\u043D\u043A\u0446\u0438\u0438 \xAB${node.name}\xBB \u043D\u0443\u0436\u043D\u043E ${fn.params.length} \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.`);
-      if (depth >= 40) syntax("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0433\u043B\u0443\u0431\u043E\u043A\u0438\u0435 \u0432\u044B\u0437\u043E\u0432\u044B \u0444\u0443\u043D\u043A\u0446\u0438\u0439.");
-      const local = new Map(fn.params.map((name, index) => [name, args[index]]));
-      try {
-        execute(fn.body, local, depth + 1);
-      } catch (signal) {
-        if (signal instanceof ReturnSignal) return signal.value;
-        throw signal;
-      }
-      return null;
-    };
-    const execute = (items, scope, depth) => {
-      for (const item of items) {
-        tick();
-        if (item.kind === "pass") continue;
-        if (item.kind === "function") {
-          functions.set(item.name, item);
-          continue;
-        }
-        if (item.kind === "return") {
-          if (depth === 0) syntax("return \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F \u0432\u043D\u0443\u0442\u0440\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
-          throw new ReturnSignal(evaluate2(item.value, scope, depth));
-        }
-        if (item.kind === "expression") {
-          evaluate2(item.value, scope, depth);
-          continue;
-        }
-        if (item.kind === "assign") {
-          const value = evaluate2(item.value, scope, depth);
-          if (item.index) {
-            const list = asList(scope.has(item.name) ? scope.get(item.name) : globals.get(item.name) ?? null), index = asNumber(evaluate2(item.index, scope, depth));
-            if (!Number.isInteger(index) || index < -list.length || index >= list.length) syntax("\u0418\u043D\u0434\u0435\u043A\u0441 \u0432\u043D\u0435 \u0441\u043F\u0438\u0441\u043A\u0430.");
-            list[index < 0 ? list.length + index : index] = value;
-          } else scope.set(item.name, value);
-          continue;
-        }
-        if (item.kind === "if") {
-          const branch = item.branches.find((entry) => Boolean(evaluate2(entry.condition, scope, depth)));
-          execute(branch?.body || item.otherwise, scope, depth);
-          continue;
-        }
-        if (item.kind === "for") {
-          const iterable = asList(evaluate2(item.iterable, scope, depth));
-          for (const value of iterable) {
-            tick();
-            scope.set(item.name, value);
-            execute(item.body, scope, depth);
-          }
-          continue;
-        }
-        if (item.kind === "while") {
-          while (Boolean(evaluate2(item.condition, scope, depth))) {
-            tick();
-            execute(item.body, scope, depth);
-          }
-        }
-      }
-    };
-    execute(program, globals, 0);
-    return { output, segments, operations };
-  } catch (error) {
-    return { output, segments, operations, error: error instanceof Error ? error.message : "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0443." };
-  }
-}
+
+// src/lessonObjectives.ts
+var rows = [
+  [23, "string", "", "print", "op:+"],
+  [24, "arithmetic", "variable", "number", "assign:1 op:*"],
+  [25, "arithmetic", "variable", "number", "assign:2 op:-"],
+  [26, "variable", "string", "print,string", "assign:1 op:+"],
+  [27, "arithmetic", "", "number", "sum_product"],
+  [28, "arithmetic", "", "number", "op:+ op:/"],
+  [29, "comparison", "arithmetic", "number", "op:% op:=="],
+  [30, "sequence", "print", "print", "print:2"],
+  [31, "assignment", "arithmetic", "variable", "reassign op:+"],
+  [32, "comparison", "variable", "number", "assign:1 op:>="],
+  [33, "arithmetic", "variable", "number", "assign:2 op:*"],
+  [34, "if", "comparison", "variable", "kind:if branches:1 else op:<"],
+  [35, "comparison", "if", "variable", "kind:if op:>="],
+  [36, "if", "comparison", "variable", "kind:if else op:>="],
+  [37, "if", "comparison", "string", "kind:if op:=="],
+  [38, "if", "comparison", "comparison", "branches:2 else"],
+  [39, "if", "arithmetic", "comparison", "kind:if else op:%"],
+  [40, "if", "comparison", "comparison", "kind:if else op:>="],
+  [41, "comparison", "if", "comparison", "kind:if op:and"],
+  [42, "if", "comparison", "comparison", "branches:2 else"],
+  [43, "if", "string", "comparison", "kind:if else op:=="],
+  [44, "if", "arithmetic", "comparison", "kind:if else op:* op:-"],
+  [45, "loop", "", "print", "kind:for"],
+  [46, "loop", "", "number", "kind:for call:range"],
+  [47, "loop", "", "number", "kind:for call:range"],
+  [48, "loop", "arithmetic,assignment", "variable", "kind:for reassign op:+"],
+  [49, "loop", "assignment", "variable", "kind:for reassign op:+"],
+  [50, "loop", "comparison,assignment", "variable", "kind:while reassign"],
+  [51, "loop", "comparison,assignment", "variable", "kind:while op:-"],
+  [52, "loop", "arithmetic", "number", "kind:for op:*"],
+  [53, "loop", "arithmetic", "loop", "nested_loop"],
+  [54, "loop", "if,arithmetic", "if", "kind:for kind:if op:%"],
+  [55, "loop", "arithmetic", "variable", "kind:for op:* op:+"],
+  [56, "function", "", "sequence", "kind:function"],
+  [57, "function", "string", "string", "params:1"],
+  [58, "function", "arithmetic", "arithmetic", "params:1 kind:return"],
+  [59, "function", "arithmetic", "arithmetic", "params:1 kind:return"],
+  [60, "function", "comparison", "comparison", "params:1 kind:return op:>="],
+  [61, "function", "arithmetic", "arithmetic", "params:2 kind:return"],
+  [62, "function", "string", "string", "params:1 kind:return op:+"],
+  [63, "function", "loop,arithmetic", "loop", "params:1 kind:return kind:for"],
+  [64, "function", "comparison,arithmetic", "comparison", "params:1 kind:return op:%"],
+  [65, "function", "if,arithmetic", "if", "params:2 kind:return kind:if"],
+  [66, "function", "string", "string", "params:1"],
+  [67, "list", "", "variable", "kind:list kind:index"],
+  [68, "list", "", "variable", "kind:list kind:index"],
+  [69, "list", "", "variable", "kind:list call:len"],
+  [70, "list", "", "variable", "kind:list kind:index"],
+  [71, "list", "loop", "loop", "kind:list kind:for"],
+  [72, "list", "loop,arithmetic", "loop", "kind:list kind:for op:+"],
+  [73, "list", "loop,comparison", "loop,if", "kind:list kind:for kind:if"],
+  [74, "list", "assignment", "variable", "kind:list mutate_index"],
+  [75, "list", "loop,if", "loop,if", "kind:list kind:for kind:if op:%"],
+  [76, "list", "loop,if", "loop,if", "kind:list kind:for kind:if"],
+  [77, "list", "loop,assignment", "loop", "kind:list kind:for reassign"],
+  [78, "list", "loop,arithmetic", "loop", "kind:list kind:for call:len op:+"],
+  [79, "input", "string", "variable", "call:input"],
+  [80, "input", "arithmetic", "arithmetic", "call:input call:int op:+"],
+  [81, "input", "arithmetic", "arithmetic", "input:2 call:int op:+"],
+  [82, "input", "arithmetic", "arithmetic", "input:2 call:int op:*"],
+  [83, "input", "if,comparison", "if", "call:input call:int kind:if"],
+  [84, "input", "if,string", "if", "call:input kind:if"],
+  [85, "input", "if,comparison", "if", "call:input call:int kind:if"],
+  [86, "input", "loop", "loop", "call:input kind:for"],
+  [87, "input", "loop", "loop", "call:input call:int kind:for"],
+  [88, "input", "arithmetic", "arithmetic", "input:2 call:int op:-"],
+  [89, "input", "arithmetic,sequence", "arithmetic", "input:3 call:int op:* print:2"],
+  [90, "drawing", "", "number", "call:forward"],
+  [91, "drawing", "sequence", "sequence", "call:forward call:right"],
+  [92, "drawing", "loop", "loop", "call:forward kind:for"],
+  [93, "drawing", "loop", "loop", "call:forward kind:for"],
+  [94, "drawing", "loop", "loop", "call:forward kind:for"],
+  [95, "drawing", "loop", "loop", "call:forward kind:for"],
+  [96, "drawing", "variable,loop", "loop,variable", "call:forward kind:for assign:1"],
+  [97, "drawing", "loop", "loop", "call:forward kind:for call:left"],
+  [98, "drawing", "function,loop", "function,loop", "call:forward params:1 kind:for"],
+  [99, "drawing", "function,loop", "function,loop", "call:forward kind:function nested_loop"],
+  [100, "drawing", "function,loop", "function,loop", "call:forward params:1 kind:for"]
+];
+var ids = (text3) => text3 ? text3.split(",") : [];
+var lessonObjectives = Object.fromEntries(rows.map(([id, primarySkill, practice, prerequisites, rules]) => [id, { skills: { primarySkill, teaches: [primarySkill], practices: ids(practice), requires: ids(prerequisites) }, rules: rules.split(" ") }]));
 
 // src/courseMaterials.ts
 var courseMaterials = {
@@ -777,97 +879,97 @@ var courseMaterials = {
 
 // src/extendedCourse.ts
 var chapters = [
-  { id: 6, skills: ["arithmetic", "variable", "text_syntax"], tasks: [
-    ["\u0412\u044B\u0432\u0435\u0441\u043A\u0430 \u043A\u043B\u0443\u0431\u0430", "\u0421\u043E\u0431\u0435\u0440\u0438 \u0438\u0437 \u0434\u0432\u0443\u0445 \u0447\u0430\u0441\u0442\u0435\u0439 \u0438 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \xAB\u041A\u043B\u0443\u0431 \u041A\u043E\u0434\u0438\u043A\xBB.", 'print("\u041A\u043B\u0443\u0431 " + "\u041A\u043E\u0434\u0438\u043A")', "\u0417\u043D\u0430\u043A + \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u0435\u0442 \u0434\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438.", [/\+/, /print\s*\(/]],
-    ["\u0422\u0440\u0438 \u0431\u0438\u043B\u0435\u0442\u0430", "\u041E\u0434\u0438\u043D \u0431\u0438\u043B\u0435\u0442 \u0441\u0442\u043E\u0438\u0442 7 \u043C\u043E\u043D\u0435\u0442. \u041F\u043E\u043A\u0430\u0436\u0438 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u0442\u0440\u0451\u0445 \u0431\u0438\u043B\u0435\u0442\u043E\u0432 \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435\u043C.", "ticket = 7\nprint(ticket * 3)", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0446\u0435\u043D\u0443 \u0438 \u0443\u043C\u043D\u043E\u0436\u044C \u0435\u0451 \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E.", [/^[\p{L}_][\p{L}\p{N}_]*\s*=/mu, /\*/]],
-    ["\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u0436\u0435\u0442\u043E\u043D\u043E\u0432", "\u0411\u044B\u043B\u043E 20 \u0436\u0435\u0442\u043E\u043D\u043E\u0432, \u043F\u043E\u0442\u0440\u0430\u0442\u0438\u043B\u0438 6. \u0412\u044B\u0432\u0435\u0434\u0438 \u043E\u0441\u0442\u0430\u0442\u043E\u043A.", "total = 20\nused = 6\nprint(total - used)", "\u0412\u044B\u0447\u0442\u0438 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043D\u043E\u0435 \u0438\u0437 \u043E\u0431\u0449\u0435\u0433\u043E \u0447\u0438\u0441\u043B\u0430.", [/^[\p{L}_][\p{L}\p{N}_]*\s*=/mu, /-/]],
-    ["\u041F\u0440\u0438\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435 \u043F\u043E \u0438\u043C\u0435\u043D\u0438", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0438\u043C\u044F \u041B\u0435\u044F \u0438 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u041B\u0435\u044F\xBB.", 'name = "\u041B\u0435\u044F"\nprint("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)', "\u0421\u043E\u0435\u0434\u0438\u043D\u0438 \u043D\u0430\u0447\u0430\u043B\u043E \u0444\u0440\u0430\u0437\u044B \u0441\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435\u043C \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439.", [/^[\p{L}_][\p{L}\p{N}_]*\s*=/mu, /\+/]],
-    ["\u0421\u043A\u043E\u0431\u043A\u0438 \u043C\u0435\u043D\u044F\u044E\u0442 \u043E\u0442\u0432\u0435\u0442", "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u043B\u043E\u0436\u0438 8 \u0438 4, \u0437\u0430\u0442\u0435\u043C \u0443\u043C\u043D\u043E\u0436\u044C \u0441\u0443\u043C\u043C\u0443 \u043D\u0430 3. \u0412\u044B\u0432\u0435\u0434\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", "print((8 + 4) * 3)", "\u0421\u0443\u043C\u043C\u0430 \u0434\u043E\u043B\u0436\u043D\u0430 \u043E\u043A\u0430\u0437\u0430\u0442\u044C\u0441\u044F \u0432\u043E \u0432\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u0438\u0445 \u0441\u043A\u043E\u0431\u043A\u0430\u0445.", [/\(\s*8\s*\+\s*4\s*\)/]],
-    ["\u0421\u0440\u0435\u0434\u043D\u0438\u0439 \u0431\u0430\u043B\u043B", "\u0411\u0430\u043B\u043B\u044B \u0437\u0430 \u0434\u0432\u0430 \u0440\u0430\u0443\u043D\u0434\u0430: 7 \u0438 9. \u0412\u044B\u0447\u0438\u0441\u043B\u0438 \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0441\u0440\u0435\u0434\u043D\u0435\u0435.", "print((7 + 9) / 2)", "\u0421\u043B\u043E\u0436\u0438 \u0434\u0432\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430 \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438 \u043D\u0430 \u0434\u0432\u0430.", [/\//]],
-    ["\u0427\u0451\u0442\u043D\u044B\u0439 \u044D\u0442\u0430\u0436", "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435\u043C, \u0447\u0451\u0442\u043D\u044B\u0439 \u043B\u0438 \u044D\u0442\u0430\u0436 14. \u0412\u044B\u0432\u0435\u0434\u0438 True \u0438\u043B\u0438 False.", "print(14 % 2 == 0)", "\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u043E\u0442 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043D\u0430 2 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0447\u0451\u0442\u043D\u043E\u0441\u0442\u044C.", [/%/, /==/]],
-    ["\u0414\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438 \u0430\u0444\u0438\u0448\u0438", "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \u043D\u0430 \u0440\u0430\u0437\u043D\u044B\u0445 \u0441\u0442\u0440\u043E\u043A\u0430\u0445 \xAB\u041E\u0442\u043A\u0440\u044B\u0442\u043E\xBB \u0438 \xAB\u0414\u043E 18:00\xBB.", 'print("\u041E\u0442\u043A\u0440\u044B\u0442\u043E")\nprint("\u0414\u043E 18:00")', "\u041A\u0430\u0436\u0434\u0430\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0430 print \u0441\u043E\u0437\u0434\u0430\u0451\u0442 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u0443\u044E \u0441\u0442\u0440\u043E\u043A\u0443.", [/print\s*\([\s\S]*print\s*\(/]],
-    ["\u041F\u043E\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435 \u0441\u0447\u0451\u0442\u0430", "\u041D\u0430 \u0441\u0447\u0451\u0442\u0435 \u0431\u044B\u043B\u043E 5 \u043E\u0447\u043A\u043E\u0432, \u0434\u043E\u0431\u0430\u0432\u0438\u043B\u0438 4. \u0418\u0437\u043C\u0435\u043D\u0438 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u043E\u0432\u044B\u0439 \u0441\u0447\u0451\u0442.", "points = 5\npoints = points + 4\nprint(points)", "\u041F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \u043C\u043E\u0436\u043D\u043E \u043F\u0440\u0438\u0441\u0432\u043E\u0438\u0442\u044C \u043D\u043E\u0432\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0435 \u0441\u0442\u0430\u0440\u043E\u0433\u043E.", [/^[\p{L}_][\p{L}\p{N}_]*\s*=/mu, /\+/]],
-    ["\u0414\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E \u043C\u043E\u043D\u0435\u0442?", "\u041F\u0440\u043E\u0432\u0435\u0440\u044C, \u0445\u0432\u0430\u0442\u0438\u0442 \u043B\u0438 12 \u043C\u043E\u043D\u0435\u0442 \u043D\u0430 \u043F\u043E\u043A\u0443\u043F\u043A\u0443 \u0437\u0430 10. \u0412\u044B\u0432\u0435\u0434\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F.", "coins = 12\nprint(coins >= 10)", "\u0417\u043D\u0430\u043A >= \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \xAB\u0431\u043E\u043B\u044C\u0448\u0435 \u0438\u043B\u0438 \u0440\u0430\u0432\u043D\u043E\xBB.", [/>=/]],
-    ["\u0427\u0435\u043A \u0437\u0430 \u043D\u0430\u0431\u043E\u0440", "\u0422\u0435\u0442\u0440\u0430\u0434\u044C \u0441\u0442\u043E\u0438\u0442 9 \u043C\u043E\u043D\u0435\u0442. \u041A\u0443\u043F\u0438\u043B\u0438 3. \u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0446\u0435\u043D\u0443 \u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E, \u0432\u044B\u0432\u0435\u0434\u0438 \u0438\u0442\u043E\u0433.", "price = 9\ncount = 3\nprint(price * count)", "\u0418\u0442\u043E\u0433 \u2014 \u0446\u0435\u043D\u0430 \u043E\u0434\u043D\u043E\u0439 \u0432\u0435\u0449\u0438, \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u043D\u0430\u044F \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E.", [/^[\p{L}_][\p{L}\p{N}_]*\s*=/mu, /^[\p{L}_][\p{L}\p{N}_]*\s*=/mu, /\*/]]
+  { id: 6, tasks: [
+    ["\u0412\u044B\u0432\u0435\u0441\u043A\u0430 \u043A\u043B\u0443\u0431\u0430", "\u0421\u043E\u0431\u0435\u0440\u0438 \u0438\u0437 \u0434\u0432\u0443\u0445 \u0447\u0430\u0441\u0442\u0435\u0439 \u0438 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \xAB\u041A\u043B\u0443\u0431 \u041A\u043E\u0434\u0438\u043A\xBB.", 'print("\u041A\u043B\u0443\u0431 " + "\u041A\u043E\u0434\u0438\u043A")', "\u0417\u043D\u0430\u043A + \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u0435\u0442 \u0434\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438."],
+    ["\u0422\u0440\u0438 \u0431\u0438\u043B\u0435\u0442\u0430", "\u041E\u0434\u0438\u043D \u0431\u0438\u043B\u0435\u0442 \u0441\u0442\u043E\u0438\u0442 7 \u043C\u043E\u043D\u0435\u0442. \u041F\u043E\u043A\u0430\u0436\u0438 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u0442\u0440\u0451\u0445 \u0431\u0438\u043B\u0435\u0442\u043E\u0432 \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435\u043C.", "ticket = 7\nprint(ticket * 3)", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0446\u0435\u043D\u0443 \u0438 \u0443\u043C\u043D\u043E\u0436\u044C \u0435\u0451 \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E."],
+    ["\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u0436\u0435\u0442\u043E\u043D\u043E\u0432", "\u0411\u044B\u043B\u043E 20 \u0436\u0435\u0442\u043E\u043D\u043E\u0432, \u043F\u043E\u0442\u0440\u0430\u0442\u0438\u043B\u0438 6. \u0412\u044B\u0432\u0435\u0434\u0438 \u043E\u0441\u0442\u0430\u0442\u043E\u043A.", "total = 20\nused = 6\nprint(total - used)", "\u0412\u044B\u0447\u0442\u0438 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043D\u043E\u0435 \u0438\u0437 \u043E\u0431\u0449\u0435\u0433\u043E \u0447\u0438\u0441\u043B\u0430."],
+    ["\u041F\u0440\u0438\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435 \u043F\u043E \u0438\u043C\u0435\u043D\u0438", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0438\u043C\u044F \u041B\u0435\u044F \u0438 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u041B\u0435\u044F\xBB.", 'name = "\u041B\u0435\u044F"\nprint("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)', "\u0421\u043E\u0435\u0434\u0438\u043D\u0438 \u043D\u0430\u0447\u0430\u043B\u043E \u0444\u0440\u0430\u0437\u044B \u0441\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435\u043C \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439."],
+    ["\u0421\u043A\u043E\u0431\u043A\u0438 \u043C\u0435\u043D\u044F\u044E\u0442 \u043E\u0442\u0432\u0435\u0442", "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u043B\u043E\u0436\u0438 8 \u0438 4, \u0437\u0430\u0442\u0435\u043C \u0443\u043C\u043D\u043E\u0436\u044C \u0441\u0443\u043C\u043C\u0443 \u043D\u0430 3. \u0412\u044B\u0432\u0435\u0434\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", "print((8 + 4) * 3)", "\u0421\u0443\u043C\u043C\u0430 \u0434\u043E\u043B\u0436\u043D\u0430 \u043E\u043A\u0430\u0437\u0430\u0442\u044C\u0441\u044F \u0432\u043E \u0432\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u0438\u0445 \u0441\u043A\u043E\u0431\u043A\u0430\u0445."],
+    ["\u0421\u0440\u0435\u0434\u043D\u0438\u0439 \u0431\u0430\u043B\u043B", "\u0411\u0430\u043B\u043B\u044B \u0437\u0430 \u0434\u0432\u0430 \u0440\u0430\u0443\u043D\u0434\u0430: 7 \u0438 9. \u0412\u044B\u0447\u0438\u0441\u043B\u0438 \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0441\u0440\u0435\u0434\u043D\u0435\u0435.", "print((7 + 9) / 2)", "\u0421\u043B\u043E\u0436\u0438 \u0434\u0432\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430 \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438 \u043D\u0430 \u0434\u0432\u0430."],
+    ["\u0427\u0451\u0442\u043D\u044B\u0439 \u044D\u0442\u0430\u0436", "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435\u043C, \u0447\u0451\u0442\u043D\u044B\u0439 \u043B\u0438 \u044D\u0442\u0430\u0436 14. \u0412\u044B\u0432\u0435\u0434\u0438 True \u0438\u043B\u0438 False.", "print(14 % 2 == 0)", "\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u043E\u0442 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043D\u0430 2 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0447\u0451\u0442\u043D\u043E\u0441\u0442\u044C."],
+    ["\u0414\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438 \u0430\u0444\u0438\u0448\u0438", "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \u043D\u0430 \u0440\u0430\u0437\u043D\u044B\u0445 \u0441\u0442\u0440\u043E\u043A\u0430\u0445 \xAB\u041E\u0442\u043A\u0440\u044B\u0442\u043E\xBB \u0438 \xAB\u0414\u043E 18:00\xBB.", 'print("\u041E\u0442\u043A\u0440\u044B\u0442\u043E")\nprint("\u0414\u043E 18:00")', "\u041A\u0430\u0436\u0434\u0430\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0430 print \u0441\u043E\u0437\u0434\u0430\u0451\u0442 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u0443\u044E \u0441\u0442\u0440\u043E\u043A\u0443."],
+    ["\u041F\u043E\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435 \u0441\u0447\u0451\u0442\u0430", "\u041D\u0430 \u0441\u0447\u0451\u0442\u0435 \u0431\u044B\u043B\u043E 5 \u043E\u0447\u043A\u043E\u0432, \u0434\u043E\u0431\u0430\u0432\u0438\u043B\u0438 4. \u0418\u0437\u043C\u0435\u043D\u0438 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u043E\u0432\u044B\u0439 \u0441\u0447\u0451\u0442.", "points = 5\npoints = points + 4\nprint(points)", "\u041F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \u043C\u043E\u0436\u043D\u043E \u043F\u0440\u0438\u0441\u0432\u043E\u0438\u0442\u044C \u043D\u043E\u0432\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0435 \u0441\u0442\u0430\u0440\u043E\u0433\u043E."],
+    ["\u0414\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E \u043C\u043E\u043D\u0435\u0442?", "\u041F\u0440\u043E\u0432\u0435\u0440\u044C, \u0445\u0432\u0430\u0442\u0438\u0442 \u043B\u0438 12 \u043C\u043E\u043D\u0435\u0442 \u043D\u0430 \u043F\u043E\u043A\u0443\u043F\u043A\u0443 \u0437\u0430 10. \u0412\u044B\u0432\u0435\u0434\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F.", "coins = 12\nprint(coins >= 10)", "\u0417\u043D\u0430\u043A >= \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \xAB\u0431\u043E\u043B\u044C\u0448\u0435 \u0438\u043B\u0438 \u0440\u0430\u0432\u043D\u043E\xBB."],
+    ["\u0427\u0435\u043A \u0437\u0430 \u043D\u0430\u0431\u043E\u0440", "\u0422\u0435\u0442\u0440\u0430\u0434\u044C \u0441\u0442\u043E\u0438\u0442 9 \u043C\u043E\u043D\u0435\u0442. \u041A\u0443\u043F\u0438\u043B\u0438 3. \u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0446\u0435\u043D\u0443 \u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E, \u0432\u044B\u0432\u0435\u0434\u0438 \u0438\u0442\u043E\u0433.", "price = 9\ncount = 3\nprint(price * count)", "\u0418\u0442\u043E\u0433 \u2014 \u0446\u0435\u043D\u0430 \u043E\u0434\u043D\u043E\u0439 \u0432\u0435\u0449\u0438, \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u043D\u0430\u044F \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E."]
   ] },
-  { id: 7, skills: ["if", "comparison", "indentation"], tasks: [
-    ["\u041C\u043E\u0440\u043E\u0437 \u0437\u0430 \u043E\u043A\u043D\u043E\u043C", "\u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u22123. \u0415\u0441\u043B\u0438 \u043E\u043D\u0430 \u043D\u0438\u0436\u0435 \u043D\u0443\u043B\u044F, \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u041C\u043E\u0440\u043E\u0437\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u0422\u0435\u043F\u043B\u043E\xBB.", 'temp = -3\nif temp < 0:\n    print("\u041C\u043E\u0440\u043E\u0437")\nelse:\n    print("\u0422\u0435\u043F\u043B\u043E")', "\u0423\u0441\u043B\u043E\u0432\u0438\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442 temp < 0.", [/^if\s/m, /^else:/m]],
-    ["\u0412\u0445\u043E\u0434 \u043D\u0430 \u043A\u043E\u043D\u0446\u0435\u0440\u0442", "\u0412\u043E\u0437\u0440\u0430\u0441\u0442 19 \u043B\u0435\u0442. \u0415\u0441\u043B\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0443 \u0435\u0441\u0442\u044C 18, \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u041C\u043E\u0436\u043D\u043E \u0432\u043E\u0439\u0442\u0438\xBB.", 'age = 19\nif age >= 18:\n    print("\u041C\u043E\u0436\u043D\u043E \u0432\u043E\u0439\u0442\u0438")', "\u041F\u043E\u0440\u043E\u0433 \u0432\u043A\u043B\u044E\u0447\u0451\u043D: \u043D\u0443\u0436\u0435\u043D \u0437\u043D\u0430\u043A >=.", [/^if\s/m, />=/]],
-    ["\u041F\u043E\u0440\u043E\u0433 \u0438\u0433\u0440\u044B", "\u0418\u0433\u0440\u043E\u043A \u043D\u0430\u0431\u0440\u0430\u043B 8 \u043E\u0447\u043A\u043E\u0432. \u041F\u043E\u043A\u0430\u0436\u0438 \xAB\u041F\u043E\u0431\u0435\u0434\u0430\xBB \u043E\u0442 10 \u043E\u0447\u043A\u043E\u0432, \u0438\u043D\u0430\u0447\u0435 \xAB\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439 \u0435\u0449\u0451\xBB.", 'score = 8\nif score >= 10:\n    print("\u041F\u043E\u0431\u0435\u0434\u0430")\nelse:\n    print("\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439 \u0435\u0449\u0451")', "\u041D\u0443\u0436\u043D\u044B \u043E\u0431\u0435 \u0432\u0435\u0442\u043A\u0438: \u0435\u0441\u043B\u0438 \u0438 \u0438\u043D\u0430\u0447\u0435.", [/^if\s/m, /^else:/m]],
-    ["\u0417\u0435\u043B\u0451\u043D\u044B\u0439 \u0441\u0432\u0435\u0442", "\u0426\u0432\u0435\u0442 \u0441\u0438\u0433\u043D\u0430\u043B\u0430 \u2014 \xAB\u0437\u0435\u043B\u0451\u043D\u044B\u0439\xBB. \u041F\u043E\u043A\u0430\u0436\u0438 \xAB\u0418\u0434\u0438\xBB \u0442\u043E\u043B\u044C\u043A\u043E \u0434\u043B\u044F \u0437\u0435\u043B\u0451\u043D\u043E\u0433\u043E \u0446\u0432\u0435\u0442\u0430.", 'color = "\u0437\u0435\u043B\u0451\u043D\u044B\u0439"\nif color == "\u0437\u0435\u043B\u0451\u043D\u044B\u0439":\n    print("\u0418\u0434\u0438")', "\u0421\u0442\u0440\u043E\u043A\u0438 \u0441\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u044E\u0442 \u0437\u043D\u0430\u043A\u043E\u043C ==.", [/^if\s/m, /==/]],
-    ["\u0420\u0430\u0437\u043C\u0435\u0440 \u043A\u043E\u0440\u043E\u0431\u043A\u0438", "\u0427\u0438\u0441\u043B\u043E 2 \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \u0441\u0440\u0435\u0434\u043D\u044E\u044E \u043A\u043E\u0440\u043E\u0431\u043A\u0443: 1 \u2014 \u043C\u0430\u043B\u0430\u044F, 2 \u2014 \u0441\u0440\u0435\u0434\u043D\u044F\u044F, \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u2014 \u0431\u043E\u043B\u044C\u0448\u0430\u044F. \u0412\u044B\u0432\u0435\u0434\u0438 \u0440\u0430\u0437\u043C\u0435\u0440.", 'size = 2\nif size == 1:\n    print("\u041C\u0430\u043B\u0430\u044F")\nelif size == 2:\n    print("\u0421\u0440\u0435\u0434\u043D\u044F\u044F")\nelse:\n    print("\u0411\u043E\u043B\u044C\u0448\u0430\u044F")', "\u041F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0433\u043E if \u043C\u043E\u0436\u043D\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0432\u0442\u043E\u0440\u043E\u0439 \u0441\u043B\u0443\u0447\u0430\u0439 \u0447\u0435\u0440\u0435\u0437 elif.", [/^elif\s/m]],
-    ["\u0427\u0451\u0442\u043D\u044B\u0439 \u0431\u0438\u043B\u0435\u0442", "\u041D\u043E\u043C\u0435\u0440 \u0431\u0438\u043B\u0435\u0442\u0430 17. \u0412\u044B\u0432\u0435\u0434\u0438 \xAB\u0427\u0451\u0442\u043D\u044B\u0439\xBB \u0438\u043B\u0438 \xAB\u041D\u0435\u0447\u0451\u0442\u043D\u044B\u0439\xBB.", 'number = 17\nif number % 2 == 0:\n    print("\u0427\u0451\u0442\u043D\u044B\u0439")\nelse:\n    print("\u041D\u0435\u0447\u0451\u0442\u043D\u044B\u0439")', "\u0427\u0451\u0442\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0434\u0435\u043B\u0438\u0442\u0441\u044F \u043D\u0430 2 \u0431\u0435\u0437 \u043E\u0441\u0442\u0430\u0442\u043A\u0430.", [/%/, /^else:/m]],
-    ["\u0414\u043E\u0441\u0442\u0430\u0432\u043A\u0430 \u0437\u0430\u043A\u0430\u0437\u0430", "\u0417\u0430\u043A\u0430\u0437 \u043D\u0430 55 \u043C\u043E\u043D\u0435\u0442. \u0414\u043E\u0441\u0442\u0430\u0432\u043A\u0430 \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u0430 \u043E\u0442 50, \u0438\u043D\u0430\u0447\u0435 \u0441\u0442\u043E\u0438\u0442 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E. \u0412\u044B\u0432\u0435\u0434\u0438 \xAB\u0411\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u043E\xBB \u0438\u043B\u0438 \xAB\u041F\u043B\u0430\u0442\u043D\u043E\xBB.", 'price = 55\nif price >= 50:\n    print("\u0411\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u043E")\nelse:\n    print("\u041F\u043B\u0430\u0442\u043D\u043E")', "\u0421\u0440\u0430\u0432\u043D\u0438 \u0441\u0443\u043C\u043C\u0443 \u0437\u0430\u043A\u0430\u0437\u0430 \u0441 \u043F\u043E\u0440\u043E\u0433\u043E\u043C 50.", [/^if\s/m, /^else:/m]],
-    ["\u0412\u043E\u0437\u0440\u0430\u0441\u0442 \u0438 \u0431\u0438\u043B\u0435\u0442", "\u0412\u043E\u0437\u0440\u0430\u0441\u0442 13, \u0431\u0438\u043B\u0435\u0442 \u043A\u0443\u043F\u043B\u0435\u043D (1). \u041F\u043E\u043A\u0430\u0436\u0438 \xAB\u041F\u0440\u043E\u0445\u043E\u0434\u0438\xBB, \u0442\u043E\u043B\u044C\u043A\u043E \u0435\u0441\u043B\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u044B \u043E\u0431\u0430 \u0443\u0441\u043B\u043E\u0432\u0438\u044F.", 'age = 13\nticket = 1\nif age >= 12 and ticket == 1:\n    print("\u041F\u0440\u043E\u0445\u043E\u0434\u0438")', "and \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u044F\u0435\u0442 \u0434\u0432\u0435 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u044B\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438.", [/\band\b/, /^if\s/m]],
-    ["\u0422\u0451\u043F\u043B\u044B\u0439 \u0434\u0435\u043D\u044C", "\u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 23. \u0414\u043E 0 \u2014 \u043C\u043E\u0440\u043E\u0437, \u0434\u043E 20 \u2014 \u043F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E, \u0438\u043D\u0430\u0447\u0435 \u0442\u0435\u043F\u043B\u043E. \u041F\u043E\u043A\u0430\u0436\u0438 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0449\u0435\u0435 \u0441\u043B\u043E\u0432\u043E.", 'temp = 23\nif temp < 0:\n    print("\u041C\u043E\u0440\u043E\u0437")\nelif temp < 20:\n    print("\u041F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E")\nelse:\n    print("\u0422\u0435\u043F\u043B\u043E")', "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u0438\u0434\u0443\u0442 \u043E\u0442 \u043C\u0435\u043D\u044C\u0448\u0435\u0439 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B \u043A \u0431\u043E\u043B\u044C\u0448\u0435\u0439.", [/^elif\s/m, /^else:/m]],
-    ["\u041A\u043E\u0434 \u0434\u043E\u0441\u0442\u0443\u043F\u0430", "\u0421\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u044B\u0439 \u043A\u043E\u0434 \u2014 \xAB\u043B\u0438\u0441\u0442\xBB. \u041F\u0440\u0438 \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u041E\u0442\u043A\u0440\u044B\u0442\u043E\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u0417\u0430\u043A\u0440\u044B\u0442\u043E\xBB.", 'code = "\u043B\u0438\u0441\u0442"\nif code == "\u043B\u0438\u0441\u0442":\n    print("\u041E\u0442\u043A\u0440\u044B\u0442\u043E")\nelse:\n    print("\u0417\u0430\u043A\u0440\u044B\u0442\u043E")', "\u0421\u0440\u0430\u0432\u043D\u0438 \u0441\u0442\u0440\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 ==.", [/==/, /^else:/m]],
-    ["\u0421\u043A\u0438\u0434\u043A\u0430 \u043D\u0430 \u0442\u0440\u0438 \u043A\u043D\u0438\u0433\u0438", "\u041A\u0443\u043F\u0438\u043B\u0438 3 \u043A\u043D\u0438\u0433\u0438 \u043F\u043E 8 \u043C\u043E\u043D\u0435\u0442. \u041E\u0442 \u0442\u0440\u0451\u0445 \u043A\u043D\u0438\u0433 \u0441\u043A\u0438\u0434\u043A\u0430 4 \u043C\u043E\u043D\u0435\u0442\u044B. \u0412\u044B\u0432\u0435\u0434\u0438 \u0438\u0442\u043E\u0433.", "count = 3\nprice = 8\nif count >= 3:\n    print(count * price - 4)\nelse:\n    print(count * price)", "\u0420\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0439 \u0446\u0435\u043D\u0443 \u0432 \u043E\u0431\u0435\u0438\u0445 \u0432\u0435\u0442\u043A\u0430\u0445 \u0443\u0441\u043B\u043E\u0432\u0438\u044F.", [/^if\s/m, /\*/, /-/]]
+  { id: 7, tasks: [
+    ["\u041C\u043E\u0440\u043E\u0437 \u0437\u0430 \u043E\u043A\u043D\u043E\u043C", "\u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u22123. \u0415\u0441\u043B\u0438 \u043E\u043D\u0430 \u043D\u0438\u0436\u0435 \u043D\u0443\u043B\u044F, \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u041C\u043E\u0440\u043E\u0437\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u0422\u0435\u043F\u043B\u043E\xBB.", 'temp = -3\nif temp < 0:\n    print("\u041C\u043E\u0440\u043E\u0437")\nelse:\n    print("\u0422\u0435\u043F\u043B\u043E")', "\u0423\u0441\u043B\u043E\u0432\u0438\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442 temp < 0."],
+    ["\u0412\u0445\u043E\u0434 \u043D\u0430 \u043A\u043E\u043D\u0446\u0435\u0440\u0442", "\u0412\u043E\u0437\u0440\u0430\u0441\u0442 19 \u043B\u0435\u0442. \u0415\u0441\u043B\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0443 \u0435\u0441\u0442\u044C 18, \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u041C\u043E\u0436\u043D\u043E \u0432\u043E\u0439\u0442\u0438\xBB.", 'age = 19\nif age >= 18:\n    print("\u041C\u043E\u0436\u043D\u043E \u0432\u043E\u0439\u0442\u0438")', "\u041F\u043E\u0440\u043E\u0433 \u0432\u043A\u043B\u044E\u0447\u0451\u043D: \u043D\u0443\u0436\u0435\u043D \u0437\u043D\u0430\u043A >=."],
+    ["\u041F\u043E\u0440\u043E\u0433 \u0438\u0433\u0440\u044B", "\u0418\u0433\u0440\u043E\u043A \u043D\u0430\u0431\u0440\u0430\u043B 8 \u043E\u0447\u043A\u043E\u0432. \u041F\u043E\u043A\u0430\u0436\u0438 \xAB\u041F\u043E\u0431\u0435\u0434\u0430\xBB \u043E\u0442 10 \u043E\u0447\u043A\u043E\u0432, \u0438\u043D\u0430\u0447\u0435 \xAB\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439 \u0435\u0449\u0451\xBB.", 'score = 8\nif score >= 10:\n    print("\u041F\u043E\u0431\u0435\u0434\u0430")\nelse:\n    print("\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439 \u0435\u0449\u0451")', "\u041D\u0443\u0436\u043D\u044B \u043E\u0431\u0435 \u0432\u0435\u0442\u043A\u0438: \u0435\u0441\u043B\u0438 \u0438 \u0438\u043D\u0430\u0447\u0435."],
+    ["\u0417\u0435\u043B\u0451\u043D\u044B\u0439 \u0441\u0432\u0435\u0442", "\u0426\u0432\u0435\u0442 \u0441\u0438\u0433\u043D\u0430\u043B\u0430 \u2014 \xAB\u0437\u0435\u043B\u0451\u043D\u044B\u0439\xBB. \u041F\u043E\u043A\u0430\u0436\u0438 \xAB\u0418\u0434\u0438\xBB \u0442\u043E\u043B\u044C\u043A\u043E \u0434\u043B\u044F \u0437\u0435\u043B\u0451\u043D\u043E\u0433\u043E \u0446\u0432\u0435\u0442\u0430.", 'color = "\u0437\u0435\u043B\u0451\u043D\u044B\u0439"\nif color == "\u0437\u0435\u043B\u0451\u043D\u044B\u0439":\n    print("\u0418\u0434\u0438")', "\u0421\u0442\u0440\u043E\u043A\u0438 \u0441\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u044E\u0442 \u0437\u043D\u0430\u043A\u043E\u043C ==."],
+    ["\u0420\u0430\u0437\u043C\u0435\u0440 \u043A\u043E\u0440\u043E\u0431\u043A\u0438", "\u0427\u0438\u0441\u043B\u043E 2 \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \u0441\u0440\u0435\u0434\u043D\u044E\u044E \u043A\u043E\u0440\u043E\u0431\u043A\u0443: 1 \u2014 \u043C\u0430\u043B\u0430\u044F, 2 \u2014 \u0441\u0440\u0435\u0434\u043D\u044F\u044F, \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u2014 \u0431\u043E\u043B\u044C\u0448\u0430\u044F. \u0412\u044B\u0432\u0435\u0434\u0438 \u0440\u0430\u0437\u043C\u0435\u0440.", 'size = 2\nif size == 1:\n    print("\u041C\u0430\u043B\u0430\u044F")\nelif size == 2:\n    print("\u0421\u0440\u0435\u0434\u043D\u044F\u044F")\nelse:\n    print("\u0411\u043E\u043B\u044C\u0448\u0430\u044F")', "\u041F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0433\u043E if \u043C\u043E\u0436\u043D\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0432\u0442\u043E\u0440\u043E\u0439 \u0441\u043B\u0443\u0447\u0430\u0439 \u0447\u0435\u0440\u0435\u0437 elif."],
+    ["\u0427\u0451\u0442\u043D\u044B\u0439 \u0431\u0438\u043B\u0435\u0442", "\u041D\u043E\u043C\u0435\u0440 \u0431\u0438\u043B\u0435\u0442\u0430 17. \u0412\u044B\u0432\u0435\u0434\u0438 \xAB\u0427\u0451\u0442\u043D\u044B\u0439\xBB \u0438\u043B\u0438 \xAB\u041D\u0435\u0447\u0451\u0442\u043D\u044B\u0439\xBB.", 'number = 17\nif number % 2 == 0:\n    print("\u0427\u0451\u0442\u043D\u044B\u0439")\nelse:\n    print("\u041D\u0435\u0447\u0451\u0442\u043D\u044B\u0439")', "\u0427\u0451\u0442\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0434\u0435\u043B\u0438\u0442\u0441\u044F \u043D\u0430 2 \u0431\u0435\u0437 \u043E\u0441\u0442\u0430\u0442\u043A\u0430."],
+    ["\u0414\u043E\u0441\u0442\u0430\u0432\u043A\u0430 \u0437\u0430\u043A\u0430\u0437\u0430", "\u0417\u0430\u043A\u0430\u0437 \u043D\u0430 55 \u043C\u043E\u043D\u0435\u0442. \u0414\u043E\u0441\u0442\u0430\u0432\u043A\u0430 \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u0430 \u043E\u0442 50, \u0438\u043D\u0430\u0447\u0435 \u0441\u0442\u043E\u0438\u0442 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E. \u0412\u044B\u0432\u0435\u0434\u0438 \xAB\u0411\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u043E\xBB \u0438\u043B\u0438 \xAB\u041F\u043B\u0430\u0442\u043D\u043E\xBB.", 'price = 55\nif price >= 50:\n    print("\u0411\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u043E")\nelse:\n    print("\u041F\u043B\u0430\u0442\u043D\u043E")', "\u0421\u0440\u0430\u0432\u043D\u0438 \u0441\u0443\u043C\u043C\u0443 \u0437\u0430\u043A\u0430\u0437\u0430 \u0441 \u043F\u043E\u0440\u043E\u0433\u043E\u043C 50."],
+    ["\u0412\u043E\u0437\u0440\u0430\u0441\u0442 \u0438 \u0431\u0438\u043B\u0435\u0442", "\u0412\u043E\u0437\u0440\u0430\u0441\u0442 13, \u0431\u0438\u043B\u0435\u0442 \u043A\u0443\u043F\u043B\u0435\u043D (1). \u041F\u043E\u043A\u0430\u0436\u0438 \xAB\u041F\u0440\u043E\u0445\u043E\u0434\u0438\xBB, \u0442\u043E\u043B\u044C\u043A\u043E \u0435\u0441\u043B\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u044B \u043E\u0431\u0430 \u0443\u0441\u043B\u043E\u0432\u0438\u044F.", 'age = 13\nticket = 1\nif age >= 12 and ticket == 1:\n    print("\u041F\u0440\u043E\u0445\u043E\u0434\u0438")', "and \u043E\u0431\u044A\u0435\u0434\u0438\u043D\u044F\u0435\u0442 \u0434\u0432\u0435 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u044B\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438."],
+    ["\u0422\u0451\u043F\u043B\u044B\u0439 \u0434\u0435\u043D\u044C", "\u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 23. \u0414\u043E 0 \u2014 \u043C\u043E\u0440\u043E\u0437, \u0434\u043E 20 \u2014 \u043F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E, \u0438\u043D\u0430\u0447\u0435 \u0442\u0435\u043F\u043B\u043E. \u041F\u043E\u043A\u0430\u0436\u0438 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0449\u0435\u0435 \u0441\u043B\u043E\u0432\u043E.", 'temp = 23\nif temp < 0:\n    print("\u041C\u043E\u0440\u043E\u0437")\nelif temp < 20:\n    print("\u041F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E")\nelse:\n    print("\u0422\u0435\u043F\u043B\u043E")', "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u0438\u0434\u0443\u0442 \u043E\u0442 \u043C\u0435\u043D\u044C\u0448\u0435\u0439 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B \u043A \u0431\u043E\u043B\u044C\u0448\u0435\u0439."],
+    ["\u041A\u043E\u0434 \u0434\u043E\u0441\u0442\u0443\u043F\u0430", "\u0421\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u044B\u0439 \u043A\u043E\u0434 \u2014 \xAB\u043B\u0438\u0441\u0442\xBB. \u041F\u0440\u0438 \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u041E\u0442\u043A\u0440\u044B\u0442\u043E\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u0417\u0430\u043A\u0440\u044B\u0442\u043E\xBB.", 'code = "\u043B\u0438\u0441\u0442"\nif code == "\u043B\u0438\u0441\u0442":\n    print("\u041E\u0442\u043A\u0440\u044B\u0442\u043E")\nelse:\n    print("\u0417\u0430\u043A\u0440\u044B\u0442\u043E")', "\u0421\u0440\u0430\u0432\u043D\u0438 \u0441\u0442\u0440\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 ==."],
+    ["\u0421\u043A\u0438\u0434\u043A\u0430 \u043D\u0430 \u0442\u0440\u0438 \u043A\u043D\u0438\u0433\u0438", "\u041A\u0443\u043F\u0438\u043B\u0438 3 \u043A\u043D\u0438\u0433\u0438 \u043F\u043E 8 \u043C\u043E\u043D\u0435\u0442. \u041E\u0442 \u0442\u0440\u0451\u0445 \u043A\u043D\u0438\u0433 \u0441\u043A\u0438\u0434\u043A\u0430 4 \u043C\u043E\u043D\u0435\u0442\u044B. \u0412\u044B\u0432\u0435\u0434\u0438 \u0438\u0442\u043E\u0433.", "count = 3\nprice = 8\nif count >= 3:\n    print(count * price - 4)\nelse:\n    print(count * price)", "\u0420\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0439 \u0446\u0435\u043D\u0443 \u0432 \u043E\u0431\u0435\u0438\u0445 \u0432\u0435\u0442\u043A\u0430\u0445 \u0443\u0441\u043B\u043E\u0432\u0438\u044F."]
   ] },
-  { id: 8, skills: ["loop", "arithmetic", "indentation"], tasks: [
-    ["\u0422\u0440\u0438 \u0441\u0438\u0433\u043D\u0430\u043B\u0430", "\u0412\u044B\u0432\u0435\u0434\u0438 \xAB\u0413\u043E\u0442\u043E\u0432\u043E\xBB \u0442\u0440\u0438 \u0440\u0430\u0437\u0430 \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E \u043E\u0434\u043D\u043E\u0433\u043E \u0446\u0438\u043A\u043B\u0430.", 'for i in range(3):\n    print("\u0413\u043E\u0442\u043E\u0432\u043E")', "range(3) \u0437\u0430\u0434\u0430\u0451\u0442 \u0442\u0440\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u044F.", [/^for\s/m]],
-    ["\u041E\u0431\u0440\u0430\u0442\u043D\u044B\u0439 \u043E\u0442\u0441\u0447\u0451\u0442", "\u041F\u043E\u043A\u0430\u0436\u0438 3, 2, 1 \u043D\u0430 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u044B\u0445 \u0441\u0442\u0440\u043E\u043A\u0430\u0445, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044F \u0446\u0438\u043A\u043B.", "for i in range(3, 0, -1):\n    print(i)", "\u041E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0448\u0430\u0433 \u0432\u0435\u0434\u0451\u0442 \u0441\u0447\u0451\u0442 \u043D\u0430\u0437\u0430\u0434.", [/^for\s/m, /range\([^)]*,[^)]*,[^)]*\)/]],
-    ["\u0427\u0451\u0442\u043D\u044B\u0435 \u043D\u043E\u043C\u0435\u0440\u0430", "\u041F\u043E\u043A\u0430\u0436\u0438 2, 4 \u0438 6 \u0447\u0435\u0440\u0435\u0437 range \u0441 \u0448\u0430\u0433\u043E\u043C 2.", "for i in range(2, 8, 2):\n    print(i)", "\u0422\u0440\u0435\u0442\u0438\u0439 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442 range \u2014 \u0448\u0430\u0433.", [/^for\s/m, /range\([^)]*,[^)]*,[^)]*\)/]],
-    ["\u0421\u0443\u043C\u043C\u0430 \u0447\u0435\u0442\u044B\u0440\u0451\u0445 \u0434\u043D\u0435\u0439", "\u0417\u0430 \u0434\u043D\u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u0438 1, 2, 3 \u0438 4 \u043C\u043E\u043D\u0435\u0442\u044B. \u041D\u0430\u043A\u043E\u043F\u0438 \u0441\u0443\u043C\u043C\u0443 \u0446\u0438\u043A\u043B\u043E\u043C \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0435\u0451.", "total = 0\nfor i in range(1, 5):\n    total = total + i\nprint(total)", "\u041D\u0430\u0447\u043D\u0438 \u0441 \u043D\u0443\u043B\u044F \u0438 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0439 \u043D\u043E\u043C\u0435\u0440 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0434\u043D\u044F.", [/^for\s/m, /^[\t ]*[\p{L}_][\p{L}\p{N}_]*\s*=.*\+/mu]],
-    ["\u041A\u043E\u043F\u0438\u043B\u043A\u0430", "\u041A\u0430\u0436\u0434\u044B\u0439 \u0438\u0437 \u0442\u0440\u0451\u0445 \u0434\u043D\u0435\u0439 \u043E\u0442\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u043B\u0438 5 \u043C\u043E\u043D\u0435\u0442. \u041D\u0430\u043A\u043E\u043F\u0438 \u0438\u0442\u043E\u0433 \u0446\u0438\u043A\u043B\u043E\u043C.", "money = 0\nfor day in range(3):\n    money = money + 5\nprint(money)", "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0439 5 \u043A \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0441\u0443\u043C\u043C\u0435 \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u043C \u0448\u0430\u0433\u0435.", [/^for\s/m, /^[\t ]*[\p{L}_][\p{L}\p{N}_]*\s*=.*\+/mu]],
-    ["\u041F\u043E\u043A\u0430 \u043D\u0435 \u043F\u044F\u0442\u044C", "\u041D\u0430\u0447\u043D\u0438 \u0441 1 \u0438 \u0432\u044B\u0432\u043E\u0434\u0438 \u0447\u0438\u0441\u043B\u0430 \u0434\u043E 5 \u0432\u043A\u043B\u044E\u0447\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E while.", "n = 1\nwhile n <= 5:\n    print(n)\n    n = n + 1", "\u0412\u043D\u0443\u0442\u0440\u0438 while \u0447\u0438\u0441\u043B\u043E \u0434\u043E\u043B\u0436\u043D\u043E \u043C\u0435\u043D\u044F\u0442\u044C\u0441\u044F.", [/^while\s/m]],
-    ["\u041E\u0441\u0442\u0430\u043B\u0438\u0441\u044C \u0431\u0438\u043B\u0435\u0442\u044B", "\u0412 \u043A\u0430\u0441\u0441\u0435 3 \u0431\u0438\u043B\u0435\u0442\u0430. \u041F\u043E\u043A\u0430 \u0431\u0438\u043B\u0435\u0442\u044B \u0435\u0441\u0442\u044C, \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0439 \u043E\u0441\u0442\u0430\u0442\u043E\u043A \u0438 \u0443\u043C\u0435\u043D\u044C\u0448\u0430\u0439 \u0435\u0433\u043E.", "tickets = 3\nwhile tickets > 0:\n    print(tickets)\n    tickets = tickets - 1", "\u041F\u043E\u0441\u043B\u0435 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u044B\u0432\u043E\u0434\u0430 \u0443\u0431\u0438\u0440\u0430\u0439 \u043E\u0434\u0438\u043D \u0431\u0438\u043B\u0435\u0442.", [/^while\s/m, /^[\t ]*[\p{L}_][\p{L}\p{N}_]*\s*=.*-/mu]],
-    ["\u0422\u0430\u0431\u043B\u0438\u0446\u0430 \u0434\u0432\u043E\u0435\u043A", "\u0412\u044B\u0432\u0435\u0434\u0438 2, 4, 6, 8 \u0447\u0435\u0440\u0435\u0437 \u0446\u0438\u043A\u043B \u0438 \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435.", "for i in range(1, 5):\n    print(i * 2)", "\u041D\u043E\u043C\u0435\u0440 \u0448\u0430\u0433\u0430 \u0443\u043C\u043D\u043E\u0436\u0430\u0439 \u043D\u0430 \u0434\u0432\u0430.", [/^for\s/m, /\*/]],
-    ["\u042F\u0447\u0435\u0439\u043A\u0438 \u0441\u0435\u0442\u043A\u0438", "\u0412\u044B\u0432\u0435\u0434\u0438 \u043D\u043E\u043C\u0435\u0440\u0430 \u044F\u0447\u0435\u0435\u043A 11, 12, 21, 22 \u0434\u0432\u0443\u043C\u044F \u0432\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u043C\u0438 \u0446\u0438\u043A\u043B\u0430\u043C\u0438.", "for row in range(1, 3):\n    for col in range(1, 3):\n        print(row * 10 + col)", "\u0412\u043D\u0435\u0448\u043D\u0438\u0439 \u0446\u0438\u043A\u043B \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442 \u0437\u0430 \u0434\u0435\u0441\u044F\u0442\u043A\u0438, \u0432\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u0438\u0439 \u2014 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u044B.", [/^\s*for\s/gm, /\*/]],
-    ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043D\u0435\u0447\u0451\u0442\u043D\u044B\u0445", "\u041F\u043E\u0441\u0447\u0438\u0442\u0430\u0439 \u043D\u0435\u0447\u0451\u0442\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u043E\u0442 1 \u0434\u043E 7 \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E.", "count = 0\nfor i in range(1, 8):\n    if i % 2 != 0:\n        count = count + 1\nprint(count)", "\u0415\u0441\u043B\u0438 \u043E\u0441\u0442\u0430\u0442\u043E\u043A \u043E\u0442 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043D\u0430 \u0434\u0432\u0430 \u043D\u0435 \u043D\u043E\u043B\u044C, \u0443\u0432\u0435\u043B\u0438\u0447\u044C \u0441\u0447\u0451\u0442\u0447\u0438\u043A.", [/^for\s/m, /^\s*if\s/m, /%/]],
-    ["\u0421\u0443\u043C\u043C\u0430 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043E\u0432", "\u0412\u044B\u0447\u0438\u0441\u043B\u0438 \u0446\u0438\u043A\u043B\u043E\u043C 1\xB2 + 2\xB2 + 3\xB2 \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0441\u0443\u043C\u043C\u0443.", "total = 0\nfor i in range(1, 4):\n    total = total + i * i\nprint(total)", "\u041D\u0430 \u043A\u0430\u0436\u0434\u043E\u043C \u0448\u0430\u0433\u0435 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0439 i \xD7 i.", [/^for\s/m, /\*/]]
+  { id: 8, tasks: [
+    ["\u0422\u0440\u0438 \u0441\u0438\u0433\u043D\u0430\u043B\u0430", "\u0412\u044B\u0432\u0435\u0434\u0438 \xAB\u0413\u043E\u0442\u043E\u0432\u043E\xBB \u0442\u0440\u0438 \u0440\u0430\u0437\u0430 \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E \u043E\u0434\u043D\u043E\u0433\u043E \u0446\u0438\u043A\u043B\u0430.", 'for i in range(3):\n    print("\u0413\u043E\u0442\u043E\u0432\u043E")', "range(3) \u0437\u0430\u0434\u0430\u0451\u0442 \u0442\u0440\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u044F."],
+    ["\u041E\u0431\u0440\u0430\u0442\u043D\u044B\u0439 \u043E\u0442\u0441\u0447\u0451\u0442", "\u041F\u043E\u043A\u0430\u0436\u0438 3, 2, 1 \u043D\u0430 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u044B\u0445 \u0441\u0442\u0440\u043E\u043A\u0430\u0445, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044F \u0446\u0438\u043A\u043B.", "for i in range(3, 0, -1):\n    print(i)", "\u041E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0448\u0430\u0433 \u0432\u0435\u0434\u0451\u0442 \u0441\u0447\u0451\u0442 \u043D\u0430\u0437\u0430\u0434."],
+    ["\u0427\u0451\u0442\u043D\u044B\u0435 \u043D\u043E\u043C\u0435\u0440\u0430", "\u041F\u043E\u043A\u0430\u0436\u0438 2, 4 \u0438 6 \u0447\u0435\u0440\u0435\u0437 range \u0441 \u0448\u0430\u0433\u043E\u043C 2.", "for i in range(2, 8, 2):\n    print(i)", "\u0422\u0440\u0435\u0442\u0438\u0439 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442 range \u2014 \u0448\u0430\u0433."],
+    ["\u0421\u0443\u043C\u043C\u0430 \u0447\u0435\u0442\u044B\u0440\u0451\u0445 \u0434\u043D\u0435\u0439", "\u0417\u0430 \u0434\u043D\u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u0438 1, 2, 3 \u0438 4 \u043C\u043E\u043D\u0435\u0442\u044B. \u041D\u0430\u043A\u043E\u043F\u0438 \u0441\u0443\u043C\u043C\u0443 \u0446\u0438\u043A\u043B\u043E\u043C \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0435\u0451.", "total = 0\nfor i in range(1, 5):\n    total = total + i\nprint(total)", "\u041D\u0430\u0447\u043D\u0438 \u0441 \u043D\u0443\u043B\u044F \u0438 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0439 \u043D\u043E\u043C\u0435\u0440 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0434\u043D\u044F."],
+    ["\u041A\u043E\u043F\u0438\u043B\u043A\u0430", "\u041A\u0430\u0436\u0434\u044B\u0439 \u0438\u0437 \u0442\u0440\u0451\u0445 \u0434\u043D\u0435\u0439 \u043E\u0442\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u043B\u0438 5 \u043C\u043E\u043D\u0435\u0442. \u041D\u0430\u043A\u043E\u043F\u0438 \u0438\u0442\u043E\u0433 \u0446\u0438\u043A\u043B\u043E\u043C.", "money = 0\nfor day in range(3):\n    money = money + 5\nprint(money)", "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0439 5 \u043A \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0441\u0443\u043C\u043C\u0435 \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u043C \u0448\u0430\u0433\u0435."],
+    ["\u041F\u043E\u043A\u0430 \u043D\u0435 \u043F\u044F\u0442\u044C", "\u041D\u0430\u0447\u043D\u0438 \u0441 1 \u0438 \u0432\u044B\u0432\u043E\u0434\u0438 \u0447\u0438\u0441\u043B\u0430 \u0434\u043E 5 \u0432\u043A\u043B\u044E\u0447\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E while.", "n = 1\nwhile n <= 5:\n    print(n)\n    n = n + 1", "\u0412\u043D\u0443\u0442\u0440\u0438 while \u0447\u0438\u0441\u043B\u043E \u0434\u043E\u043B\u0436\u043D\u043E \u043C\u0435\u043D\u044F\u0442\u044C\u0441\u044F."],
+    ["\u041E\u0441\u0442\u0430\u043B\u0438\u0441\u044C \u0431\u0438\u043B\u0435\u0442\u044B", "\u0412 \u043A\u0430\u0441\u0441\u0435 3 \u0431\u0438\u043B\u0435\u0442\u0430. \u041F\u043E\u043A\u0430 \u0431\u0438\u043B\u0435\u0442\u044B \u0435\u0441\u0442\u044C, \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0439 \u043E\u0441\u0442\u0430\u0442\u043E\u043A \u0438 \u0443\u043C\u0435\u043D\u044C\u0448\u0430\u0439 \u0435\u0433\u043E.", "tickets = 3\nwhile tickets > 0:\n    print(tickets)\n    tickets = tickets - 1", "\u041F\u043E\u0441\u043B\u0435 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u044B\u0432\u043E\u0434\u0430 \u0443\u0431\u0438\u0440\u0430\u0439 \u043E\u0434\u0438\u043D \u0431\u0438\u043B\u0435\u0442."],
+    ["\u0422\u0430\u0431\u043B\u0438\u0446\u0430 \u0434\u0432\u043E\u0435\u043A", "\u0412\u044B\u0432\u0435\u0434\u0438 2, 4, 6, 8 \u0447\u0435\u0440\u0435\u0437 \u0446\u0438\u043A\u043B \u0438 \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435.", "for i in range(1, 5):\n    print(i * 2)", "\u041D\u043E\u043C\u0435\u0440 \u0448\u0430\u0433\u0430 \u0443\u043C\u043D\u043E\u0436\u0430\u0439 \u043D\u0430 \u0434\u0432\u0430."],
+    ["\u042F\u0447\u0435\u0439\u043A\u0438 \u0441\u0435\u0442\u043A\u0438", "\u0412\u044B\u0432\u0435\u0434\u0438 \u043D\u043E\u043C\u0435\u0440\u0430 \u044F\u0447\u0435\u0435\u043A 11, 12, 21, 22 \u0434\u0432\u0443\u043C\u044F \u0432\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u043C\u0438 \u0446\u0438\u043A\u043B\u0430\u043C\u0438.", "for row in range(1, 3):\n    for col in range(1, 3):\n        print(row * 10 + col)", "\u0412\u043D\u0435\u0448\u043D\u0438\u0439 \u0446\u0438\u043A\u043B \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442 \u0437\u0430 \u0434\u0435\u0441\u044F\u0442\u043A\u0438, \u0432\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u0438\u0439 \u2014 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u044B."],
+    ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043D\u0435\u0447\u0451\u0442\u043D\u044B\u0445", "\u041F\u043E\u0441\u0447\u0438\u0442\u0430\u0439 \u043D\u0435\u0447\u0451\u0442\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u043E\u0442 1 \u0434\u043E 7 \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E.", "count = 0\nfor i in range(1, 8):\n    if i % 2 != 0:\n        count = count + 1\nprint(count)", "\u0415\u0441\u043B\u0438 \u043E\u0441\u0442\u0430\u0442\u043E\u043A \u043E\u0442 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043D\u0430 \u0434\u0432\u0430 \u043D\u0435 \u043D\u043E\u043B\u044C, \u0443\u0432\u0435\u043B\u0438\u0447\u044C \u0441\u0447\u0451\u0442\u0447\u0438\u043A."],
+    ["\u0421\u0443\u043C\u043C\u0430 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043E\u0432", "\u0412\u044B\u0447\u0438\u0441\u043B\u0438 \u0446\u0438\u043A\u043B\u043E\u043C 1\xB2 + 2\xB2 + 3\xB2 \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0441\u0443\u043C\u043C\u0443.", "total = 0\nfor i in range(1, 4):\n    total = total + i * i\nprint(total)", "\u041D\u0430 \u043A\u0430\u0436\u0434\u043E\u043C \u0448\u0430\u0433\u0435 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0439 i \xD7 i."]
   ] },
-  { id: 9, skills: ["function", "indentation", "arithmetic"], tasks: [
-    ["\u041F\u043E\u0437\u043E\u0432\u0438 \u0434\u0432\u0430\u0436\u0434\u044B", "\u0421\u043E\u0437\u0434\u0430\u0439 \u0444\u0443\u043D\u043A\u0446\u0438\u044E hello, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442 \xAB\u041F\u0440\u0438\u0432\u0435\u0442\xBB, \u0438 \u0432\u044B\u0437\u043E\u0432\u0438 \u0435\u0451 \u0434\u0432\u0430\u0436\u0434\u044B.", 'def hello():\n    print("\u041F\u0440\u0438\u0432\u0435\u0442")\nhello()\nhello()', "\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043F\u0438\u0441\u044B\u0432\u0430\u0435\u0442 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435; \u0435\u0433\u043E \u043D\u0443\u0436\u043D\u043E \u0432\u044B\u0437\u0432\u0430\u0442\u044C.", [/^def\s/m, /hello\(\)/]],
-    ["\u0418\u043C\u044F \u0434\u043B\u044F \u043F\u0440\u0438\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u044F", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F greet \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0438\u043C\u044F. \u0412\u044B\u0437\u043E\u0432\u0438 \u0435\u0451 \u0441 \xAB\u041C\u0438\u0440\u0430\xBB \u0438 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u041C\u0438\u0440\u0430\xBB.", 'def greet(name):\n    print("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)\ngreet("\u041C\u0438\u0440\u0430")', "\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 name \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u0438 \u0432\u044B\u0437\u043E\u0432\u0435.", [/^def\s+greet\s*\([^)]*\)/m]],
-    ["\u041A\u0432\u0430\u0434\u0440\u0430\u0442 \u0447\u0438\u0441\u043B\u0430", "\u0421\u043E\u0437\u0434\u0430\u0439 square \u0441 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u043C n; \u043E\u043D\u0430 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 n \xD7 n. \u041F\u043E\u043A\u0430\u0436\u0438 square(4).", "def square(n):\n    return n * n\nprint(square(4))", "return \u043F\u0435\u0440\u0435\u0434\u0430\u0451\u0442 \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u043D\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043D\u0430\u0440\u0443\u0436\u0443.", [/^def\s/m, /^\s*return\s/m]],
-    ["\u0423\u0434\u0432\u043E\u0439 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F double \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0443\u0434\u0432\u043E\u0435\u043D\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E. \u041F\u043E\u043A\u0430\u0436\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u044B \u0434\u043B\u044F 3 \u0438 5.", "def double(n):\n    return n * 2\nprint(double(3))\nprint(double(5))", "\u041E\u0434\u043D\u0443 \u0444\u0443\u043D\u043A\u0446\u0438\u044E \u043C\u043E\u0436\u043D\u043E \u0432\u044B\u0437\u0432\u0430\u0442\u044C \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430\u043C\u0438.", [/^def\s/m, /^\s*return\s/m]],
-    ["\u041C\u043E\u0436\u043D\u043E \u0432\u043E\u0439\u0442\u0438?", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F can_enter \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u0438 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 18+. \u041F\u043E\u043A\u0430\u0436\u0438 \u043E\u0442\u0432\u0435\u0442 \u0434\u043B\u044F 16.", "def can_enter(age):\n    return age >= 18\nprint(can_enter(16))", "\u0412\u0435\u0440\u043D\u0438 True \u0438\u043B\u0438 False \u0438\u0437 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F.", [/^def\s/m, /^\s*return\s/m, />=/]],
-    ["\u041F\u0435\u0440\u0438\u043C\u0435\u0442\u0440 \u043A\u043E\u043C\u043D\u0430\u0442\u044B", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F perimeter \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u043B\u0438\u043D\u0443 5 \u0438 \u0448\u0438\u0440\u0438\u043D\u0443 3. \u0412\u0435\u0440\u043D\u0438 \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0435\u0440\u0438\u043C\u0435\u0442\u0440.", "def perimeter(a, b):\n    return 2 * (a + b)\nprint(perimeter(5, 3))", "\u041F\u0435\u0440\u0438\u043C\u0435\u0442\u0440 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u2014 \u0434\u0432\u0435 \u0434\u043B\u0438\u043D\u044B \u0438 \u0434\u0432\u0435 \u0448\u0438\u0440\u0438\u043D\u044B.", [/^def\s/m, /^\s*return\s/m]],
-    ["\u042F\u0440\u043B\u044B\u043A \u0434\u043B\u044F \u0442\u0435\u043A\u0441\u0442\u0430", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F label \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u043F\u0435\u0440\u0435\u0434 \u0442\u0435\u043A\u0441\u0442\u043E\u043C \xAB>> \xBB. \u041F\u043E\u043A\u0430\u0436\u0438 \u044F\u0440\u043B\u044B\u043A \u0434\u043B\u044F \xAB\u041F\u043B\u0430\u043D\xBB.", 'def label(text):\n    return ">> " + text\nprint(label("\u041F\u043B\u0430\u043D"))', "\u0421\u0442\u0440\u043E\u043A\u0438 \u043C\u043E\u0436\u043D\u043E \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u0442\u044C \u0432\u043D\u0443\u0442\u0440\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438.", [/^def\s/m, /^\s*return\s/m, /\+/]],
-    ["\u0421\u0443\u043C\u043C\u0430 \u0434\u043E \u0447\u0438\u0441\u043B\u0430", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F sum_to(n) \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442 \u0447\u0438\u0441\u043B\u0430 \u043E\u0442 1 \u0434\u043E n. \u041F\u043E\u043A\u0430\u0436\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0434\u043B\u044F 4.", "def sum_to(n):\n    total = 0\n    for i in range(1, n + 1):\n        total = total + i\n    return total\nprint(sum_to(4))", "\u041D\u0430\u043A\u043E\u043F\u0438 \u0441\u0443\u043C\u043C\u0443 \u0432\u043D\u0443\u0442\u0440\u0438 \u0446\u0438\u043A\u043B\u0430 \u0438 \u0432\u0435\u0440\u043D\u0438 \u043F\u043E\u0441\u043B\u0435 \u043D\u0435\u0433\u043E.", [/^def\s/m, /^\s*for\s/m, /^\s*return\s/m]],
-    ["\u0427\u0451\u0442\u043D\u043E\u0435 \u0438\u043B\u0438 \u043D\u0435\u0442", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F is_even \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 True \u0434\u043B\u044F \u0447\u0451\u0442\u043D\u043E\u0433\u043E \u0447\u0438\u0441\u043B\u0430. \u041F\u0440\u043E\u0432\u0435\u0440\u044C 9.", "def is_even(n):\n    return n % 2 == 0\nprint(is_even(9))", "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043E\u0441\u0442\u0430\u0442\u043E\u043A \u043E\u0442 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043D\u0430 \u0434\u0432\u0430.", [/^def\s/m, /^\s*return\s/m, /%/]],
-    ["\u0421\u043A\u0438\u0434\u043A\u0430 \u0432 \u0444\u0443\u043D\u043A\u0446\u0438\u0438", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F final_price \u0443\u043C\u0435\u043D\u044C\u0448\u0430\u0435\u0442 \u0446\u0435\u043D\u0443 \u043D\u0430 3, \u0435\u0441\u043B\u0438 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0445\u043E\u0442\u044F \u0431\u044B \u0434\u0432\u0430. \u041F\u043E\u043A\u0430\u0436\u0438 \u0446\u0435\u043D\u0443 \u0434\u043B\u044F 2 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u043F\u043E 8.", "def final_price(count, price):\n    total = count * price\n    if count >= 2:\n        return total - 3\n    return total\nprint(final_price(2, 8))", "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0447\u0438\u0441\u043B\u0438 \u0438\u0442\u043E\u0433, \u0437\u0430\u0442\u0435\u043C \u0440\u0435\u0448\u0438, \u043D\u0443\u0436\u043D\u0430 \u043B\u0438 \u0441\u043A\u0438\u0434\u043A\u0430.", [/^def\s/m, /^\s*if\s/m, /^\s*return\s/m]],
-    ["\u041E\u0434\u0438\u043D \u0448\u0430\u0431\u043B\u043E\u043D, \u0434\u0432\u0430 \u0432\u044B\u0437\u043E\u0432\u0430", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F message(name) \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u0438\u043C\u044F\xBB. \u041F\u043E\u0437\u0434\u043E\u0440\u043E\u0432\u0430\u0439\u0441\u044F \u0441 \u041B\u0435\u0435\u0439 \u0438 \u041C\u0438\u0440\u043E\u0439.", 'def message(name):\n    print("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)\nmessage("\u041B\u0435\u044F")\nmessage("\u041C\u0438\u0440\u0430")', "\u0412\u044B\u0437\u043E\u0432\u0438 \u043E\u0434\u043D\u0443 \u0444\u0443\u043D\u043A\u0446\u0438\u044E \u0434\u0432\u0430 \u0440\u0430\u0437\u0430 \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u0438\u043C\u0435\u043D\u0430\u043C\u0438.", [/^def\s/m, /message\s*\(/, /message\s*\(/]]
+  { id: 9, tasks: [
+    ["\u041F\u043E\u0437\u043E\u0432\u0438 \u0434\u0432\u0430\u0436\u0434\u044B", "\u0421\u043E\u0437\u0434\u0430\u0439 \u0444\u0443\u043D\u043A\u0446\u0438\u044E hello, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442 \xAB\u041F\u0440\u0438\u0432\u0435\u0442\xBB, \u0438 \u0432\u044B\u0437\u043E\u0432\u0438 \u0435\u0451 \u0434\u0432\u0430\u0436\u0434\u044B.", 'def hello():\n    print("\u041F\u0440\u0438\u0432\u0435\u0442")\nhello()\nhello()', "\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043F\u0438\u0441\u044B\u0432\u0430\u0435\u0442 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435; \u0435\u0433\u043E \u043D\u0443\u0436\u043D\u043E \u0432\u044B\u0437\u0432\u0430\u0442\u044C."],
+    ["\u0418\u043C\u044F \u0434\u043B\u044F \u043F\u0440\u0438\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u044F", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F greet \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0438\u043C\u044F. \u0412\u044B\u0437\u043E\u0432\u0438 \u0435\u0451 \u0441 \xAB\u041C\u0438\u0440\u0430\xBB \u0438 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u041C\u0438\u0440\u0430\xBB.", 'def greet(name):\n    print("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)\ngreet("\u041C\u0438\u0440\u0430")', "\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 name \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u0438 \u0432\u044B\u0437\u043E\u0432\u0435."],
+    ["\u041A\u0432\u0430\u0434\u0440\u0430\u0442 \u0447\u0438\u0441\u043B\u0430", "\u0421\u043E\u0437\u0434\u0430\u0439 square \u0441 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u043C n; \u043E\u043D\u0430 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 n \xD7 n. \u041F\u043E\u043A\u0430\u0436\u0438 square(4).", "def square(n):\n    return n * n\nprint(square(4))", "return \u043F\u0435\u0440\u0435\u0434\u0430\u0451\u0442 \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u043D\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043D\u0430\u0440\u0443\u0436\u0443."],
+    ["\u0423\u0434\u0432\u043E\u0439 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F double \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0443\u0434\u0432\u043E\u0435\u043D\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E. \u041F\u043E\u043A\u0430\u0436\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u044B \u0434\u043B\u044F 3 \u0438 5.", "def double(n):\n    return n * 2\nprint(double(3))\nprint(double(5))", "\u041E\u0434\u043D\u0443 \u0444\u0443\u043D\u043A\u0446\u0438\u044E \u043C\u043E\u0436\u043D\u043E \u0432\u044B\u0437\u0432\u0430\u0442\u044C \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430\u043C\u0438."],
+    ["\u041C\u043E\u0436\u043D\u043E \u0432\u043E\u0439\u0442\u0438?", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F can_enter \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u0438 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 18+. \u041F\u043E\u043A\u0430\u0436\u0438 \u043E\u0442\u0432\u0435\u0442 \u0434\u043B\u044F 16.", "def can_enter(age):\n    return age >= 18\nprint(can_enter(16))", "\u0412\u0435\u0440\u043D\u0438 True \u0438\u043B\u0438 False \u0438\u0437 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F."],
+    ["\u041F\u0435\u0440\u0438\u043C\u0435\u0442\u0440 \u043A\u043E\u043C\u043D\u0430\u0442\u044B", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F perimeter \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u043B\u0438\u043D\u0443 5 \u0438 \u0448\u0438\u0440\u0438\u043D\u0443 3. \u0412\u0435\u0440\u043D\u0438 \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0435\u0440\u0438\u043C\u0435\u0442\u0440.", "def perimeter(a, b):\n    return 2 * (a + b)\nprint(perimeter(5, 3))", "\u041F\u0435\u0440\u0438\u043C\u0435\u0442\u0440 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u2014 \u0434\u0432\u0435 \u0434\u043B\u0438\u043D\u044B \u0438 \u0434\u0432\u0435 \u0448\u0438\u0440\u0438\u043D\u044B."],
+    ["\u042F\u0440\u043B\u044B\u043A \u0434\u043B\u044F \u0442\u0435\u043A\u0441\u0442\u0430", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F label \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u043F\u0435\u0440\u0435\u0434 \u0442\u0435\u043A\u0441\u0442\u043E\u043C \xAB>> \xBB. \u041F\u043E\u043A\u0430\u0436\u0438 \u044F\u0440\u043B\u044B\u043A \u0434\u043B\u044F \xAB\u041F\u043B\u0430\u043D\xBB.", 'def label(text):\n    return ">> " + text\nprint(label("\u041F\u043B\u0430\u043D"))', "\u0421\u0442\u0440\u043E\u043A\u0438 \u043C\u043E\u0436\u043D\u043E \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u0442\u044C \u0432\u043D\u0443\u0442\u0440\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438."],
+    ["\u0421\u0443\u043C\u043C\u0430 \u0434\u043E \u0447\u0438\u0441\u043B\u0430", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F sum_to(n) \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442 \u0447\u0438\u0441\u043B\u0430 \u043E\u0442 1 \u0434\u043E n. \u041F\u043E\u043A\u0430\u0436\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0434\u043B\u044F 4.", "def sum_to(n):\n    total = 0\n    for i in range(1, n + 1):\n        total = total + i\n    return total\nprint(sum_to(4))", "\u041D\u0430\u043A\u043E\u043F\u0438 \u0441\u0443\u043C\u043C\u0443 \u0432\u043D\u0443\u0442\u0440\u0438 \u0446\u0438\u043A\u043B\u0430 \u0438 \u0432\u0435\u0440\u043D\u0438 \u043F\u043E\u0441\u043B\u0435 \u043D\u0435\u0433\u043E."],
+    ["\u0427\u0451\u0442\u043D\u043E\u0435 \u0438\u043B\u0438 \u043D\u0435\u0442", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F is_even \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 True \u0434\u043B\u044F \u0447\u0451\u0442\u043D\u043E\u0433\u043E \u0447\u0438\u0441\u043B\u0430. \u041F\u0440\u043E\u0432\u0435\u0440\u044C 9.", "def is_even(n):\n    return n % 2 == 0\nprint(is_even(9))", "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043E\u0441\u0442\u0430\u0442\u043E\u043A \u043E\u0442 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043D\u0430 \u0434\u0432\u0430."],
+    ["\u0421\u043A\u0438\u0434\u043A\u0430 \u0432 \u0444\u0443\u043D\u043A\u0446\u0438\u0438", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F final_price \u0443\u043C\u0435\u043D\u044C\u0448\u0430\u0435\u0442 \u0446\u0435\u043D\u0443 \u043D\u0430 3, \u0435\u0441\u043B\u0438 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0445\u043E\u0442\u044F \u0431\u044B \u0434\u0432\u0430. \u041F\u043E\u043A\u0430\u0436\u0438 \u0446\u0435\u043D\u0443 \u0434\u043B\u044F 2 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u043F\u043E 8.", "def final_price(count, price):\n    total = count * price\n    if count >= 2:\n        return total - 3\n    return total\nprint(final_price(2, 8))", "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0447\u0438\u0441\u043B\u0438 \u0438\u0442\u043E\u0433, \u0437\u0430\u0442\u0435\u043C \u0440\u0435\u0448\u0438, \u043D\u0443\u0436\u043D\u0430 \u043B\u0438 \u0441\u043A\u0438\u0434\u043A\u0430."],
+    ["\u041E\u0434\u0438\u043D \u0448\u0430\u0431\u043B\u043E\u043D, \u0434\u0432\u0430 \u0432\u044B\u0437\u043E\u0432\u0430", "\u0424\u0443\u043D\u043A\u0446\u0438\u044F message(name) \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u0438\u043C\u044F\xBB. \u041F\u043E\u0437\u0434\u043E\u0440\u043E\u0432\u0430\u0439\u0441\u044F \u0441 \u041B\u0435\u0435\u0439 \u0438 \u041C\u0438\u0440\u043E\u0439.", 'def message(name):\n    print("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)\nmessage("\u041B\u0435\u044F")\nmessage("\u041C\u0438\u0440\u0430")', "\u0412\u044B\u0437\u043E\u0432\u0438 \u043E\u0434\u043D\u0443 \u0444\u0443\u043D\u043A\u0446\u0438\u044E \u0434\u0432\u0430 \u0440\u0430\u0437\u0430 \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u0438\u043C\u0435\u043D\u0430\u043C\u0438."]
   ] },
-  { id: 10, skills: ["list", "loop", "variable"], tasks: [
-    ["\u041F\u0435\u0440\u0432\u043E\u0435 \u0438\u043C\u044F", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 \u041B\u0435\u044F \u0438 \u041C\u0438\u0440\u0430. \u041F\u043E\u043A\u0430\u0436\u0438 \u043F\u0435\u0440\u0432\u043E\u0435 \u0438\u043C\u044F \u043F\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0443.", 'names = ["\u041B\u0435\u044F", "\u041C\u0438\u0440\u0430"]\nprint(names[0])', "\u041E\u0442\u0441\u0447\u0451\u0442 \u0438\u043D\u0434\u0435\u043A\u0441\u043E\u0432 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0441 \u043D\u0443\u043B\u044F.", [/\[[^\]]+,/, /\[0\]/]],
-    ["\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0431\u0430\u043B\u043B", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 3, 5, 8. \u041F\u043E\u043A\u0430\u0436\u0438 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0431\u0430\u043B\u043B.", "scores = [3, 5, 8]\nprint(scores[2])", "\u0423 \u0442\u0440\u0451\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0438\u043D\u0434\u0435\u043A\u0441\u044B 0, 1, 2.", [/\[[^\]]+,/, /\[2\]/]],
-    ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043D\u0438\u0433", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 \u0442\u0440\u0438 \u043A\u043D\u0438\u0433\u0438. \u0412\u044B\u0432\u0435\u0434\u0438 \u0435\u0433\u043E \u0434\u043B\u0438\u043D\u0443 \u0447\u0435\u0440\u0435\u0437 len.", 'books = ["\u041A\u043E\u0434", "\u0418\u0433\u0440\u0430", "\u041C\u0438\u0440"]\nprint(len(books))', "len \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0447\u0438\u0441\u043B\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0441\u043F\u0438\u0441\u043A\u0430.", [/\blen\s*\(/]],
-    ["\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u044F\u044F \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430", "\u041F\u043E\u043A\u0430\u0436\u0438 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u044E\u044E \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u0441\u043F\u0438\u0441\u043A\u0430 4, 7, 9 \u0447\u0435\u0440\u0435\u0437 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0438\u043D\u0434\u0435\u043A\u0441.", "cards = [4, 7, 9]\nprint(cards[-1])", "\u0418\u043D\u0434\u0435\u043A\u0441 \u22121 \u0431\u0435\u0440\u0451\u0442 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0441 \u043A\u043E\u043D\u0446\u0430.", [/\[-1\]/]],
-    ["\u0418\u043C\u0435\u043D\u0430 \u043F\u043E \u043E\u0447\u0435\u0440\u0435\u0434\u0438", "\u0412\u044B\u0432\u0435\u0434\u0438 \u041B\u0435\u044F, \u041C\u0438\u0440\u0430 \u0438 \u041E\u043B\u0435\u0433 \u043F\u043E \u043E\u0434\u043D\u043E\u043C\u0443 \u0438\u043C\u0435\u043D\u0438 \u0432 \u0441\u0442\u0440\u043E\u043A\u0435 \u0447\u0435\u0440\u0435\u0437 \u0446\u0438\u043A\u043B \u043F\u043E \u0441\u043F\u0438\u0441\u043A\u0443.", 'names = ["\u041B\u0435\u044F", "\u041C\u0438\u0440\u0430", "\u041E\u043B\u0435\u0433"]\nfor name in names:\n    print(name)', "\u0426\u0438\u043A\u043B \u043C\u043E\u0436\u0435\u0442 \u0431\u0440\u0430\u0442\u044C \u0441\u0440\u0430\u0437\u0443 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u0441\u043F\u0438\u0441\u043A\u0430.", [/^for\s/m, /\[[^\]]+\]/]],
-    ["\u0421\u0443\u043C\u043C\u0430 \u043F\u043E\u043A\u0443\u043F\u043E\u043A", "\u0426\u0435\u043D\u044B 4, 6, 3. \u0421\u043B\u043E\u0436\u0438 \u0438\u0445 \u0446\u0438\u043A\u043B\u043E\u043C \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u0441\u0443\u043C\u043C\u0443.", "prices = [4, 6, 3]\ntotal = 0\nfor price in prices:\n    total = total + price\nprint(total)", "\u041D\u0430\u0447\u043D\u0438 \u0441 \u043D\u0443\u043B\u044F \u0438 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0439 \u043A\u0430\u0436\u0434\u0443\u044E \u0446\u0435\u043D\u0443.", [/^for\s/m, /\[[^\]]+\]/, /^[\t ]*[\p{L}_][\p{L}\p{N}_]*\s*=.*\+/mu]],
-    ["\u041B\u0443\u0447\u0448\u0438\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442", "\u0411\u0430\u043B\u043B\u044B 4, 9, 6. \u041D\u0430\u0439\u0434\u0438 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0446\u0438\u043A\u043B\u043E\u043C \u0431\u0435\u0437 \u0433\u043E\u0442\u043E\u0432\u043E\u0439 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 max.", "scores = [4, 9, 6]\nbest = scores[0]\nfor score in scores:\n    if score > best:\n        best = score\nprint(best)", "\u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0439 \u043A\u0430\u0436\u0434\u044B\u0439 \u0431\u0430\u043B\u043B \u0441 \u043B\u0443\u0447\u0448\u0438\u043C \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u043C.", [/^for\s/m, /^\s*if\s/m]],
-    ["\u0418\u0441\u043F\u0440\u0430\u0432\u044C \u043E\u0446\u0435\u043D\u043A\u0443", "\u041E\u0446\u0435\u043D\u043A\u0438 3, 2, 5. \u0417\u0430\u043C\u0435\u043D\u0438 \u0432\u0442\u043E\u0440\u0443\u044E \u043D\u0430 4 \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u0441\u043F\u0438\u0441\u043E\u043A.", "grades = [3, 2, 5]\ngrades[1] = 4\nprint(grades)", "\u0418\u043D\u0434\u0435\u043A\u0441 \u0432\u0442\u043E\u0440\u043E\u0439 \u043F\u043E\u0437\u0438\u0446\u0438\u0438 \u0440\u0430\u0432\u0435\u043D 1.", [/\[1\]\s*=/]],
-    ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0451\u0442\u043D\u044B\u0445", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 1, 2, 4, 7, 8 \u043F\u043E\u0441\u0447\u0438\u0442\u0430\u0439 \u0447\u0451\u0442\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430.", "numbers = [1, 2, 4, 7, 8]\ncount = 0\nfor number in numbers:\n    if number % 2 == 0:\n        count = count + 1\nprint(count)", "\u041F\u0440\u043E\u0432\u0435\u0440\u044F\u0439 \u043A\u0430\u0436\u0434\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0438 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0432\u0430\u0439 \u0441\u0447\u0451\u0442\u0447\u0438\u043A.", [/^for\s/m, /%/]],
-    ["\u0426\u0435\u043D\u044B \u0432\u044B\u0448\u0435 \u043F\u043E\u0440\u043E\u0433\u0430", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 4, 11, 7, 15 \u043F\u043E\u043A\u0430\u0436\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u0446\u0435\u043D\u044B \u0432\u044B\u0448\u0435 10.", "prices = [4, 11, 7, 15]\nfor price in prices:\n    if price > 10:\n        print(price)", "\u0423\u0441\u043B\u043E\u0432\u0438\u0435 \u0434\u043E\u043B\u0436\u043D\u043E \u043D\u0430\u0445\u043E\u0434\u0438\u0442\u044C\u0441\u044F \u0432\u043D\u0443\u0442\u0440\u0438 \u0446\u0438\u043A\u043B\u0430.", [/^for\s/m, /^\s*if\s/m]],
-    ["\u0421\u0447\u0451\u0442 \u043F\u043E \u0434\u043D\u044F\u043C", "\u0417\u0430 \u0442\u0440\u0438 \u0434\u043D\u044F \u0441\u043E\u0431\u0440\u0430\u043B\u0438 2, 3, 4 \u0436\u0435\u0442\u043E\u043D\u0430. \u041F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0443\u044E \u0441\u0443\u043C\u043C\u0443 \u043F\u043E\u0441\u043B\u0435 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0434\u043D\u044F.", "days = [2, 3, 4]\ntotal = 0\nfor amount in days:\n    total = total + amount\n    print(total)", "\u0412\u044B\u0432\u043E\u0434\u0438 \u0441\u0443\u043C\u043C\u0443 \u0432\u043D\u0443\u0442\u0440\u0438 \u0446\u0438\u043A\u043B\u0430 \u043F\u043E\u0441\u043B\u0435 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u0438\u044F.", [/^for\s/m, /\[[^\]]+\]/]],
-    ["\u041A\u043E\u0440\u0437\u0438\u043D\u0430 \u043F\u043E\u043A\u0443\u043F\u043E\u043A", "\u0412 \u043A\u043E\u0440\u0437\u0438\u043D\u0435 \u0446\u0435\u043D\u044B 5, 8, 2. \u041F\u043E\u043A\u0430\u0436\u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438 \u043E\u0431\u0449\u0443\u044E \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C.", "prices = [5, 8, 2]\ntotal = 0\nfor price in prices:\n    total = total + price\nprint(len(prices))\nprint(total)", "\u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0434\u0430\u0451\u0442 len, \u0438\u0442\u043E\u0433 \u043D\u0430\u043A\u043E\u043F\u0438 \u0446\u0438\u043A\u043B\u043E\u043C.", [/\blen\s*\(/, /^for\s/m]]
+  { id: 10, tasks: [
+    ["\u041F\u0435\u0440\u0432\u043E\u0435 \u0438\u043C\u044F", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 \u041B\u0435\u044F \u0438 \u041C\u0438\u0440\u0430. \u041F\u043E\u043A\u0430\u0436\u0438 \u043F\u0435\u0440\u0432\u043E\u0435 \u0438\u043C\u044F \u043F\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0443.", 'names = ["\u041B\u0435\u044F", "\u041C\u0438\u0440\u0430"]\nprint(names[0])', "\u041E\u0442\u0441\u0447\u0451\u0442 \u0438\u043D\u0434\u0435\u043A\u0441\u043E\u0432 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0441 \u043D\u0443\u043B\u044F."],
+    ["\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0431\u0430\u043B\u043B", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 3, 5, 8. \u041F\u043E\u043A\u0430\u0436\u0438 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0431\u0430\u043B\u043B.", "scores = [3, 5, 8]\nprint(scores[2])", "\u0423 \u0442\u0440\u0451\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0438\u043D\u0434\u0435\u043A\u0441\u044B 0, 1, 2."],
+    ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043D\u0438\u0433", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 \u0442\u0440\u0438 \u043A\u043D\u0438\u0433\u0438. \u0412\u044B\u0432\u0435\u0434\u0438 \u0435\u0433\u043E \u0434\u043B\u0438\u043D\u0443 \u0447\u0435\u0440\u0435\u0437 len.", 'books = ["\u041A\u043E\u0434", "\u0418\u0433\u0440\u0430", "\u041C\u0438\u0440"]\nprint(len(books))', "len \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0447\u0438\u0441\u043B\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0441\u043F\u0438\u0441\u043A\u0430."],
+    ["\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u044F\u044F \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430", "\u041F\u043E\u043A\u0430\u0436\u0438 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u044E\u044E \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u0441\u043F\u0438\u0441\u043A\u0430 4, 7, 9 \u0447\u0435\u0440\u0435\u0437 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0438\u043D\u0434\u0435\u043A\u0441.", "cards = [4, 7, 9]\nprint(cards[-1])", "\u0418\u043D\u0434\u0435\u043A\u0441 \u22121 \u0431\u0435\u0440\u0451\u0442 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0441 \u043A\u043E\u043D\u0446\u0430."],
+    ["\u0418\u043C\u0435\u043D\u0430 \u043F\u043E \u043E\u0447\u0435\u0440\u0435\u0434\u0438", "\u0412\u044B\u0432\u0435\u0434\u0438 \u041B\u0435\u044F, \u041C\u0438\u0440\u0430 \u0438 \u041E\u043B\u0435\u0433 \u043F\u043E \u043E\u0434\u043D\u043E\u043C\u0443 \u0438\u043C\u0435\u043D\u0438 \u0432 \u0441\u0442\u0440\u043E\u043A\u0435 \u0447\u0435\u0440\u0435\u0437 \u0446\u0438\u043A\u043B \u043F\u043E \u0441\u043F\u0438\u0441\u043A\u0443.", 'names = ["\u041B\u0435\u044F", "\u041C\u0438\u0440\u0430", "\u041E\u043B\u0435\u0433"]\nfor name in names:\n    print(name)', "\u0426\u0438\u043A\u043B \u043C\u043E\u0436\u0435\u0442 \u0431\u0440\u0430\u0442\u044C \u0441\u0440\u0430\u0437\u0443 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u0441\u043F\u0438\u0441\u043A\u0430."],
+    ["\u0421\u0443\u043C\u043C\u0430 \u043F\u043E\u043A\u0443\u043F\u043E\u043A", "\u0426\u0435\u043D\u044B 4, 6, 3. \u0421\u043B\u043E\u0436\u0438 \u0438\u0445 \u0446\u0438\u043A\u043B\u043E\u043C \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u0441\u0443\u043C\u043C\u0443.", "prices = [4, 6, 3]\ntotal = 0\nfor price in prices:\n    total = total + price\nprint(total)", "\u041D\u0430\u0447\u043D\u0438 \u0441 \u043D\u0443\u043B\u044F \u0438 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0439 \u043A\u0430\u0436\u0434\u0443\u044E \u0446\u0435\u043D\u0443."],
+    ["\u041B\u0443\u0447\u0448\u0438\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442", "\u0411\u0430\u043B\u043B\u044B 4, 9, 6. \u041D\u0430\u0439\u0434\u0438 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0446\u0438\u043A\u043B\u043E\u043C \u0431\u0435\u0437 \u0433\u043E\u0442\u043E\u0432\u043E\u0439 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 max.", "scores = [4, 9, 6]\nbest = scores[0]\nfor score in scores:\n    if score > best:\n        best = score\nprint(best)", "\u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0439 \u043A\u0430\u0436\u0434\u044B\u0439 \u0431\u0430\u043B\u043B \u0441 \u043B\u0443\u0447\u0448\u0438\u043C \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u043C."],
+    ["\u0418\u0441\u043F\u0440\u0430\u0432\u044C \u043E\u0446\u0435\u043D\u043A\u0443", "\u041E\u0446\u0435\u043D\u043A\u0438 3, 2, 5. \u0417\u0430\u043C\u0435\u043D\u0438 \u0432\u0442\u043E\u0440\u0443\u044E \u043D\u0430 4 \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u0441\u043F\u0438\u0441\u043E\u043A.", "grades = [3, 2, 5]\ngrades[1] = 4\nprint(grades)", "\u0418\u043D\u0434\u0435\u043A\u0441 \u0432\u0442\u043E\u0440\u043E\u0439 \u043F\u043E\u0437\u0438\u0446\u0438\u0438 \u0440\u0430\u0432\u0435\u043D 1."],
+    ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0451\u0442\u043D\u044B\u0445", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 1, 2, 4, 7, 8 \u043F\u043E\u0441\u0447\u0438\u0442\u0430\u0439 \u0447\u0451\u0442\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430.", "numbers = [1, 2, 4, 7, 8]\ncount = 0\nfor number in numbers:\n    if number % 2 == 0:\n        count = count + 1\nprint(count)", "\u041F\u0440\u043E\u0432\u0435\u0440\u044F\u0439 \u043A\u0430\u0436\u0434\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0438 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0432\u0430\u0439 \u0441\u0447\u0451\u0442\u0447\u0438\u043A."],
+    ["\u0426\u0435\u043D\u044B \u0432\u044B\u0448\u0435 \u043F\u043E\u0440\u043E\u0433\u0430", "\u0412 \u0441\u043F\u0438\u0441\u043A\u0435 4, 11, 7, 15 \u043F\u043E\u043A\u0430\u0436\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u0446\u0435\u043D\u044B \u0432\u044B\u0448\u0435 10.", "prices = [4, 11, 7, 15]\nfor price in prices:\n    if price > 10:\n        print(price)", "\u0423\u0441\u043B\u043E\u0432\u0438\u0435 \u0434\u043E\u043B\u0436\u043D\u043E \u043D\u0430\u0445\u043E\u0434\u0438\u0442\u044C\u0441\u044F \u0432\u043D\u0443\u0442\u0440\u0438 \u0446\u0438\u043A\u043B\u0430."],
+    ["\u0421\u0447\u0451\u0442 \u043F\u043E \u0434\u043D\u044F\u043C", "\u0417\u0430 \u0442\u0440\u0438 \u0434\u043D\u044F \u0441\u043E\u0431\u0440\u0430\u043B\u0438 2, 3, 4 \u0436\u0435\u0442\u043E\u043D\u0430. \u041F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0443\u044E \u0441\u0443\u043C\u043C\u0443 \u043F\u043E\u0441\u043B\u0435 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0434\u043D\u044F.", "days = [2, 3, 4]\ntotal = 0\nfor amount in days:\n    total = total + amount\n    print(total)", "\u0412\u044B\u0432\u043E\u0434\u0438 \u0441\u0443\u043C\u043C\u0443 \u0432\u043D\u0443\u0442\u0440\u0438 \u0446\u0438\u043A\u043B\u0430 \u043F\u043E\u0441\u043B\u0435 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u0438\u044F."],
+    ["\u041A\u043E\u0440\u0437\u0438\u043D\u0430 \u043F\u043E\u043A\u0443\u043F\u043E\u043A", "\u0412 \u043A\u043E\u0440\u0437\u0438\u043D\u0435 \u0446\u0435\u043D\u044B 5, 8, 2. \u041F\u043E\u043A\u0430\u0436\u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438 \u043E\u0431\u0449\u0443\u044E \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C.", "prices = [5, 8, 2]\ntotal = 0\nfor price in prices:\n    total = total + price\nprint(len(prices))\nprint(total)", "\u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0434\u0430\u0451\u0442 len, \u0438\u0442\u043E\u0433 \u043D\u0430\u043A\u043E\u043F\u0438 \u0446\u0438\u043A\u043B\u043E\u043C."]
   ] },
-  { id: 11, skills: ["input", "variable", "if"], tasks: [
-    ["\u041F\u043E\u0437\u0434\u043E\u0440\u043E\u0432\u0430\u0439\u0441\u044F \u0441 \u0433\u043E\u0441\u0442\u0435\u043C", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0438\u043C\u044F \u0447\u0435\u0440\u0435\u0437 input \u0438 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u0438\u043C\u044F\xBB.", 'name = input()\nprint("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)', "input \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0442\u0435\u043A\u0441\u0442; \u0441\u043E\u0445\u0440\u0430\u043D\u0438 \u0435\u0433\u043E \u0432 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439.", [/\binput\s*\(/], [["\u041C\u0438\u0440\u0430"], ["\u041E\u043B\u0435\u0433"]]],
-    ["\u0427\u0435\u0440\u0435\u0437 \u0433\u043E\u0434", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u0447\u0438\u0441\u043B\u043E\u043C \u0438 \u043F\u043E\u043A\u0430\u0436\u0438, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0435\u0442 \u0431\u0443\u0434\u0435\u0442 \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434.", "age = int(input())\nprint(age + 1)", "input \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0441\u0442\u0440\u043E\u043A\u0443, int \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0435\u0451 \u0432 \u0447\u0438\u0441\u043B\u043E.", [/\binput\s*\(/, /\bint\s*\(/], [["12"], ["20"]]],
-    ["\u0421\u043B\u043E\u0436\u0438 \u0434\u0432\u0430 \u0432\u0432\u043E\u0434\u0430", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0434\u0432\u0430 \u0446\u0435\u043B\u044B\u0445 \u0447\u0438\u0441\u043B\u0430 \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0438\u0445 \u0441\u0443\u043C\u043C\u0443.", "a = int(input())\nb = int(input())\nprint(a + b)", "\u041F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u0443\u0439 \u043E\u0431\u0430 \u0432\u0432\u0435\u0434\u0451\u043D\u043D\u044B\u0445 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F.", [/\binput\s*\(/, /\bint\s*\(/, /\+/], [["3", "5"], ["10", "2"]]],
-    ["\u0426\u0435\u043D\u0430 \u0437\u0430\u043A\u0430\u0437\u0430", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0446\u0435\u043D\u0443 \u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E, \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0432\u0435\u0434\u0438 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C.", "price = int(input())\ncount = int(input())\nprint(price * count)", "\u0421\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u0440\u0430\u0432\u043D\u0430 \u0446\u0435\u043D\u0435, \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u043D\u043E\u0439 \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E.", [/\binput\s*\(/, /\*/], [["7", "3"], ["4", "5"]]],
-    ["\u0412\u043E\u0437\u0440\u0430\u0441\u0442\u043D\u043E\u0439 \u043F\u043E\u0440\u043E\u0433", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0432\u043E\u0437\u0440\u0430\u0441\u0442. \u041F\u043E\u043A\u0430\u0436\u0438 \xAB\u041C\u043E\u0436\u043D\u043E\xBB \u043E\u0442 18 \u043B\u0435\u0442, \u0438\u043D\u0430\u0447\u0435 \xAB\u0420\u0430\u043D\u043E\xBB.", 'age = int(input())\nif age >= 18:\n    print("\u041C\u043E\u0436\u043D\u043E")\nelse:\n    print("\u0420\u0430\u043D\u043E")', "\u0421\u0440\u0430\u0432\u043D\u0438 \u0447\u0438\u0441\u043B\u043E \u0441 18 \u0432 \u0443\u0441\u043B\u043E\u0432\u0438\u0438.", [/\binput\s*\(/, /^if\s/m], [["16"], ["21"]]],
-    ["\u0421\u0435\u043A\u0440\u0435\u0442\u043D\u043E\u0435 \u0441\u043B\u043E\u0432\u043E", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0441\u043B\u043E\u0432\u043E. \u0414\u043B\u044F \xAB\u043B\u0438\u0441\u0442\xBB \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u041E\u0442\u043A\u0440\u044B\u0442\u043E\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u0417\u0430\u043A\u0440\u044B\u0442\u043E\xBB.", 'word = input()\nif word == "\u043B\u0438\u0441\u0442":\n    print("\u041E\u0442\u043A\u0440\u044B\u0442\u043E")\nelse:\n    print("\u0417\u0430\u043A\u0440\u044B\u0442\u043E")', "\u0421\u0440\u0430\u0432\u043D\u0438 \u0441\u0442\u0440\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 ==.", [/\binput\s*\(/, /^if\s/m], [["\u043B\u0438\u0441\u0442"], ["\u043A\u0430\u043C\u0435\u043D\u044C"]]],
-    ["\u0422\u0451\u043F\u043B\u0430\u044F \u043F\u043E\u0433\u043E\u0434\u0430", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0443. \u041E\u0442 20 \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u0422\u0435\u043F\u043B\u043E\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u041F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E\xBB.", 'temp = int(input())\nif temp >= 20:\n    print("\u0422\u0435\u043F\u043B\u043E")\nelse:\n    print("\u041F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E")', "\u041F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u0443\u0439 \u0432\u0432\u043E\u0434 \u0432 \u0447\u0438\u0441\u043B\u043E \u043F\u0435\u0440\u0435\u0434 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435\u043C.", [/\binput\s*\(/, /\bint\s*\(/], [["24"], ["12"]]],
-    ["\u041F\u043E\u0432\u0442\u043E\u0440\u0438 \u0438\u043C\u044F", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0438\u043C\u044F \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0435\u0433\u043E \u0442\u0440\u0438\u0436\u0434\u044B \u0447\u0435\u0440\u0435\u0437 \u0446\u0438\u043A\u043B.", "name = input()\nfor i in range(3):\n    print(name)", "\u0418\u043C\u044F \u0432\u0432\u043E\u0434\u044F\u0442 \u043E\u0434\u0438\u043D \u0440\u0430\u0437, \u0437\u0430\u0442\u0435\u043C \u0446\u0438\u043A\u043B \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442 \u0435\u0433\u043E \u0442\u0440\u0438\u0436\u0434\u044B.", [/\binput\s*\(/, /^for\s/m], [["\u041B\u0435\u044F"], ["\u041C\u0438\u0440\u0430"]]],
-    ["\u0421\u0438\u0433\u043D\u0430\u043B \u043D\u0443\u0436\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0440\u0430\u0437", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0447\u0438\u0441\u043B\u043E n \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \xAB\u0421\u0438\u0433\u043D\u0430\u043B\xBB \u0440\u043E\u0432\u043D\u043E n \u0440\u0430\u0437.", 'n = int(input())\nfor i in range(n):\n    print("\u0421\u0438\u0433\u043D\u0430\u043B")', "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 n \u043A\u0430\u043A \u0433\u0440\u0430\u043D\u0438\u0446\u0443 range.", [/\binput\s*\(/, /^for\s/m], [["2"], ["4"]]],
-    ["\u0421\u0434\u0430\u0447\u0430 \u0432 \u043C\u0430\u0433\u0430\u0437\u0438\u043D\u0435", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0441\u0443\u043C\u043C\u0443 \u043E\u043F\u043B\u0430\u0442\u044B \u0438 \u0446\u0435\u043D\u0443 \u043F\u043E\u043A\u0443\u043F\u043A\u0438. \u041F\u043E\u043A\u0430\u0436\u0438 \u0441\u0434\u0430\u0447\u0443.", "paid = int(input())\nprice = int(input())\nprint(paid - price)", "\u0412\u044B\u0447\u0442\u0438 \u0446\u0435\u043D\u0443 \u0438\u0437 \u043E\u043F\u043B\u0430\u0442\u044B.", [/\binput\s*\(/, /-/], [["20", "13"], ["50", "32"]]],
-    ["\u041C\u0438\u043D\u0438-\u0447\u0435\u043A", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0438\u043C\u044F \u0442\u043E\u0432\u0430\u0440\u0430, \u0446\u0435\u043D\u0443 \u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E. \u041F\u043E\u043A\u0430\u0436\u0438 \u0438\u043C\u044F \u0438 \u0437\u0430\u0442\u0435\u043C \u0438\u0442\u043E\u0433\u043E\u0432\u0443\u044E \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C.", "name = input()\nprice = int(input())\ncount = int(input())\nprint(name)\nprint(price * count)", "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435, \u0437\u0430\u0442\u0435\u043C \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u0446\u0435\u043D\u044B \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E.", [/\binput\s*\(/, /\*/], [["\u041A\u043D\u0438\u0433\u0430", "8", "2"], ["\u041C\u044F\u0447", "5", "3"]]]
+  { id: 11, tasks: [
+    ["\u041F\u043E\u0437\u0434\u043E\u0440\u043E\u0432\u0430\u0439\u0441\u044F \u0441 \u0433\u043E\u0441\u0442\u0435\u043C", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0438\u043C\u044F \u0447\u0435\u0440\u0435\u0437 input \u0438 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0439 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u0438\u043C\u044F\xBB.", 'name = input()\nprint("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)', "input \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0442\u0435\u043A\u0441\u0442; \u0441\u043E\u0445\u0440\u0430\u043D\u0438 \u0435\u0433\u043E \u0432 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439.", [["\u041C\u0438\u0440\u0430"], ["\u041E\u043B\u0435\u0433"]]],
+    ["\u0427\u0435\u0440\u0435\u0437 \u0433\u043E\u0434", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u0447\u0438\u0441\u043B\u043E\u043C \u0438 \u043F\u043E\u043A\u0430\u0436\u0438, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0435\u0442 \u0431\u0443\u0434\u0435\u0442 \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434.", "age = int(input())\nprint(age + 1)", "input \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0441\u0442\u0440\u043E\u043A\u0443, int \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0435\u0451 \u0432 \u0447\u0438\u0441\u043B\u043E.", [["12"], ["20"]]],
+    ["\u0421\u043B\u043E\u0436\u0438 \u0434\u0432\u0430 \u0432\u0432\u043E\u0434\u0430", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0434\u0432\u0430 \u0446\u0435\u043B\u044B\u0445 \u0447\u0438\u0441\u043B\u0430 \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0438\u0445 \u0441\u0443\u043C\u043C\u0443.", "a = int(input())\nb = int(input())\nprint(a + b)", "\u041F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u0443\u0439 \u043E\u0431\u0430 \u0432\u0432\u0435\u0434\u0451\u043D\u043D\u044B\u0445 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F.", [["3", "5"], ["10", "2"]]],
+    ["\u0426\u0435\u043D\u0430 \u0437\u0430\u043A\u0430\u0437\u0430", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0446\u0435\u043D\u0443 \u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E, \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0432\u0435\u0434\u0438 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C.", "price = int(input())\ncount = int(input())\nprint(price * count)", "\u0421\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u0440\u0430\u0432\u043D\u0430 \u0446\u0435\u043D\u0435, \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u043D\u043E\u0439 \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E.", [["7", "3"], ["4", "5"]]],
+    ["\u0412\u043E\u0437\u0440\u0430\u0441\u0442\u043D\u043E\u0439 \u043F\u043E\u0440\u043E\u0433", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0432\u043E\u0437\u0440\u0430\u0441\u0442. \u041F\u043E\u043A\u0430\u0436\u0438 \xAB\u041C\u043E\u0436\u043D\u043E\xBB \u043E\u0442 18 \u043B\u0435\u0442, \u0438\u043D\u0430\u0447\u0435 \xAB\u0420\u0430\u043D\u043E\xBB.", 'age = int(input())\nif age >= 18:\n    print("\u041C\u043E\u0436\u043D\u043E")\nelse:\n    print("\u0420\u0430\u043D\u043E")', "\u0421\u0440\u0430\u0432\u043D\u0438 \u0447\u0438\u0441\u043B\u043E \u0441 18 \u0432 \u0443\u0441\u043B\u043E\u0432\u0438\u0438.", [["16"], ["21"]]],
+    ["\u0421\u0435\u043A\u0440\u0435\u0442\u043D\u043E\u0435 \u0441\u043B\u043E\u0432\u043E", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0441\u043B\u043E\u0432\u043E. \u0414\u043B\u044F \xAB\u043B\u0438\u0441\u0442\xBB \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u041E\u0442\u043A\u0440\u044B\u0442\u043E\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u0417\u0430\u043A\u0440\u044B\u0442\u043E\xBB.", 'word = input()\nif word == "\u043B\u0438\u0441\u0442":\n    print("\u041E\u0442\u043A\u0440\u044B\u0442\u043E")\nelse:\n    print("\u0417\u0430\u043A\u0440\u044B\u0442\u043E")', "\u0421\u0440\u0430\u0432\u043D\u0438 \u0441\u0442\u0440\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 ==.", [["\u043B\u0438\u0441\u0442"], ["\u043A\u0430\u043C\u0435\u043D\u044C"]]],
+    ["\u0422\u0451\u043F\u043B\u0430\u044F \u043F\u043E\u0433\u043E\u0434\u0430", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0443. \u041E\u0442 20 \u043F\u043E\u043A\u0430\u0436\u0438 \xAB\u0422\u0435\u043F\u043B\u043E\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u041F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E\xBB.", 'temp = int(input())\nif temp >= 20:\n    print("\u0422\u0435\u043F\u043B\u043E")\nelse:\n    print("\u041F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E")', "\u041F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u0443\u0439 \u0432\u0432\u043E\u0434 \u0432 \u0447\u0438\u0441\u043B\u043E \u043F\u0435\u0440\u0435\u0434 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435\u043C.", [["24"], ["12"]]],
+    ["\u041F\u043E\u0432\u0442\u043E\u0440\u0438 \u0438\u043C\u044F", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0438\u043C\u044F \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0435\u0433\u043E \u0442\u0440\u0438\u0436\u0434\u044B \u0447\u0435\u0440\u0435\u0437 \u0446\u0438\u043A\u043B.", "name = input()\nfor i in range(3):\n    print(name)", "\u0418\u043C\u044F \u0432\u0432\u043E\u0434\u044F\u0442 \u043E\u0434\u0438\u043D \u0440\u0430\u0437, \u0437\u0430\u0442\u0435\u043C \u0446\u0438\u043A\u043B \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442 \u0435\u0433\u043E \u0442\u0440\u0438\u0436\u0434\u044B.", [["\u041B\u0435\u044F"], ["\u041C\u0438\u0440\u0430"]]],
+    ["\u0421\u0438\u0433\u043D\u0430\u043B \u043D\u0443\u0436\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0440\u0430\u0437", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0447\u0438\u0441\u043B\u043E n \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \xAB\u0421\u0438\u0433\u043D\u0430\u043B\xBB \u0440\u043E\u0432\u043D\u043E n \u0440\u0430\u0437.", 'n = int(input())\nfor i in range(n):\n    print("\u0421\u0438\u0433\u043D\u0430\u043B")', "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 n \u043A\u0430\u043A \u0433\u0440\u0430\u043D\u0438\u0446\u0443 range.", [["2"], ["4"]]],
+    ["\u0421\u0434\u0430\u0447\u0430 \u0432 \u043C\u0430\u0433\u0430\u0437\u0438\u043D\u0435", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0441\u0443\u043C\u043C\u0443 \u043E\u043F\u043B\u0430\u0442\u044B \u0438 \u0446\u0435\u043D\u0443 \u043F\u043E\u043A\u0443\u043F\u043A\u0438. \u041F\u043E\u043A\u0430\u0436\u0438 \u0441\u0434\u0430\u0447\u0443.", "paid = int(input())\nprice = int(input())\nprint(paid - price)", "\u0412\u044B\u0447\u0442\u0438 \u0446\u0435\u043D\u0443 \u0438\u0437 \u043E\u043F\u043B\u0430\u0442\u044B.", [["20", "13"], ["50", "32"]]],
+    ["\u041C\u0438\u043D\u0438-\u0447\u0435\u043A", "\u041F\u043E\u043B\u0443\u0447\u0438 \u0438\u043C\u044F \u0442\u043E\u0432\u0430\u0440\u0430, \u0446\u0435\u043D\u0443 \u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E. \u041F\u043E\u043A\u0430\u0436\u0438 \u0438\u043C\u044F \u0438 \u0437\u0430\u0442\u0435\u043C \u0438\u0442\u043E\u0433\u043E\u0432\u0443\u044E \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C.", "name = input()\nprice = int(input())\ncount = int(input())\nprint(name)\nprint(price * count)", "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435, \u0437\u0430\u0442\u0435\u043C \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u0446\u0435\u043D\u044B \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E.", [["\u041A\u043D\u0438\u0433\u0430", "8", "2"], ["\u041C\u044F\u0447", "5", "3"]]]
   ] },
-  { id: 12, skills: ["drawing", "loop", "function"], tasks: [
-    ["\u041F\u0435\u0440\u0432\u0430\u044F \u043B\u0438\u043D\u0438\u044F", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043B\u0438\u043D\u0438\u044E \u0434\u043B\u0438\u043D\u043E\u0439 60 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u0439 forward.", "forward(60)", "forward \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u043B\u0438\u043D\u0443 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F.", [/\bforward\s*\(/]],
-    ["\u041F\u043E\u0432\u0435\u0440\u043D\u0438 \u0437\u0430 \u0443\u0433\u043E\u043B", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0434\u0432\u0435 \u043B\u0438\u043D\u0438\u0438 \u043F\u043E 40 \u0441 \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u043E\u043C \u0432\u043F\u0440\u0430\u0432\u043E \u043D\u0430 90 \u0433\u0440\u0430\u0434\u0443\u0441\u043E\u0432 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438.", "forward(40)\nright(90)\nforward(40)", "\u041F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0439 \u043B\u0438\u043D\u0438\u0438 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u043D\u0430 \u043F\u0440\u044F\u043C\u043E\u0439 \u0443\u0433\u043E\u043B.", [/\bforward\s*\(/, /\bright\s*\(/]],
-    ["\u041A\u0432\u0430\u0434\u0440\u0430\u0442 \u0446\u0438\u043A\u043B\u043E\u043C", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 50 \u043E\u0434\u043D\u0438\u043C \u0446\u0438\u043A\u043B\u043E\u043C.", "for i in range(4):\n    forward(50)\n    right(90)", "\u0423 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430 \u0447\u0435\u0442\u044B\u0440\u0435 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B \u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u0430.", [/^for\s/m, /\bforward\s*\(/]],
-    ["\u0422\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0440\u0430\u0432\u043D\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0439 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 50 \u0447\u0435\u0440\u0435\u0437 \u0446\u0438\u043A\u043B.", "for i in range(3):\n    forward(50)\n    right(120)", "\u0412\u043D\u0435\u0448\u043D\u0438\u0439 \u043F\u043E\u0432\u043E\u0440\u043E\u0442 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u0440\u0430\u0432\u0435\u043D 120 \u0433\u0440\u0430\u0434\u0443\u0441\u0430\u043C.", [/^for\s/m, /\bforward\s*\(/]],
-    ["\u041F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 80 \u0438 40.", "for i in range(2):\n    forward(80)\n    right(90)\n    forward(40)\n    right(90)", "\u041F\u0430\u0440\u0430 \u0434\u043B\u0438\u043D\u043D\u043E\u0439 \u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0439 \u0441\u0442\u043E\u0440\u043E\u043D \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u0435\u0442\u0441\u044F \u0434\u0432\u0430\u0436\u0434\u044B.", [/^for\s/m, /\bforward\s*\(/]],
-    ["\u0428\u0435\u0441\u0442\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0439 \u0448\u0435\u0441\u0442\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 30.", "for i in range(6):\n    forward(30)\n    right(60)", "\u0423\u0433\u043E\u043B \u0432\u043D\u0435\u0448\u043D\u0435\u0433\u043E \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u0430 \u2014 360 / 6.", [/^for\s/m, /\bforward\s*\(/]],
-    ["\u0420\u0430\u0437\u043C\u0435\u0440 \u0432 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0440\u0430\u0437\u043C\u0435\u0440 70 \u0438 \u043D\u0430\u0440\u0438\u0441\u0443\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044F \u044D\u0442\u0443 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E.", "size = 70\nfor i in range(4):\n    forward(size)\n    right(90)", "\u041F\u0435\u0440\u0435\u0434 \u0446\u0438\u043A\u043B\u043E\u043C \u0437\u0430\u043F\u043E\u043C\u043D\u0438 \u0434\u043B\u0438\u043D\u0443 \u0441\u0442\u043E\u0440\u043E\u043D\u044B.", [/^[\p{L}_][\p{L}\p{N}_]*\s*=/mu, /^for\s/m]],
-    ["\u041B\u0435\u0441\u0442\u043D\u0438\u0446\u0430", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0442\u0440\u0438 \u0441\u0442\u0443\u043F\u0435\u043D\u0438: \u0432\u043F\u0440\u0430\u0432\u043E 30, \u043F\u043E\u0432\u043E\u0440\u043E\u0442, \u0432\u0432\u0435\u0440\u0445 30 \u2014 \u0438 \u0442\u0430\u043A \u0442\u0440\u0438 \u0440\u0430\u0437\u0430.", "for i in range(3):\n    forward(30)\n    left(90)\n    forward(30)\n    right(90)", "\u041E\u0434\u043D\u0430 \u0441\u0442\u0443\u043F\u0435\u043D\u044C \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u0438\u0437 \u0434\u0432\u0443\u0445 \u043E\u0442\u0440\u0435\u0437\u043A\u043E\u0432.", [/^for\s/m, /\bforward\s*\(/]],
-    ["\u0424\u0443\u043D\u043A\u0446\u0438\u044F \u0440\u0438\u0441\u0443\u0435\u0442 \u043A\u0432\u0430\u0434\u0440\u0430\u0442", "\u0421\u043E\u0437\u0434\u0430\u0439 \u0444\u0443\u043D\u043A\u0446\u0438\u044E square(size), \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u0440\u0438\u0441\u0443\u0435\u0442 \u043A\u0432\u0430\u0434\u0440\u0430\u0442. \u0412\u044B\u0437\u043E\u0432\u0438 \u0435\u0451 \u0434\u043B\u044F \u0441\u0442\u043E\u0440\u043E\u043D\u044B 40.", "def square(size):\n    for i in range(4):\n        forward(size)\n        right(90)\nsquare(40)", "\u0412\u043D\u0443\u0442\u0440\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0438 \u0447\u0435\u0442\u044B\u0440\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B.", [/^def\s/m, /^\s*for\s/m]],
-    ["\u0426\u0432\u0435\u0442\u043E\u043A \u0438\u0437 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043E\u0432", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0447\u0435\u0442\u044B\u0440\u0435 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 30, \u043F\u043E\u0432\u043E\u0440\u0430\u0447\u0438\u0432\u0430\u044F \u043D\u0430\u0447\u0430\u043B\u043E \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043D\u0430 90 \u0433\u0440\u0430\u0434\u0443\u0441\u043E\u0432.", "def square():\n    for i in range(4):\n        forward(30)\n        right(90)\nfor j in range(4):\n    square()\n    right(90)", "\u041A\u0432\u0430\u0434\u0440\u0430\u0442 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0447\u0435\u0440\u0435\u043F\u0430\u0448\u043A\u0443 \u043A \u043D\u0430\u0447\u0430\u043B\u0443; \u0437\u0430\u0442\u0435\u043C \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435.", [/^def\s/m, /^for\s/m]],
-    ["\u0417\u0432\u0435\u0437\u0434\u0430 \u041A\u043E\u0434\u0438\u043A\u0430", "\u0418\u0442\u043E\u0433\u043E\u0432\u044B\u0439 \u043F\u0440\u043E\u0435\u043A\u0442: \u0444\u0443\u043D\u043A\u0446\u0438\u044F \u0440\u0438\u0441\u0443\u0435\u0442 \u043F\u044F\u0442\u0438\u043A\u043E\u043D\u0435\u0447\u043D\u0443\u044E \u0437\u0432\u0435\u0437\u0434\u0443 \u0438\u0437 \u043B\u0438\u043D\u0438\u0439 \u043F\u043E 80. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0446\u0438\u043A\u043B \u0438 \u0432\u044B\u0437\u043E\u0432\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u044E.", "def star(size):\n    for i in range(5):\n        forward(size)\n        right(144)\nstar(80)", "\u0414\u043B\u044F \u0437\u0432\u0435\u0437\u0434\u044B \u043F\u043E\u0441\u043B\u0435 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043B\u0443\u0447\u0430 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u043D\u0430 144 \u0433\u0440\u0430\u0434\u0443\u0441\u0430.", [/^def\s/m, /^\s*for\s/m, /\bforward\s*\(/]]
+  { id: 12, tasks: [
+    ["\u041F\u0435\u0440\u0432\u0430\u044F \u043B\u0438\u043D\u0438\u044F", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043B\u0438\u043D\u0438\u044E \u0434\u043B\u0438\u043D\u043E\u0439 60 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u0439 forward.", "forward(60)", "forward \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u043B\u0438\u043D\u0443 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F."],
+    ["\u041F\u043E\u0432\u0435\u0440\u043D\u0438 \u0437\u0430 \u0443\u0433\u043E\u043B", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0434\u0432\u0435 \u043B\u0438\u043D\u0438\u0438 \u043F\u043E 40 \u0441 \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u043E\u043C \u0432\u043F\u0440\u0430\u0432\u043E \u043D\u0430 90 \u0433\u0440\u0430\u0434\u0443\u0441\u043E\u0432 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438.", "forward(40)\nright(90)\nforward(40)", "\u041F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0439 \u043B\u0438\u043D\u0438\u0438 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u043D\u0430 \u043F\u0440\u044F\u043C\u043E\u0439 \u0443\u0433\u043E\u043B."],
+    ["\u041A\u0432\u0430\u0434\u0440\u0430\u0442 \u0446\u0438\u043A\u043B\u043E\u043C", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 50 \u043E\u0434\u043D\u0438\u043C \u0446\u0438\u043A\u043B\u043E\u043C.", "for i in range(4):\n    forward(50)\n    right(90)", "\u0423 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430 \u0447\u0435\u0442\u044B\u0440\u0435 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B \u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u0430."],
+    ["\u0422\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0440\u0430\u0432\u043D\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0439 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 50 \u0447\u0435\u0440\u0435\u0437 \u0446\u0438\u043A\u043B.", "for i in range(3):\n    forward(50)\n    right(120)", "\u0412\u043D\u0435\u0448\u043D\u0438\u0439 \u043F\u043E\u0432\u043E\u0440\u043E\u0442 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u0440\u0430\u0432\u0435\u043D 120 \u0433\u0440\u0430\u0434\u0443\u0441\u0430\u043C."],
+    ["\u041F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 80 \u0438 40.", "for i in range(2):\n    forward(80)\n    right(90)\n    forward(40)\n    right(90)", "\u041F\u0430\u0440\u0430 \u0434\u043B\u0438\u043D\u043D\u043E\u0439 \u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0439 \u0441\u0442\u043E\u0440\u043E\u043D \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u0435\u0442\u0441\u044F \u0434\u0432\u0430\u0436\u0434\u044B."],
+    ["\u0428\u0435\u0441\u0442\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0439 \u0448\u0435\u0441\u0442\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 30.", "for i in range(6):\n    forward(30)\n    right(60)", "\u0423\u0433\u043E\u043B \u0432\u043D\u0435\u0448\u043D\u0435\u0433\u043E \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u0430 \u2014 360 / 6."],
+    ["\u0420\u0430\u0437\u043C\u0435\u0440 \u0432 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439", "\u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0440\u0430\u0437\u043C\u0435\u0440 70 \u0438 \u043D\u0430\u0440\u0438\u0441\u0443\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044F \u044D\u0442\u0443 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E.", "size = 70\nfor i in range(4):\n    forward(size)\n    right(90)", "\u041F\u0435\u0440\u0435\u0434 \u0446\u0438\u043A\u043B\u043E\u043C \u0437\u0430\u043F\u043E\u043C\u043D\u0438 \u0434\u043B\u0438\u043D\u0443 \u0441\u0442\u043E\u0440\u043E\u043D\u044B."],
+    ["\u041B\u0435\u0441\u0442\u043D\u0438\u0446\u0430", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0442\u0440\u0438 \u0441\u0442\u0443\u043F\u0435\u043D\u0438: \u0432\u043F\u0440\u0430\u0432\u043E 30, \u043F\u043E\u0432\u043E\u0440\u043E\u0442, \u0432\u0432\u0435\u0440\u0445 30 \u2014 \u0438 \u0442\u0430\u043A \u0442\u0440\u0438 \u0440\u0430\u0437\u0430.", "for i in range(3):\n    forward(30)\n    left(90)\n    forward(30)\n    right(90)", "\u041E\u0434\u043D\u0430 \u0441\u0442\u0443\u043F\u0435\u043D\u044C \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u0438\u0437 \u0434\u0432\u0443\u0445 \u043E\u0442\u0440\u0435\u0437\u043A\u043E\u0432."],
+    ["\u0424\u0443\u043D\u043A\u0446\u0438\u044F \u0440\u0438\u0441\u0443\u0435\u0442 \u043A\u0432\u0430\u0434\u0440\u0430\u0442", "\u0421\u043E\u0437\u0434\u0430\u0439 \u0444\u0443\u043D\u043A\u0446\u0438\u044E square(size), \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u0440\u0438\u0441\u0443\u0435\u0442 \u043A\u0432\u0430\u0434\u0440\u0430\u0442. \u0412\u044B\u0437\u043E\u0432\u0438 \u0435\u0451 \u0434\u043B\u044F \u0441\u0442\u043E\u0440\u043E\u043D\u044B 40.", "def square(size):\n    for i in range(4):\n        forward(size)\n        right(90)\nsquare(40)", "\u0412\u043D\u0443\u0442\u0440\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0438 \u0447\u0435\u0442\u044B\u0440\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B."],
+    ["\u0426\u0432\u0435\u0442\u043E\u043A \u0438\u0437 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043E\u0432", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0447\u0435\u0442\u044B\u0440\u0435 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 30, \u043F\u043E\u0432\u043E\u0440\u0430\u0447\u0438\u0432\u0430\u044F \u043D\u0430\u0447\u0430\u043B\u043E \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043D\u0430 90 \u0433\u0440\u0430\u0434\u0443\u0441\u043E\u0432.", "def square():\n    for i in range(4):\n        forward(30)\n        right(90)\nfor j in range(4):\n    square()\n    right(90)", "\u041A\u0432\u0430\u0434\u0440\u0430\u0442 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0447\u0435\u0440\u0435\u043F\u0430\u0448\u043A\u0443 \u043A \u043D\u0430\u0447\u0430\u043B\u0443; \u0437\u0430\u0442\u0435\u043C \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435."],
+    ["\u0417\u0432\u0435\u0437\u0434\u0430 \u041A\u043E\u0434\u0438\u043A\u0430", "\u0418\u0442\u043E\u0433\u043E\u0432\u044B\u0439 \u043F\u0440\u043E\u0435\u043A\u0442: \u0444\u0443\u043D\u043A\u0446\u0438\u044F \u0440\u0438\u0441\u0443\u0435\u0442 \u043F\u044F\u0442\u0438\u043A\u043E\u043D\u0435\u0447\u043D\u0443\u044E \u0437\u0432\u0435\u0437\u0434\u0443 \u0438\u0437 \u043B\u0438\u043D\u0438\u0439 \u043F\u043E 80. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0446\u0438\u043A\u043B \u0438 \u0432\u044B\u0437\u043E\u0432\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u044E.", "def star(size):\n    for i in range(5):\n        forward(size)\n        right(144)\nstar(80)", "\u0414\u043B\u044F \u0437\u0432\u0435\u0437\u0434\u044B \u043F\u043E\u0441\u043B\u0435 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043B\u0443\u0447\u0430 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u043D\u0430 144 \u0433\u0440\u0430\u0434\u0443\u0441\u0430."]
   ] }
 ];
 var chapterNames = {
@@ -887,7 +989,7 @@ var scaffolds = {
   79: { prefix: "name = ", suffix: '\nprint("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)', answer: "input()", choices: ["input()", "print()", "int()"] },
   90: { prefix: "", suffix: "(60)", answer: "forward", choices: ["forward", "right", "left"] }
 };
-var extendedLessons = chapters.flatMap(({ id: chapter, skills: skills2, tasks }) => tasks.map(([title, goal, code2, hint, required, scenarios]) => {
+var extendedLessons = chapters.flatMap(({ id: chapter, tasks }) => tasks.map(([title, goal, code2, hint, scenarios]) => {
   const id = nextId++;
   const inputs = scenarios || [[]];
   const reference = runCourseProgram(code2, inputs[0]);
@@ -918,8 +1020,8 @@ ${material.explanation}`,
     solution: {},
     allowed: [],
     validate: () => null,
-    skills: { teaches: skills2, practices: skills2, requires: skills2.slice(0, 1) },
-    extended: { inputs, required, drawing: chapter === 12 },
+    skills: lessonObjectives[id].skills,
+    extended: { inputs, rules: lessonObjectives[id].rules, drawing: chapter === 12 },
     success: chapter === 12 ? "\u0420\u0438\u0441\u0443\u043D\u043E\u043A \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u0441\u044F. \u0422\u044B \u0441\u043E\u0431\u0440\u0430\u043B \u0435\u0433\u043E \u0438\u0437 \u043A\u043E\u043C\u0430\u043D\u0434 Python." : "\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0434\u0430\u043B\u0430 \u043D\u0443\u0436\u043D\u044B\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442. \u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439 \u043E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u044C, \u043F\u043E\u0447\u0435\u043C\u0443 \u043E\u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442."
   };
 }));
@@ -1034,6 +1136,149 @@ var lessons3 = [...newLessons.map((source) => {
   return { ...lesson, progressiveHints: hintsFor(lesson) };
 }), ...extendedLessons];
 
+// src/pythonStructure.ts
+var children = (node) => {
+  switch (node.kind) {
+    case "assign":
+      return [node.value, ...node.index ? [node.index] : []];
+    case "expression":
+    case "return":
+    case "unary":
+      return [node.value];
+    case "if":
+      return [...node.branches.flatMap((branch) => [branch.condition, ...branch.body]), ...node.otherwise];
+    case "for":
+      return [node.iterable, ...node.body];
+    case "while":
+      return [node.condition, ...node.body];
+    case "function":
+      return node.body;
+    case "list":
+      return node.items;
+    case "binary":
+      return [node.left, node.right];
+    case "call":
+      return node.args;
+    case "index":
+      return [node.target, node.index];
+    default:
+      return [];
+  }
+};
+function walkPython(program) {
+  return program.flatMap((node) => [node, ...walkPython(children(node))]);
+}
+function structureError(program, run, rules) {
+  const relevant = [...run.observed];
+  for (const rule of rules) {
+    const [type, value] = rule.split(":");
+    let valid = false;
+    if (type === "kind") valid = relevant.some((node) => node.kind === value);
+    if (type === "op") valid = relevant.some((node) => node.kind === "binary" && node.operator === value);
+    if (type === "call") valid = relevant.some((node) => node.kind === "call" && node.name === value);
+    if (type === "assign") valid = relevant.filter((node) => node.kind === "assign").length >= Number(value);
+    if (type === "print" || type === "input") valid = relevant.filter((node) => node.kind === "call" && node.name === type).length >= Number(value);
+    if (type === "params") valid = relevant.some((node) => node.kind === "function" && node.params.length === Number(value));
+    if (type === "branches") valid = relevant.some((node) => node.kind === "if" && node.branches.length >= Number(value));
+    if (type === "else") valid = relevant.some((node) => node.kind === "if" && node.otherwise.length > 0);
+    if (type === "mutate_index") valid = relevant.some((node) => node.kind === "assign" && node.index);
+    if (type === "reassign") valid = [...run.reassigned].some((node) => run.observed.has(node));
+    if (type === "sum_product") valid = relevant.some((node) => node.kind === "binary" && node.operator === "*" && [node.left, node.right].some((part) => part.kind === "binary" && part.operator === "+"));
+    if (type === "nested_loop") {
+      valid = relevant.some((node) => (node.kind === "for" || node.kind === "while") && walkPython(node.body).some((child) => (child.kind === "for" || child.kind === "while") && run.observed.has(child)));
+      if (!valid) valid = relevant.some((node) => (node.kind === "for" || node.kind === "while") && walkPython(node.body).some((child) => {
+        if (child.kind !== "call" || !run.observed.has(child)) return false;
+        const fn = program.find((item) => item.kind === "function" && item.name === child.name);
+        return fn?.kind === "function" && walkPython(fn.body).some((item) => (item.kind === "for" || item.kind === "while") && run.observed.has(item));
+      }));
+    }
+    if (!valid) {
+      const messages = { op: `\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 ${value} \u0432 \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0438, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0432\u043B\u0438\u044F\u0435\u0442 \u043D\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.`, assign: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0434\u0430\u043D\u043D\u044B\u0435 \u0432 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0445 \u0438 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0438\u0445 \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0435.", reassign: "\u0418\u0437\u043C\u0435\u043D\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u0443\u044E \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0438 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043D\u043E\u0432\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.", else: "\u0414\u043E\u0431\u0430\u0432\u044C \u0432\u0435\u0442\u043A\u0443 else \u0434\u043B\u044F \u0432\u0442\u043E\u0440\u043E\u0433\u043E \u0441\u043B\u0443\u0447\u0430\u044F.", branches: "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u043B\u0443\u0447\u0430\u0435\u0432 \u0447\u0435\u0440\u0435\u0437 if \u0438 elif.", params: `\u0412 \u044D\u0442\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u044F \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 ${value} \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0441\u0442\u0440\u043E\u043A\u0443 def \u0438 \u0432\u044B\u0437\u043E\u0432.`, mutate_index: "\u0418\u0437\u043C\u0435\u043D\u0438 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0441\u043F\u0438\u0441\u043A\u0430 \u043F\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0443.", nested_loop: "\u041E\u0434\u043D\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0435 \u0434\u043E\u043B\u0436\u043D\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0442\u044C\u0441\u044F \u0432\u043D\u0443\u0442\u0440\u0438 \u0434\u0440\u0443\u0433\u043E\u0433\u043E.", sum_product: "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u043F\u043E\u043B\u0443\u0447\u0438 \u0441\u0443\u043C\u043C\u0443, \u0437\u0430\u0442\u0435\u043C \u0443\u043C\u043D\u043E\u0436\u044C \u0435\u0451. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0441\u043A\u043E\u0431\u043A\u0438.", print: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u044B\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u044B print \u0432 \u043D\u0443\u0436\u043D\u043E\u043C \u043F\u043E\u0440\u044F\u0434\u043A\u0435.", input: "\u041F\u043E\u043B\u0443\u0447\u0438 \u043A\u0430\u0436\u0434\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E\u0439 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u0439 input." };
+      return messages[type] || `\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 ${value || type} \u0442\u0430\u043A, \u0447\u0442\u043E\u0431\u044B \u044D\u0442\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u0443\u0447\u0430\u0441\u0442\u0432\u043E\u0432\u0430\u043B\u0430 \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0435 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B.`;
+    }
+  }
+  void program;
+}
+function summarizePython(program) {
+  let budget = 48;
+  const describe = (node) => {
+    if (--budget < 0) return "more";
+    if (node.kind === "literal") return Array.isArray(node.value) ? "list" : typeof node.value === "string" ? "string" : typeof node.value === "boolean" ? "boolean" : "number";
+    if (node.kind === "name") return "variable";
+    if (node.kind === "function") return `function(params_${node.params.length},${node.body.map(describe).join(",")})`;
+    if (node.kind === "call") return `${["print", "input", "int", "str", "len", "range", "forward", "right", "left"].includes(node.name) ? node.name : "call"}(${node.args.map(describe).join(",")})`;
+    if (node.kind === "binary") return `binary(${describe(node.left)},${describe(node.right)})`;
+    return `${node.kind}(${children(node).map(describe).join(",")})`;
+  };
+  return program.slice(0, 16).map(describe).join(",").slice(0, 512) || "empty";
+}
+
+// src/extendedChecker.ts
+var equal = (actual, reference, drawing) => !actual.error && !reference.error && actual.output.length === reference.output.length && actual.output.every((value, i) => value === reference.output[i]) && (!drawing || actual.segments.length === reference.segments.length && actual.segments.every((part, i) => ["x1", "y1", "x2", "y2"].every((key) => Math.abs(part[key] - reference.segments[i][key]) < 0.02)));
+var clone = (value) => JSON.parse(JSON.stringify(value));
+var dataValue = (node) => {
+  if (node.kind !== "assign" || node.index) return void 0;
+  if (node.value.kind === "literal") return node.value.value;
+  if (node.value.kind === "unary" && node.value.operator === "-" && node.value.value.kind === "literal" && typeof node.value.value.value === "number") return -node.value.value.value;
+  if (node.value.kind === "list" && node.value.items.every((item) => item.kind === "literal")) return node.value.items.map((item) => item.kind === "literal" ? item.value : null);
+};
+var changed = (value) => Array.isArray(value) ? value.map((part, i) => typeof part === "number" ? part + i + 2 : typeof part === "string" ? `${part}!` : part) : typeof value === "number" ? value > 10 ? value - 7 : value + 2 : typeof value === "string" ? `${value}!` : value;
+function generalizes(actual, reference, inputs, drawing) {
+  const seen = /* @__PURE__ */ new Set();
+  for (let i = 0; i < reference.length; i++) {
+    const value = dataValue(reference[i]);
+    if (value === void 0 || seen.has(JSON.stringify(value))) continue;
+    seen.add(JSON.stringify(value));
+    const primary = runPythonAst(actual, inputs);
+    const candidateIndex = actual.findIndex((node) => dataValue(node) !== void 0 && JSON.stringify(dataValue(node)) === JSON.stringify(value) && primary.observed.has(node));
+    if (candidateIndex < 0) continue;
+    const expected = clone(reference), candidate = clone(actual), replacement = changed(value);
+    expected[i].value = { kind: "literal", value: replacement };
+    candidate[candidateIndex].value = { kind: "literal", value: replacement };
+    if (!equal(runPythonAst(candidate, inputs), runPythonAst(expected, inputs), drawing)) return false;
+    if (seen.size >= 3) break;
+  }
+  const refRun = runPythonAst(reference, inputs), actualRun = runPythonAst(actual, inputs);
+  const refFunctions = reference.filter((node) => node.kind === "function" && refRun.observed.has(node));
+  const actualFunctions = actual.filter((node) => node.kind === "function" && actualRun.observed.has(node));
+  for (let i = 0; i < refFunctions.length; i++) {
+    const fn = refFunctions[i], candidate = actualFunctions[i];
+    if (!candidate || candidate.params.length !== fn.params.length) return false;
+    for (const n of [1, 3, 7]) {
+      const args = fn.params.map((_, index) => ({ kind: "literal", value: n + index }));
+      const calls = [...refRun.observed].filter((node) => node.kind === "call" && node.name === fn.name);
+      const stringArgs = calls.some((node) => node.kind === "call" && node.args.some((arg) => arg.kind === "literal" && typeof arg.value === "string"));
+      const probeArgs = stringArgs ? args.map((_, index) => ({ kind: "literal", value: `\u0413\u043E\u0441\u0442\u044C${n + index}` })) : args;
+      const returns = [...refRun.observed].some((node) => node.kind === "return");
+      const call2 = (name) => ({ kind: "expression", value: returns ? { kind: "call", name: "print", args: [{ kind: "call", name, args: probeArgs }] } : { kind: "call", name, args: probeArgs } });
+      if (!equal(runPythonAst([...actual, call2(candidate.name)], inputs), runPythonAst([...reference, call2(fn.name)], inputs), drawing)) return false;
+    }
+  }
+  return true;
+}
+function checkExtendedLesson(lesson, answer) {
+  const source = lesson.mode === "completion" || lesson.mode === "tokens" ? `${lesson.prefix || ""}${answer}${lesson.suffix || ""}` : answer;
+  let ast = [];
+  try {
+    ast = parseCourseProgram(source);
+  } catch {
+  }
+  const primary = ast.length ? runPythonAst(ast, lesson.extended.inputs[0] || []) : runCourseProgram(source, lesson.extended.inputs[0] || []);
+  const program = { statements: [], normalizedStructure: ast.length ? summarizePython(ast) : "syntax_error" };
+  const failed = (message) => {
+    const details = issue(message, [...lesson.skills?.teaches || [], ...lesson.skills?.practices || []]);
+    return { passed: false, message, result: { output: primary.output, segments: primary.segments, error: primary.error, systemError: false, errorType: details.errorType, affectedSkills: details.affectedSkills }, program };
+  };
+  if (primary.error) return failed(primary.error);
+  const structural = structureError(ast, primary, lesson.extended.rules);
+  if (structural) return failed(structural);
+  for (const inputs of lesson.extended.inputs) {
+    if (!equal(runCourseProgram(source, inputs), runCourseProgram(lesson.codeAnswer, inputs), !!lesson.extended.drawing)) return failed(lesson.extended.drawing ? "\u0420\u0438\u0441\u0443\u043D\u043E\u043A \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u043B\u0438\u043D\u044B, \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u044B \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043B\u0438\u043D\u0438\u0439." : "\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0434\u0430\u0451\u0442 \u0434\u0440\u0443\u0433\u043E\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439.");
+  }
+  if (!generalizes(ast, parseCourseProgram(lesson.codeAnswer), lesson.extended.inputs[0], !!lesson.extended.drawing)) return failed("\u0421 \u0434\u0440\u0443\u0433\u0438\u043C\u0438 \u0434\u0430\u043D\u043D\u044B\u043C\u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u0451\u0442 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0445 \u0438 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u044B \u0444\u0443\u043D\u043A\u0446\u0438\u0438, \u0447\u0442\u043E\u0431\u044B \u0432\u044B\u0447\u0438\u0441\u043B\u044F\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.");
+  return { passed: true, message: lesson.success || "\u041F\u043E\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C!", result: { output: primary.output, segments: primary.segments, systemError: false }, program };
+}
+
 // src/textLearning.ts
 function tokenize2(source) {
   const tokens = [];
@@ -1050,10 +1295,10 @@ function tokenize2(source) {
       rest = rest.slice(string[0].length);
       continue;
     }
-    const number2 = /^\d+(?:\.\d+)?/.exec(rest);
-    if (number2) {
-      tokens.push({ kind: "number", value: number2[0] });
-      rest = rest.slice(number2[0].length);
+    const number3 = /^\d+(?:\.\d+)?/.exec(rest);
+    if (number3) {
+      tokens.push({ kind: "number", value: number3[0] });
+      rest = rest.slice(number3[0].length);
       continue;
     }
     const name = /^[\p{L}_][\p{L}\p{N}_]*/u.exec(rest);
@@ -1195,7 +1440,7 @@ function parsePythonProgram(source) {
         statements2.push({ kind: "call", name: match[1] });
         continue;
       }
-      throw new Error(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u043E\u043A\u0430 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u043F\u0440\u0438\u0441\u0432\u0430\u0438\u0432\u0430\u043D\u0438\u0435, print, if/else, for range \u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0431\u0435\u0437 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u043E\u0432.`);
+      throw new Error(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u0443, \u0441\u043A\u043E\u0431\u043A\u0438 \u0438 \u0434\u0432\u043E\u0435\u0442\u043E\u0447\u0438\u0435. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u0438 \u0438\u0437 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u044D\u0442\u043E\u0433\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u044F.`);
     }
     return statements2;
   };
@@ -1205,8 +1450,33 @@ function parsePythonProgram(source) {
 }
 
 // src/supportVariants.ts
+function codeFirstVariant(source, level) {
+  if (level === "blocks" || level === "blocks_with_code" || !source.codeAnswer) return null;
+  const code2 = source.codeAnswer;
+  const base2 = { ...source, supportLevel: level, tutorial: void 0, choices: void 0, tokens: void 0, prefix: void 0, suffix: void 0 };
+  if (level === "free_code") return { ...base2, mode: "text", answer: code2 };
+  if (level === "code_tokens") {
+    const tokens = code2.split(/(?<=\n)/).filter(Boolean);
+    if (tokens.length === 1) {
+      const parts = code2.match(/\s*(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\p{L}_][\p{L}\p{N}_]*|\d+|[^\s])\s*/gu);
+      if (!parts || parts.join("") !== code2) return null;
+      return { ...base2, mode: "tokens", answer: code2, tokens: [...parts].reverse() };
+    }
+    return { ...base2, mode: "tokens", answer: code2, tokens: [...tokens].reverse() };
+  }
+  const skill = source.skills?.primarySkill;
+  const gap = skill === "loop" ? /(?:range\(([^\n)]+)\)|while\s+([^\n:]+):)/.exec(code2) : skill === "if" || skill === "comparison" ? /if\s+([^\n:]+):/.exec(code2) : skill === "function" ? /return\s+([^\n]+)/.exec(code2) : skill === "list" ? /print\(([^\n]+)\)/.exec(code2) : /print\(([^\n]+)\)/.exec(code2) || /forward\(([^\n]+)\)/.exec(code2);
+  const fallback = /print\(([^\n]+)\)/.exec(code2) || /forward\(([^\n]+)\)/.exec(code2);
+  const match = gap || fallback;
+  if (!match) return null;
+  const answer = match[1] || match[2], index = match.index + match[0].indexOf(answer);
+  const choices = [.../* @__PURE__ */ new Set([answer, "0", '"\u0434\u0440\u0443\u0433\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435"'])];
+  const variant = { ...base2, mode: "completion", answer, choices, prefix: code2.slice(0, index), suffix: code2.slice(index + answer.length) };
+  return checkExtendedLesson(variant, answer).passed ? variant : null;
+}
 function createSupportVariant(source, level) {
   if (level === source.supportLevel) return source;
+  if (source.extended) return codeFirstVariant(source, level);
   if (level === "blocks" || level === "blocks_with_code") {
     if (source.mode !== "blocks" && source.mode !== "text") return null;
     return { ...source, mode: "blocks", supportLevel: level };
@@ -1265,7 +1535,25 @@ var practicePool = [
   { id: "loop-review-1", kind: "review", title: "\u0411\u044B\u0441\u0442\u0440\u043E \u0432\u0441\u043F\u043E\u043C\u043D\u0438\u043C \u0446\u0438\u043A\u043B\u044B", prompt: "\u041F\u043E\u0432\u0442\u043E\u0440\u0438 \u043E\u0434\u043D\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0442\u0440\u0438 \u0440\u0430\u0437\u0430.", skills: ["loop", "indentation", "print"], requires: ["print", "number"], supportLevel: "guided_code", durationSeconds: 40, sourceLessonId: 18 },
   { id: "comparison-if-review", kind: "review", title: "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435", prompt: "\u0412\u0441\u043F\u043E\u043C\u043D\u0438, \u043A\u0430\u043A \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435\u043C.", skills: ["comparison", "if"], requires: ["assignment", "comparison", "if"], supportLevel: "guided_code", durationSeconds: 55, sourceLessonId: 17 },
   { id: "function-review-1", kind: "review", title: "\u041E\u043F\u0438\u0448\u0438 \u0438 \u0432\u044B\u0437\u043E\u0432\u0438", prompt: "\u041E\u0442\u043B\u0438\u0447\u0438 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u043E\u0442 \u0435\u0451 \u0437\u0430\u043F\u0443\u0441\u043A\u0430.", skills: ["function", "indentation"], requires: ["sequence"], supportLevel: "blocks_with_code", durationSeconds: 45, sourceLessonId: 11 },
-  { id: "text-syntax-review-1", kind: "review", title: "\u041E\u0434\u043D\u0430 \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0430\u044F \u0441\u0442\u0440\u043E\u043A\u0430", prompt: "\u0421\u043E\u0431\u0435\u0440\u0438 \u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u0443\u044E \u0441\u0442\u0440\u043E\u043A\u0443 Python.", skills: ["text_syntax", "print"], requires: ["print"], supportLevel: "code_tokens", durationSeconds: 30, sourceLessonId: 19 }
+  { id: "text-syntax-review-1", kind: "review", title: "\u041E\u0434\u043D\u0430 \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0430\u044F \u0441\u0442\u0440\u043E\u043A\u0430", prompt: "\u0421\u043E\u0431\u0435\u0440\u0438 \u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u0443\u044E \u0441\u0442\u0440\u043E\u043A\u0443 Python.", skills: ["text_syntax", "print"], requires: ["print"], supportLevel: "code_tokens", durationSeconds: 30, sourceLessonId: 19 },
+  { id: "code-string-fix", kind: "corrective", title: "\u0421\u043E\u0435\u0434\u0438\u043D\u0438 \u0434\u0432\u0435 \u0447\u0430\u0441\u0442\u0438", prompt: "\u0412\u044B\u0432\u0435\u0434\u0438 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u043C\u0438\u0440\xBB \u0438\u0437 \u0434\u0432\u0443\u0445 \u0441\u0442\u0440\u043E\u043A.", skills: ["string"], requires: ["print"], supportLevel: "guided_code", durationSeconds: 30, sourceLessonId: 23, code: 'print("\u041F\u0440\u0438\u0432\u0435\u0442, " + "\u043C\u0438\u0440")' },
+  { id: "code-arithmetic-fix", kind: "corrective", title: "\u0426\u0435\u043D\u0430 \u0434\u0432\u0443\u0445 \u0432\u0435\u0449\u0435\u0439", prompt: "\u0426\u0435\u043D\u0430 \u0432\u0435\u0449\u0438 \u2014 4. \u0412\u044B\u0447\u0438\u0441\u043B\u0438 \u0446\u0435\u043D\u0443 \u0434\u0432\u0443\u0445 \u0432\u0435\u0449\u0435\u0439.", skills: ["arithmetic", "variable"], requires: ["number"], supportLevel: "guided_code", durationSeconds: 35, sourceLessonId: 24, code: "price = 4\nprint(price * 2)" },
+  { id: "code-variable-fix", kind: "corrective", title: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u043E\u0435 \u0438\u043C\u044F", prompt: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438 \u0438\u043C\u044F \u041C\u0438\u0440\u0430, \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0432\u0435\u0434\u0438 \xAB\u041F\u0440\u0438\u0432\u0435\u0442, \u041C\u0438\u0440\u0430\xBB.", skills: ["variable", "string"], requires: ["print", "string"], supportLevel: "guided_code", durationSeconds: 35, sourceLessonId: 26, code: 'name = "\u041C\u0438\u0440\u0430"\nprint("\u041F\u0440\u0438\u0432\u0435\u0442, " + name)' },
+  { id: "code-assignment-fix", kind: "corrective", title: "\u041E\u0431\u043D\u043E\u0432\u0438 \u0441\u0447\u0451\u0442", prompt: "\u0411\u044B\u043B\u043E 2 \u043E\u0447\u043A\u0430. \u0414\u043E\u0431\u0430\u0432\u044C 3 \u0432 \u0442\u0443 \u0436\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0438 \u0432\u044B\u0432\u0435\u0434\u0438 \u0441\u0447\u0451\u0442.", skills: ["assignment", "arithmetic"], requires: ["variable"], supportLevel: "guided_code", durationSeconds: 40, sourceLessonId: 31, code: "score = 2\nscore = score + 3\nprint(score)" },
+  { id: "code-if-fix", kind: "corrective", title: "\u0414\u0432\u0435 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B", prompt: "\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0435 \u22121 \u0432\u044B\u0432\u0435\u0434\u0438 \xAB\u0425\u043E\u043B\u043E\u0434\u043D\u043E\xBB, \u0438\u043D\u0430\u0447\u0435 \xAB\u0422\u0435\u043F\u043B\u043E\xBB.", skills: ["if", "comparison"], requires: ["comparison"], supportLevel: "guided_code", durationSeconds: 40, sourceLessonId: 34, code: 'temp = -1\nif temp < 0:\n    print("\u0425\u043E\u043B\u043E\u0434\u043D\u043E")\nelse:\n    print("\u0422\u0435\u043F\u043B\u043E")' },
+  { id: "code-comparison-fix", kind: "corrective", title: "\u0425\u0432\u0430\u0442\u0438\u0442 \u043B\u0438 \u043E\u0447\u043A\u043E\u0432?", prompt: "\u041F\u0440\u043E\u0432\u0435\u0440\u044C, \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 \u043B\u0438 8 \u043E\u0447\u043A\u043E\u0432 \u043F\u043E\u0440\u043E\u0433\u0430 6.", skills: ["comparison"], requires: ["number"], supportLevel: "guided_code", durationSeconds: 25, sourceLessonId: 32, code: "score = 8\nprint(score >= 6)" },
+  { id: "code-loop-fix", kind: "corrective", title: "\u0421\u0438\u0433\u043D\u0430\u043B \u0442\u0440\u0438 \u0440\u0430\u0437\u0430", prompt: "\u0412\u044B\u0432\u0435\u0434\u0438 \xAB\u0421\u0438\u0433\u043D\u0430\u043B\xBB \u0442\u0440\u0438 \u0440\u0430\u0437\u0430 \u0446\u0438\u043A\u043B\u043E\u043C.", skills: ["loop"], requires: ["print"], supportLevel: "guided_code", durationSeconds: 30, sourceLessonId: 45, code: 'for i in range(3):\n    print("\u0421\u0438\u0433\u043D\u0430\u043B")' },
+  { id: "code-function-fix", kind: "corrective", title: "\u0412\u0435\u0440\u043D\u0438 \u0443\u0442\u0440\u043E\u0435\u043D\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E", prompt: "\u0424\u0443\u043D\u043A\u0446\u0438\u044F \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0447\u0438\u0441\u043B\u043E \u0438 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0435\u0433\u043E, \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u043D\u043E\u0435 \u043D\u0430 3. \u041F\u043E\u043A\u0430\u0436\u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0434\u043B\u044F 2.", skills: ["function"], requires: ["arithmetic"], supportLevel: "guided_code", durationSeconds: 40, sourceLessonId: 58, code: "def triple(n):\n    return n * 3\nprint(triple(2))" },
+  { id: "list-index-fix", kind: "corrective", title: "\u041F\u0435\u0440\u0432\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442", prompt: "\u0412\u044B\u0432\u0435\u0434\u0438 \u043F\u0435\u0440\u0432\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0441\u043F\u0438\u0441\u043A\u0430 [4, 7].", skills: ["list"], requires: ["variable"], supportLevel: "guided_code", durationSeconds: 30, sourceLessonId: 67, code: "values = [4, 7]\nprint(values[0])" },
+  { id: "list-loop-fix", kind: "corrective", title: "\u041A\u0430\u0436\u0434\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442", prompt: "\u0412\u044B\u0432\u0435\u0434\u0438 \u0447\u0438\u0441\u043B\u0430 2 \u0438 5 \u0438\u0437 \u0441\u043F\u0438\u0441\u043A\u0430 \u0446\u0438\u043A\u043B\u043E\u043C.", skills: ["list", "loop"], requires: ["loop"], supportLevel: "code_tokens", durationSeconds: 40, sourceLessonId: 71, code: "values = [2, 5]\nfor value in values:\n    print(value)" },
+  { id: "list-review", kind: "review", title: "\u0420\u0430\u0437\u043C\u0435\u0440 \u0441\u043F\u0438\u0441\u043A\u0430", prompt: "\u041F\u043E\u043A\u0430\u0436\u0438 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 [1, 3, 5].", skills: ["list"], requires: ["variable"], supportLevel: "guided_code", durationSeconds: 25, sourceLessonId: 69, code: "values = [1, 3, 5]\nprint(len(values))" },
+  { id: "input-fix", kind: "corrective", title: "\u041F\u0440\u043E\u0447\u0438\u0442\u0430\u0439 \u0438 \u043E\u0442\u0432\u0435\u0442\u044C", prompt: "\u041F\u043E\u043B\u0443\u0447\u0438 \u0438\u043C\u044F \u0447\u0435\u0440\u0435\u0437 input \u0438 \u043F\u043E\u0437\u0434\u043E\u0440\u043E\u0432\u0430\u0439\u0441\u044F \u0441 \u043D\u0438\u043C.", skills: ["input", "string"], requires: ["variable"], supportLevel: "guided_code", durationSeconds: 30, sourceLessonId: 79 },
+  { id: "input-number-fix", kind: "corrective", title: "\u0412\u0432\u043E\u0434 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0447\u0438\u0441\u043B\u043E\u043C", prompt: "\u041F\u0440\u043E\u0447\u0438\u0442\u0430\u0439 \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u0438 \u043F\u043E\u043A\u0430\u0436\u0438, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0431\u0443\u0434\u0435\u0442 \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434.", skills: ["input", "arithmetic"], requires: ["arithmetic"], supportLevel: "guided_code", durationSeconds: 35, sourceLessonId: 80 },
+  { id: "input-review", kind: "review", title: "\u0414\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0441 \u043A\u043B\u0430\u0432\u0438\u0430\u0442\u0443\u0440\u044B", prompt: "\u041F\u043E\u043B\u0443\u0447\u0438 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430, \u0441\u043B\u043E\u0436\u0438 \u0438 \u043F\u043E\u043A\u0430\u0436\u0438 \u0441\u0443\u043C\u043C\u0443.", skills: ["input", "arithmetic"], requires: ["arithmetic"], supportLevel: "code_tokens", durationSeconds: 40, sourceLessonId: 81 },
+  { id: "drawing-fix", kind: "corrective", title: "\u041E\u0434\u043D\u0430 \u043B\u0438\u043D\u0438\u044F", prompt: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043B\u0438\u043D\u0438\u044E \u0434\u043B\u0438\u043D\u043E\u0439 25.", skills: ["drawing"], requires: ["number"], supportLevel: "guided_code", durationSeconds: 20, sourceLessonId: 90, code: "forward(25)" },
+  { id: "drawing-loop-fix", kind: "corrective", title: "\u0421\u0442\u043E\u0440\u043E\u043D\u044B \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430", prompt: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 20 \u043E\u0434\u043D\u0438\u043C \u0446\u0438\u043A\u043B\u043E\u043C.", skills: ["drawing", "loop"], requires: ["loop"], supportLevel: "code_tokens", durationSeconds: 40, sourceLessonId: 92, code: "for i in range(4):\n    forward(20)\n    right(90)" },
+  { id: "drawing-review", kind: "review", title: "\u0414\u0432\u0435 \u043B\u0438\u043D\u0438\u0438 \u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442", prompt: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439 \u0434\u0432\u0435 \u043B\u0438\u043D\u0438\u0438 \u043F\u043E 40 \u0441 \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u043E\u043C \u043D\u0430 90 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438.", skills: ["drawing", "sequence"], requires: ["sequence"], supportLevel: "code_tokens", durationSeconds: 35, sourceLessonId: 91 },
+  ...[["arithmetic", 24], ["variable", 26], ["if", 34], ["comparison", 32], ["loop", 45], ["function", 58], ["string", 23], ["assignment", 31]].map(([skill, sourceLessonId]) => ({ id: `code-${skill}-review`, kind: "review", title: "\u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0432\u0441\u043F\u043E\u043C\u043D\u0438\u043C \u0442\u0435\u043C\u0443", prompt: "\u0412\u044B\u043F\u043E\u043B\u043D\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443\u044E \u0437\u0430\u0434\u0430\u0447\u0443, \u0447\u0442\u043E\u0431\u044B \u043E\u0441\u0432\u0435\u0436\u0438\u0442\u044C \u043D\u0430\u0432\u044B\u043A.", skills: [skill], requires: [], supportLevel: "guided_code", durationSeconds: 35, sourceLessonId }))
 ];
 function practiceLessonId(id) {
   const index = practicePool.findIndex((item) => item.id === id);
@@ -1275,18 +1563,22 @@ function getPracticeLesson(id, support) {
   const item = practicePool.find((candidate) => candidate.id === id);
   const source = lessons3.find((lesson) => lesson.id === item?.sourceLessonId);
   if (!item || !source) return void 0;
-  const variant = materializeSupport(source, support || item.supportLevel);
+  const prepared = item.code && source.extended ? { ...source, goal: item.prompt, hint: "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u0443, \u0435\u0451 \u0434\u0430\u043D\u043D\u044B\u0435 \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439.", progressiveHints: ["\u041D\u0430\u0439\u0434\u0438 \u0432 \u0437\u0430\u0434\u0430\u043D\u0438\u0438 \u0434\u0430\u043D\u043D\u044B\u0435, \u0441 \u043A\u043E\u0442\u043E\u0440\u044B\u043C\u0438 \u0434\u043E\u043B\u0436\u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u0430.", "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044E \u0438\u0437 \u0440\u0430\u0437\u0431\u043E\u0440\u0430 \u0442\u0435\u043C\u044B \u0438 \u043F\u043E\u0434\u0441\u0442\u0430\u0432\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0438.", "\u0421\u0440\u0430\u0432\u043D\u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043A\u043E\u043C\u0430\u043D\u0434 \u0441 \u0446\u0435\u043B\u044C\u044E \u0437\u0430\u0434\u0430\u043D\u0438\u044F."], success: "\u0417\u0430\u043A\u0440\u0435\u043F\u0438\u043B\u0438 \u0442\u0435\u043C\u0443!", codeAnswer: item.code, answer: item.code, mode: "text", supportLevel: "free_code", expectedOutput: runCourseProgram(item.code, source.extended.inputs[0]).output, prefix: void 0, suffix: void 0, choices: void 0, extended: { ...source.extended, rules: item.rules || source.extended.rules } } : source;
+  const variant = materializeSupport(prepared, support || item.supportLevel);
   return {
     ...variant,
     id: practiceLessonId(id),
     title: item.title,
-    instruction: `${item.prompt} ${source.instruction}`,
+    instruction: item.code ? item.prompt : `${item.prompt} ${source.instruction}`,
     tutorial: void 0,
     review: true,
-    skills: { teaches: [], practices: item.skills, requires: item.requires }
+    skills: { primarySkill: item.skills[0], teaches: [], practices: item.skills, requires: item.requires }
   };
 }
 var practiceLessons = practicePool.map((item) => getPracticeLesson(item.id));
+
+// src/adaptiveSupport.ts
+var supportLevels = ["blocks", "blocks_with_code", "guided_code", "code_tokens", "free_code"];
 
 // src/ai/aiContext.ts
 var errorLabels = {
@@ -1310,9 +1602,9 @@ var stmt = (value) => {
 var bounded2 = (value, max) => Math.min(max, Math.max(0, Math.floor(Number.isFinite(value) ? value : 0)));
 function buildTutorContext(lesson, progress, session, program, errorType) {
   const allowedConcepts = [.../* @__PURE__ */ new Set([...lesson.skills?.teaches || [], ...lesson.skills?.practices || []])];
-  const skillId = allowedConcepts[0] || "print";
+  const skillId = lesson.skills?.primarySkill || allowedConcepts[0] || "print";
   const state3 = progress.skillStates?.[skillId];
-  const representation = lesson.mode === "blocks" ? "blocks" : lesson.mode === "text" ? "code" : "choice";
+  const representation = lesson.extended || lesson.mode === "text" ? "code" : lesson.mode === "blocks" ? "blocks" : "choice";
   return {
     lessonId: lesson.id,
     lessonTitle: lesson.title,
@@ -1320,13 +1612,15 @@ function buildTutorContext(lesson, progress, session, program, errorType) {
     task: { description: lesson.goal, expectedConcept: skillId, supportLevel: lesson.supportLevel || "blocks_with_code" },
     learner: { attempts: bounded2(session.attempts, 100), consecutiveErrors: bounded2(state3?.consecutiveErrors || 0, 100), hintsUsed: bounded2(session.hintsUsed, 3), independentSuccesses: bounded2(state3?.independentSuccesses || 0, 100) },
     ...errorType ? { lastError: { type: errorType, message: errorLabels[errorType] } } : {},
-    currentSolution: { representation, normalizedStructure: representation === "choice" ? "not_shared" : program.statements.slice(0, 12).map(stmt).join(",").slice(0, 160) || "empty" },
+    currentSolution: { representation, normalizedStructure: program.normalizedStructure || (representation === "choice" ? "not_shared" : program.statements.slice(0, 12).map(stmt).join(",").slice(0, 160) || "empty") },
     allowedConcepts
   };
 }
 function sanitizeTutorContext(lesson, raw) {
+  const level = raw?.task?.supportLevel;
+  if (supportLevels.includes(level)) lesson = materializeSupport(lesson, level);
   const safeSession = { attempts: bounded2(raw?.learner?.attempts, 100), hintsUsed: bounded2(raw?.learner?.hintsUsed, 3) };
-  const skillId = lesson.skills?.teaches[0] || lesson.skills?.practices[0] || "print";
+  const skillId = lesson.skills?.primarySkill || lesson.skills?.teaches[0] || lesson.skills?.practices[0] || "print";
   const progress = { skillStates: { [skillId]: {
     mastery: Number.isFinite(raw?.skill?.mastery) ? Math.max(0, Math.min(1, raw.skill.mastery)) : 0,
     consecutiveErrors: bounded2(raw?.learner?.consecutiveErrors, 100),
@@ -1339,8 +1633,8 @@ function sanitizeTutorContext(lesson, raw) {
   for (const output of lesson.expectedOutput) if (output.length >= 3) clean.task.description = clean.task.description.replaceAll(output, "\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0438\u0437 \u0437\u0430\u0434\u0430\u043D\u0438\u044F");
   const structure = raw?.currentSolution?.normalizedStructure;
   const tokens = typeof structure === "string" ? structure.match(/[a-z_]+/g) || [] : [];
-  const safeKinds = ["empty", "not_shared", "print", "assign", "call", "define", "repeat", "if", "binary", "comparison", "string", "number", "variable", "missing"];
-  if (clean.currentSolution.representation !== "choice" && typeof structure === "string" && structure.length <= 160 && /^[a-z0-9_,:() +*<>=!-]+$/.test(structure) && tokens.every((token) => safeKinds.includes(token))) clean.currentSolution.normalizedStructure = structure;
+  const safeKinds = ["empty", "not_shared", "print", "assign", "call", "define", "repeat", "if", "binary", "comparison", "string", "number", "variable", "missing", "syntax_error", "function", "params_", "for", "while", "return", "list", "index", "expression", "pass", "unary", "boolean", "input", "int", "str", "len", "range", "forward", "right", "left", "more"];
+  if (clean.currentSolution.representation !== "choice" && typeof structure === "string" && structure.length <= 512 && /^[a-z0-9_,:() +*<>=!-]+$/.test(structure) && tokens.every((token) => safeKinds.includes(token))) clean.currentSolution.normalizedStructure = structure;
   return clean;
 }
 
@@ -1409,8 +1703,10 @@ function validateTutorResponse(value, request, lesson, onReject) {
   if (result.example != null && (typeof result.example !== "object" || Object.keys(result.example).some((key) => !["code", "explanation"].includes(key)) || result.example.code != null && !cleanText(result.example.code, 100) || result.example.explanation != null && !cleanText(result.example.explanation, 160))) return reject("example_shape");
   const message = result.message;
   const exampleCode = result.example?.code || "";
-  if (python.test(`${message}
-${exampleCode}`)) return reject("unsupported_python");
+  const combined = `${message}
+${exampleCode}`;
+  if (/\b(?:import|class|try|except|lambda)\b/i.test(combined)) return reject("unsupported_python");
+  if (python.test(combined) && (!lesson?.extended || /\bwhile\b/i.test(combined) && !request.context.allowedConcepts.includes("loop") || /\binput\b/i.test(combined) && !request.context.allowedConcepts.includes("input") || /\breturn\b/i.test(combined) && !request.context.allowedConcepts.includes("function"))) return reject("unsupported_python");
   if (request.hintLevel < 3 && request.action === "hint" && (executableCode(message) || exampleCode)) return reject("hint_code");
   if (request.action === "hint" && exampleCode && (request.hintLevel < 3 || !exampleCode.includes("...") || exampleCode.includes("\n"))) return reject("hint_full_code");
   if (request.context.task.supportLevel === "blocks" && (code.test(message) || exampleCode)) return reject("blocks_code");
@@ -1480,8 +1776,46 @@ function configuredTutorProvider() {
   return null;
 }
 
+// server/storage.ts
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+var secret = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+var digest = (value) => createHmac("sha256", secret()).update(value).digest("hex");
+function identity(req, res) {
+  const cookie = typeof req.headers.cookie === "string" ? req.headers.cookie.match(/(?:^|;\s*)kodik_learner=([a-f0-9-]+)\.([a-f0-9]{64})(?:;|$)/) : null;
+  let id = randomUUID();
+  if (cookie && cookie[1].length === 36) {
+    const expected = Buffer.from(digest(cookie[1]), "hex"), actual = Buffer.from(cookie[2], "hex");
+    if (expected.length === actual.length && timingSafeEqual(expected, actual)) id = cookie[1];
+  }
+  if (!cookie || id !== cookie[1]) res.setHeader("Set-Cookie", `kodik_learner=${id}.${digest(id)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=31536000`);
+  const forwarded = process.env.VERCEL ? req.headers["x-vercel-forwarded-for"] || req.headers["x-forwarded-for"] : void 0;
+  const address = typeof forwarded === "string" ? forwarded.split(",")[0].trim() : req.socket?.remoteAddress || "unknown";
+  return { learner: digest(id), address: digest(address) };
+}
+async function database(path, body, prefer) {
+  const url = process.env.SUPABASE_URL, key = secret();
+  if (!url || !key) throw Error("storage_unavailable");
+  const response = await fetch(`${url}/rest/v1/${path}`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...prefer ? { Prefer: prefer } : {} }, body: JSON.stringify(body), signal: AbortSignal.timeout(2500) });
+  if (!response.ok) {
+    console.warn("learning_storage_failed", { status: response.status });
+    throw Error("storage_unavailable");
+  }
+  const text3 = await response.text();
+  return text3 ? JSON.parse(text3) : null;
+}
+function bucket(key, limit, windowMs) {
+  const window = Math.floor(Date.now() / windowMs);
+  return { key: `${key}:${window}`, limit, expires: new Date((window + 1) * windowMs).toISOString() };
+}
+async function claim(buckets) {
+  return await database("rpc/claim_learning_budget", { p_buckets: buckets }) === true;
+}
+function dailyLimit(name, fallback) {
+  const n = Number(process.env[name]);
+  return Number.isInteger(n) && n > 0 ? Math.min(n, 1e4) : fallback;
+}
+
 // server/aiTutor.ts
-var hits = /* @__PURE__ */ new Map();
 var actions = ["hint", "error_explanation", "concept", "example"];
 var maxBody = 4096;
 async function handler(req, res) {
@@ -1501,18 +1835,6 @@ async function handler(req, res) {
   }
   const provider = configuredTutorProvider();
   if (process.env.AI_TUTOR_ENABLED !== "true" || !provider) return res.status(503).json({ error: "ai_unavailable" });
-  const address = req.socket?.remoteAddress || "unknown";
-  const now = Date.now();
-  const hit = hits.get(address) || { count: 0, expires: now + 6e4 };
-  if (now >= hit.expires) {
-    hit.count = 0;
-    hit.expires = now + 6e4;
-  }
-  if (++hit.count > 30) return res.status(429).json({ error: "rate_limit" });
-  hits.set(address, hit);
-  if (hits.size > 1e3) {
-    for (const [key, value] of hits) if (value.expires < now) hits.delete(key);
-  }
   let body;
   try {
     const serialized = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
@@ -1526,6 +1848,19 @@ async function handler(req, res) {
   if ((body.action === "concept" || body.action === "error_explanation") && process.env.AI_EXPLANATIONS_ENABLED !== "true") return res.status(503).json({ error: "ai_unavailable" });
   const lesson = [...lessons3, ...practiceLessons].find((item) => item.id === body.context?.lessonId);
   if (!lesson) return res.status(400).json({ error: "unknown_lesson" });
+  try {
+    const user = identity(req, res), day = 864e5;
+    const allowed = await claim([
+      bucket(`ai:learner:${user.learner}:lesson:${lesson.id}`, 8, day),
+      bucket(`ai:ip:${user.address}:minute`, 30, 6e4),
+      bucket(`ai:learner:${user.learner}:day`, dailyLimit("AI_LEARNER_DAILY_LIMIT", 80), day),
+      bucket(`ai:ip:${user.address}:day`, dailyLimit("AI_IP_DAILY_LIMIT", 200), day),
+      bucket("ai:global:day", dailyLimit("AI_DAILY_REQUEST_LIMIT", 1e3), day)
+    ]);
+    if (!allowed) return res.status(429).json({ error: "rate_limit" });
+  } catch {
+    return res.status(503).json({ error: "budget_unavailable" });
+  }
   const request = { action: body.action, hintLevel: body.hintLevel, context: sanitizeTutorContext(lesson, body.context) };
   const prompt = makeTutorPrompt(request);
   const controller = new AbortController();

@@ -26,7 +26,7 @@ export default function App() {
   const [status, setStatus] = useState('Прогресс сохраняется на этом устройстве')
   const practice = progress.activePractice
   const sourceLesson = (practice?.lessonId === lessonId ? getPracticeLesson(practice.id, practice.supportLevel) : lessons.find(l => l.id === lessonId)) || lessons[0]
-  const lesson = sourceLesson.extended ? sourceLesson : materializeSupport(sourceLesson, progress.sessions?.[lessonId]?.supportLevel)
+  const lesson = materializeSupport(sourceLesson, progress.sessions?.[lessonId]?.supportLevel)
   const contextLesson = practice?.lessonId === lessonId ? lessons.find(item=>item.id===practice.returnLessonId) || lesson : lesson
   const lessonChapter = chapterLessons(contextLesson.chapter || 1)
   const lessonPosition = Math.max(1, lessonChapter.findIndex(item => item.id === contextLesson.id) + 1)
@@ -80,7 +80,7 @@ export default function App() {
     if (replay || !sessions[id]) { sessions[id] = { ...newSession(), supportLevel: opened.lesson.supportLevel, supportMessage: opened.message }; if (replay) delete drafts[id] }
     else sessions[id] = { ...sessions[id], supportLevel: opened.lesson.supportLevel, supportMessage: opened.message }
     persist({ ...p, sessions, drafts, started: true, currentLesson: active ? active.returnLessonId : id, currentChapter: target.chapter })
-    track(replay ? 'replay' : 'lesson_open', id)
+    track(replay ? 'replay' : 'lesson_open', id, { supportLevel: opened.lesson.supportLevel || 'blocks_with_code' })
     setLessonId(id); setRunKey(n => n + 1); setScreen('lesson')
   }
   const next = () => {

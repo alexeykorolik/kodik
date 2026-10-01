@@ -1,6 +1,7 @@
 import type { SkillId, SupportLevel } from './skills'
 import { lessons } from './course'
 import { materializeSupport } from './supportVariants'
+import { runCourseProgram } from './pythonRuntime'
 
 export type PracticeItem = {
   id: string
@@ -12,6 +13,8 @@ export type PracticeItem = {
   supportLevel: SupportLevel
   durationSeconds: number
   sourceLessonId: number
+  code?: string
+  rules?: string[]
 }
 
 // Curated, finite tasks. The selector only chooses from this list; it never
@@ -29,7 +32,25 @@ export const practicePool: PracticeItem[] = [
   { id: 'loop-review-1', kind: 'review', title: 'Быстро вспомним циклы', prompt: 'Повтори одно действие три раза.', skills: ['loop','indentation','print'], requires: ['print','number'], supportLevel: 'guided_code', durationSeconds: 40, sourceLessonId: 18 },
   { id: 'comparison-if-review', kind: 'review', title: 'Проверка и действие', prompt: 'Вспомни, как проверка управляет действием.', skills: ['comparison','if'], requires: ['assignment','comparison','if'], supportLevel: 'guided_code', durationSeconds: 55, sourceLessonId: 17 },
   { id: 'function-review-1', kind: 'review', title: 'Опиши и вызови', prompt: 'Отличи определение функции от её запуска.', skills: ['function','indentation'], requires: ['sequence'], supportLevel: 'blocks_with_code', durationSeconds: 45, sourceLessonId: 11 },
-  { id: 'text-syntax-review-1', kind: 'review', title: 'Одна настоящая строка', prompt: 'Собери корректную строку Python.', skills: ['text_syntax','print'], requires: ['print'], supportLevel: 'code_tokens', durationSeconds: 30, sourceLessonId: 19 }
+  { id: 'text-syntax-review-1', kind: 'review', title: 'Одна настоящая строка', prompt: 'Собери корректную строку Python.', skills: ['text_syntax','print'], requires: ['print'], supportLevel: 'code_tokens', durationSeconds: 30, sourceLessonId: 19 },
+  { id: 'code-string-fix', kind: 'corrective', title: 'Соедини две части', prompt: 'Выведи «Привет, мир» из двух строк.', skills: ['string'], requires: ['print'], supportLevel: 'guided_code', durationSeconds: 30, sourceLessonId: 23, code: 'print("Привет, " + "мир")' },
+  { id: 'code-arithmetic-fix', kind: 'corrective', title: 'Цена двух вещей', prompt: 'Цена вещи — 4. Вычисли цену двух вещей.', skills: ['arithmetic','variable'], requires: ['number'], supportLevel: 'guided_code', durationSeconds: 35, sourceLessonId: 24, code: 'price = 4\nprint(price * 2)' },
+  { id: 'code-variable-fix', kind: 'corrective', title: 'Используй сохранённое имя', prompt: 'Сохрани имя Мира, затем выведи «Привет, Мира».', skills: ['variable','string'], requires: ['print','string'], supportLevel: 'guided_code', durationSeconds: 35, sourceLessonId: 26, code: 'name = "Мира"\nprint("Привет, " + name)' },
+  { id: 'code-assignment-fix', kind: 'corrective', title: 'Обнови счёт', prompt: 'Было 2 очка. Добавь 3 в ту же переменную и выведи счёт.', skills: ['assignment','arithmetic'], requires: ['variable'], supportLevel: 'guided_code', durationSeconds: 40, sourceLessonId: 31, code: 'score = 2\nscore = score + 3\nprint(score)' },
+  { id: 'code-if-fix', kind: 'corrective', title: 'Две температуры', prompt: 'При температуре −1 выведи «Холодно», иначе «Тепло».', skills: ['if','comparison'], requires: ['comparison'], supportLevel: 'guided_code', durationSeconds: 40, sourceLessonId: 34, code: 'temp = -1\nif temp < 0:\n    print("Холодно")\nelse:\n    print("Тепло")' },
+  { id: 'code-comparison-fix', kind: 'corrective', title: 'Хватит ли очков?', prompt: 'Проверь, не меньше ли 8 очков порога 6.', skills: ['comparison'], requires: ['number'], supportLevel: 'guided_code', durationSeconds: 25, sourceLessonId: 32, code: 'score = 8\nprint(score >= 6)' },
+  { id: 'code-loop-fix', kind: 'corrective', title: 'Сигнал три раза', prompt: 'Выведи «Сигнал» три раза циклом.', skills: ['loop'], requires: ['print'], supportLevel: 'guided_code', durationSeconds: 30, sourceLessonId: 45, code: 'for i in range(3):\n    print("Сигнал")' },
+  { id: 'code-function-fix', kind: 'corrective', title: 'Верни утроенное число', prompt: 'Функция принимает число и возвращает его, умноженное на 3. Покажи результат для 2.', skills: ['function'], requires: ['arithmetic'], supportLevel: 'guided_code', durationSeconds: 40, sourceLessonId: 58, code: 'def triple(n):\n    return n * 3\nprint(triple(2))' },
+  { id: 'list-index-fix', kind: 'corrective', title: 'Первый элемент', prompt: 'Выведи первый элемент списка [4, 7].', skills: ['list'], requires: ['variable'], supportLevel: 'guided_code', durationSeconds: 30, sourceLessonId: 67, code: 'values = [4, 7]\nprint(values[0])' },
+  { id: 'list-loop-fix', kind: 'corrective', title: 'Каждый элемент', prompt: 'Выведи числа 2 и 5 из списка циклом.', skills: ['list','loop'], requires: ['loop'], supportLevel: 'code_tokens', durationSeconds: 40, sourceLessonId: 71, code: 'values = [2, 5]\nfor value in values:\n    print(value)' },
+  { id: 'list-review', kind: 'review', title: 'Размер списка', prompt: 'Покажи количество элементов в списке [1, 3, 5].', skills: ['list'], requires: ['variable'], supportLevel: 'guided_code', durationSeconds: 25, sourceLessonId: 69, code: 'values = [1, 3, 5]\nprint(len(values))' },
+  { id: 'input-fix', kind: 'corrective', title: 'Прочитай и ответь', prompt: 'Получи имя через input и поздоровайся с ним.', skills: ['input','string'], requires: ['variable'], supportLevel: 'guided_code', durationSeconds: 30, sourceLessonId: 79 },
+  { id: 'input-number-fix', kind: 'corrective', title: 'Ввод становится числом', prompt: 'Прочитай возраст и покажи, сколько будет через год.', skills: ['input','arithmetic'], requires: ['arithmetic'], supportLevel: 'guided_code', durationSeconds: 35, sourceLessonId: 80 },
+  { id: 'input-review', kind: 'review', title: 'Два числа с клавиатуры', prompt: 'Получи два числа, сложи и покажи сумму.', skills: ['input','arithmetic'], requires: ['arithmetic'], supportLevel: 'code_tokens', durationSeconds: 40, sourceLessonId: 81 },
+  { id: 'drawing-fix', kind: 'corrective', title: 'Одна линия', prompt: 'Нарисуй линию длиной 25.', skills: ['drawing'], requires: ['number'], supportLevel: 'guided_code', durationSeconds: 20, sourceLessonId: 90, code: 'forward(25)' },
+  { id: 'drawing-loop-fix', kind: 'corrective', title: 'Стороны квадрата', prompt: 'Нарисуй квадрат со стороной 20 одним циклом.', skills: ['drawing','loop'], requires: ['loop'], supportLevel: 'code_tokens', durationSeconds: 40, sourceLessonId: 92, code: 'for i in range(4):\n    forward(20)\n    right(90)' },
+  { id: 'drawing-review', kind: 'review', title: 'Две линии и поворот', prompt: 'Нарисуй две линии по 40 с поворотом на 90 между ними.', skills: ['drawing','sequence'], requires: ['sequence'], supportLevel: 'code_tokens', durationSeconds: 35, sourceLessonId: 91 },
+  ...([['arithmetic',24],['variable',26],['if',34],['comparison',32],['loop',45],['function',58],['string',23],['assignment',31]] as const).map(([skill, sourceLessonId]) => ({ id: `code-${skill}-review`, kind: 'review' as const, title: 'Коротко вспомним тему', prompt: 'Выполни короткую задачу, чтобы освежить навык.', skills: [skill], requires: [], supportLevel: 'guided_code' as const, durationSeconds: 35, sourceLessonId }))
 ]
 
 // Negative IDs isolate practice drafts, attempts and sessions from curriculum rewards.
@@ -38,8 +59,9 @@ export function getPracticeLesson(id: string, support?: SupportLevel) {
   const item = practicePool.find(candidate => candidate.id === id)
   const source = lessons.find(lesson => lesson.id === item?.sourceLessonId)
   if (!item || !source) return undefined
-  const variant = materializeSupport(source, support || item.supportLevel)
-  return { ...variant, id: practiceLessonId(id)!, title: item.title, instruction: `${item.prompt} ${source.instruction}`, tutorial: undefined, review: true,
-    skills: { teaches: [], practices: item.skills, requires: item.requires } }
+  const prepared = item.code && source.extended ? { ...source, goal: item.prompt, hint: 'Проверь команду, её данные и порядок действий.', progressiveHints: ['Найди в задании данные, с которыми должна работать команда.', 'Используй конструкцию из разбора темы и подставь данные короткой задачи.', 'Сравни порядок команд с целью задания.'], success: 'Закрепили тему!', codeAnswer: item.code, answer: item.code, mode: 'text' as const, supportLevel: 'free_code' as const, expectedOutput: runCourseProgram(item.code, source.extended.inputs[0]).output, prefix: undefined, suffix: undefined, choices: undefined, extended: { ...source.extended, rules: item.rules || source.extended.rules } } : source
+  const variant = materializeSupport(prepared, support || item.supportLevel)
+  return { ...variant, id: practiceLessonId(id)!, title: item.title, instruction: item.code ? item.prompt : `${item.prompt} ${source.instruction}`, tutorial: undefined, review: true,
+    skills: { primarySkill: item.skills[0], teaches: [], practices: item.skills, requires: item.requires } }
 }
 export const practiceLessons = practicePool.map(item => getPracticeLesson(item.id)!)

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { chapters, lessons } from '../src/course'
 import { checkTextLesson } from '../src/textLearning'
-import { runCourseProgram } from '../src/course100Runtime'
+import { runCourseProgram } from '../src/pythonRuntime'
 
 assert.equal(chapters.length, 12)
 assert.equal(lessons.length, 100)
