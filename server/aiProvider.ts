@@ -1,6 +1,7 @@
-import { tutorResponseSchema } from '../src/ai/aiPrompt'
+import { tutorResponseSchemaFor } from '../src/ai/aiPrompt'
+import type { TutorResponseType } from '../src/ai/aiTypes'
 
-export type Prompt = { instructions: string; input: string }
+export type Prompt = { instructions: string; input: string; responseType: TutorResponseType }
 export type ServerAIProvider = { name: 'groq' | 'openai'; generate: (prompt: Prompt, signal: AbortSignal) => Promise<unknown> }
 
 export class ProviderError extends Error {
@@ -19,7 +20,7 @@ function groqProvider(key: string): ServerAIProvider {
     const data = await post('https://api.groq.com/openai/v1/chat/completions', key, {
       model: process.env.GROQ_TUTOR_MODEL || 'openai/gpt-oss-20b',
       messages: [{ role: 'system', content: prompt.instructions }, { role: 'user', content: prompt.input }],
-      response_format: { type: 'json_schema', json_schema: { name: 'tutor_response', strict: true, schema: tutorResponseSchema } },
+      response_format: { type: 'json_schema', json_schema: { name: 'tutor_response', strict: true, schema: tutorResponseSchemaFor(prompt.responseType) } },
       reasoning_effort: 'low', max_completion_tokens: 500,
     }, signal) as { choices?: { message?: { content?: string | null } }[] }
     const content = data.choices?.[0]?.message?.content
@@ -30,8 +31,8 @@ function groqProvider(key: string): ServerAIProvider {
 function openAIProvider(key: string, model: string): ServerAIProvider {
   return { name: 'openai', async generate(prompt, signal) {
     const data = await post('https://api.openai.com/v1/responses', key, {
-      model, store: false, ...prompt,
-      text: { format: { type: 'json_schema', name: 'tutor_response', strict: true, schema: tutorResponseSchema } },
+      model, store: false, instructions: prompt.instructions, input: prompt.input,
+      text: { format: { type: 'json_schema', name: 'tutor_response', strict: true, schema: tutorResponseSchemaFor(prompt.responseType) } },
       max_output_tokens: 300,
     }, signal) as { output?: { content?: { type?: string; text?: string }[] }[] }
     const content = data.output?.flatMap(item => item.content || []).find(item => item.type === 'output_text')?.text

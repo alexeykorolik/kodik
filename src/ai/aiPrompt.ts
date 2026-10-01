@@ -1,4 +1,4 @@
-import type { TutorRequest } from './aiTypes'
+import type { TutorAction, TutorRequest, TutorResponseType } from './aiTypes'
 import { instructionFor } from './aiPolicy'
 
 export const tutorResponseSchema = {
@@ -10,6 +10,11 @@ export const tutorResponseSchema = {
     shouldRevealSolution: { type: 'boolean' }, confidence: { type: ['string','null'], enum: ['high','medium','low',null] },
   }, required: ['type','message','concept','example','shouldRevealSolution','confidence'],
 }
+export const responseTypeFor = (action: TutorAction): TutorResponseType => action === 'hint' ? 'hint' : action === 'example' ? 'example' : 'explanation'
+export function tutorResponseSchemaFor(type: TutorResponseType) {
+  return { ...tutorResponseSchema, properties: { ...tutorResponseSchema.properties, type: { type: 'string', enum: [type] } } }
+}
 export function makeTutorPrompt(request: TutorRequest) {
-  return { instructions: instructionFor(request), input: JSON.stringify(request) }
+  const responseType = responseTypeFor(request.action)
+  return { instructions: `${instructionFor(request)}\nПоле type в ответе: ${responseType}.`, input: JSON.stringify(request), responseType }
 }

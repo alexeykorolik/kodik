@@ -47,6 +47,8 @@ export function sanitizeTutorContext(lesson: Lesson, raw: TutorContext): TutorCo
   const errorType = raw?.lastError?.type
   const validErrors: ErrorType[] = ['wrong_order','wrong_value','missing_block','wrong_structure','syntax_error','wrong_indentation','wrong_condition','loop_error','wrong_function_call','runtime_error']
   const clean = buildTutorContext(lesson, progress, safeSession, { statements: [] }, errorType && validErrors.includes(errorType) ? errorType : undefined)
+  clean.task.description = lesson.goal.replace(/[«“"][^»”"]+[»”"]/g, '«значение из задания»')
+  for (const output of lesson.expectedOutput) if (output.length >= 3) clean.task.description = clean.task.description.replaceAll(output, 'значение из задания')
   const structure = raw?.currentSolution?.normalizedStructure
   const tokens = typeof structure === 'string' ? structure.match(/[a-z_]+/g) || [] : []
   const safeKinds = ['empty','not_shared','print','assign','call','define','repeat','if','binary','comparison','string','number','variable','missing']

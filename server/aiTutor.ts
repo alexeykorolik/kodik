@@ -47,7 +47,7 @@ export default async function handler(req: Request, res: Response) {
   const timer = setTimeout(() => controller.abort(), 7000)
   try {
     const raw = await provider.generate(prompt, controller.signal)
-    const validated = validateTutorResponse(raw, request, lesson)
+    const validated = validateTutorResponse(raw, request, lesson, reason => console.warn('ai_tutor_invalid_response', { provider: provider.name, action: request.action, reason }))
     if (!validated) return res.status(502).json({ error: 'invalid_response' })
     return res.status(200).json(validated)
   } catch (error) { return res.status(error instanceof ProviderError && error.status === 429 ? 429 : 502).json({ error: error instanceof ProviderError && error.status === 429 ? 'rate_limit' : 'provider_error' }) }
