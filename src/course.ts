@@ -1,6 +1,7 @@
 import { lessons as base } from './courseBase'
 import type { Lesson } from './learningEngine'
 import { supportForMode, type LessonSkills, type SkillId } from './skills'
+import { extendedChapters, extendedLessons } from './extendedCourse'
 const original = (id: number) => base.find(l => l.id === id)!
 export const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } }
 const text = (value: string) => ({ type: 'text', fields: { TEXT: value } })
@@ -13,7 +14,8 @@ export const chapters = [
   { id: 2, title: 'Запоминать и считать', description: 'Дай данным имя и научи программу считать.', required: 4 },
   { id: 3, title: 'Принимать решения', description: 'Разные действия для разных ситуаций.', required: 4 },
   { id: 4, title: 'Повторять действия', description: 'Одна команда вместо нескольких одинаковых.', required: 4 },
-  { id: 5, title: 'От блоков к Python', description: 'Назови действия и напиши свои строки кода.', required: 0 }
+  { id: 5, title: 'От блоков к Python', description: 'Назови действия и напиши свои строки кода.', required: 0 },
+  ...extendedChapters
 ]
 const newLessons: Lesson[] = [
   { ...greeting(1, 'Научим программу говорить', 'Привет!'), chapter: 1, tutorial: ['print', 'text_value'] },
@@ -86,9 +88,9 @@ const hintsFor = (lesson: Lesson) => {
   return [first[concept!] || lesson.starterHint, lesson.starterHint, lesson.hint]
 }
 
-export const lessons: Lesson[] = newLessons.map(source => {
+export const lessons: Lesson[] = [...newLessons.map((source): Lesson => {
   const mode = source.mode || 'blocks'
   const lesson: Lesson = { ...source, mode, codeAnswer:codeAnswers[source.id], skills: metadata[source.id], difficulty: Math.min(5, Math.max(1, source.chapter || 1)) as 1|2|3|4|5, supportLevel: source.tutorial?.length ? 'blocks' : supportForMode(mode) }
   return { ...lesson, progressiveHints: hintsFor(lesson) }
-})
+}), ...extendedLessons]
 export function chapterLessons(id: number) { return lessons.filter(l => l.chapter === id) }

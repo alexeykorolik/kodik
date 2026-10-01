@@ -5,16 +5,15 @@ import type { Progress } from './progress'
 
 type Screen = 'home' | 'path' | 'finish'
 
-export function BottomNavigation({ active, onHome, onPath, onHundred, onProgress }: { active: Screen; onHome: () => void; onPath: () => void; onHundred: () => void; onProgress: () => void }) {
+export function BottomNavigation({ active, onHome, onPath, onProgress }: { active: Screen; onHome: () => void; onPath: () => void; onProgress: () => void }) {
   return <nav className="bottom-navigation" aria-label="Основная навигация">
     <button className={active === 'home' ? 'active' : ''} aria-current={active === 'home' ? 'page' : undefined} onClick={onHome}><span aria-hidden="true">⌂</span>Главная</button>
     <button className={active === 'path' ? 'active' : ''} aria-current={active === 'path' ? 'page' : undefined} onClick={onPath}><span aria-hidden="true">▤</span>Курс</button>
-    <button onClick={onHundred}><span aria-hidden="true">◇</span>100 задач</button>
     <button onClick={onProgress}><span aria-hidden="true">◔</span>Прогресс</button>
   </nav>
 }
 
-export function HomeScreen({ progress, resumeId, done, onStart, onPath, onHundred, onOpen }: { progress: Progress; resumeId?: number; done: boolean; onStart: () => void; onPath: () => void; onHundred: () => void; onOpen: (id: number) => void }) {
+export function HomeScreen({ progress, resumeId, done, onStart, onPath, onOpen }: { progress: Progress; resumeId?: number; done: boolean; onStart: () => void; onPath: () => void; onOpen: (id: number) => void }) {
   const completed = progress.completed.length
   const currentIndex = Math.max(0, lessons.findIndex(lesson => lesson.id === resumeId))
   const preview = lessons.slice(Math.max(0, currentIndex - (completed ? 1 : 0)), currentIndex + 3)
@@ -39,6 +38,5 @@ export function HomeScreen({ progress, resumeId, done, onStart, onPath, onHundre
       const unlocked = isUnlocked(lesson.id, progress)
       return <li key={lesson.id} className={complete ? 'complete' : unlocked && lesson.id === resumeId ? 'current' : 'locked'}><span className="preview-marker" aria-hidden="true">{complete ? '✓' : lesson.id}</span><button disabled={!unlocked} onClick={() => onOpen(lesson.id)}><span><strong>{lesson.title}</strong><small>{complete ? 'Пройдено' : unlocked ? index === 0 || lesson.id === resumeId ? 'Продолжить' : 'Доступно' : 'Откроется позже'}</small></span><span aria-hidden="true">{unlocked ? '›' : '·'}</span></button></li>
     })}</ol></section>
-    <button className="course100-tile" onClick={onHundred}><span aria-hidden="true">✦</span><span><strong>100 заданий</strong><small>Ещё больше практики в 12 главах</small></span><span aria-hidden="true">›</span></button>
   </div>
 }

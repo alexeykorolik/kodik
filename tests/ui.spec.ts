@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { lessons } from '../src/course'
+import { fillFieldEditor } from './fieldEditor'
 async function seed(page: Page,id: number,options: Record<string,unknown> = {}) {
   const prior = lessons.slice(0,lessons.findIndex(l=>l.id===id))
   await page.addInitScript(data=>{if(!localStorage.getItem('kodik-progress-v1'))localStorage.setItem('kodik-progress-v1',JSON.stringify(data))}, { version:2,completed:prior.map(l=>l.id),bestStars:Object.fromEntries(prior.filter(l=>!l.tutorial).map(l=>[l.id,3])),introducedConcepts:prior.flatMap(l=>l.tutorial||[]),currentLesson:id,started:true,...options })
@@ -7,8 +8,8 @@ async function seed(page: Page,id: number,options: Record<string,unknown> = {}) 
 }
 async function add(page:Page,name:string) { await page.getByRole('button',{name:/Добавить блок/}).click(); await page.locator('.block-options button').filter({has:page.getByText(name,{exact:true})}).click() }
 async function createVariable(page:Page,name:string) { await page.getByRole('button',{name:/Добавить блок/}).click(); await page.getByRole('dialog').locator('.variable-option').click(); await page.getByLabel('Название переменной').fill(name); await page.getByRole('button',{name:'Создать',exact:true}).click() }
-async function text(page:Page,value:string,index=0) { await page.locator('.text .blocklyInputField').nth(index).click(); await page.locator('.blocklyHtmlInput').fill(value); await page.locator('.blocklyHtmlInput').press('Enter') }
-async function number(page:Page,value:string,index=0) { await page.locator('.math_number .blocklyInputField').nth(index).click(); await page.locator('.blocklyHtmlInput').fill(value); await page.locator('.blocklyHtmlInput').press('Enter') }
+async function text(page:Page,value:string,index=0) { await page.locator('.text .blocklyInputField').nth(index).click(); await fillFieldEditor(page,value) }
+async function number(page:Page,value:string,index=0) { await page.locator('.math_number .blocklyInputField').nth(index).click(); await fillFieldEditor(page,value) }
 async function greater(page:Page) { await page.locator('.logic_compare > .blocklyDropdownField').click(); await page.getByRole('option',{name:/≥/}).click() }
 async function passed(page:Page) { await page.getByRole('button',{name:/^Проверить(?: снова)?$/}).click(); await expect(page.getByRole('heading',{name:'Получилось!',exact:true})).toBeVisible() }
 
@@ -155,8 +156,8 @@ test('блок и строка Python синхронизируют фокус в
   await expect(page.locator('.text_print.blocklySelected')).toBeVisible()
 })
 
-test('все 22 задания подряд, mastery открывает главы, финал',async({page})=>{
-  test.setTimeout(120000)
+test('все 100 заданий основного курса подряд, открытие глав и финал',async({page})=>{
+  test.setTimeout(180000)
   await page.setViewportSize({width:390,height:844})
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
   await page.goto('/');await page.getByRole('button',{name:/Начать бесплатно/}).click()
@@ -166,6 +167,10 @@ test('все 22 задания подряд, mastery открывает глав
   for(let i=0;i<lessons.length;i++){
     const l=lessons[i]
     await expect(page.getByRole('heading',{name:l.title,exact:true})).toBeVisible()
+    if (l.extended) {
+      if (l.mode === 'completion') await page.getByRole('radio',{name:l.answer!,exact:true}).check()
+      else await page.getByLabel('Твой Python',{exact:true}).fill(l.answer!)
+    }
     switch(l.id){
       case 1: await message('Привет!');break
       case 13: await message('Мне нравится Python');break
@@ -205,5 +210,5 @@ test('повреждённое хранилище и отказ записи н�
   await add(page,'Напечатать');await add(page,'Текст');await text(page,'Привет!');await passed(page)
   await page.getByRole('button',{name:'Продолжить',exact:true}).click()
   await expect(page.locator('.lesson-storage')).toContainText('Не удалось сохранить')
-  await page.getByRole('button',{name:'К карте курса'}).click();await expect(page.locator('.course-path .complete')).toHaveCount(1)
+  await page.getByRole('button',{name:'К карте курса'}).click();await expect(page.locator('.path-fixed-lessons .complete')).toHaveCount(1)
 })

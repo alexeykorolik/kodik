@@ -1,8 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 import { lessons } from '../src/course'
 import { mkdirSync } from 'node:fs'
+import { fillFieldEditor } from './fieldEditor'
 const add = async (page: Page, name: string) => { await page.getByRole('button',{name:/Добавить блок/}).click(); await page.locator('.block-options button').filter({has:page.getByText(name,{exact:true})}).click() }
-const edit = async (page: Page, value: string, index = 0) => { await page.locator('.blocklyInputField').nth(index).click(); await page.locator('.blocklyHtmlInput').fill(value); await page.locator('.blocklyHtmlInput').press('Enter') }
+const edit = async (page: Page, value: string, index = 0) => { await page.locator('.blocklyInputField').nth(index).click(); await fillFieldEditor(page,value) }
 const check = async (page: Page) => { await page.getByRole('button',{name:/^Проверить(?: снова)?$/}).click(); await expect(page.getByRole('heading',{name:'Получилось!',exact:true})).toBeVisible() }
 async function greeting(page: Page, message: string) { await add(page,'Напечатать'); await add(page,'Текст'); await edit(page,message) }
 async function expectPython(page:Page,code:string,width:number) {
@@ -45,6 +46,7 @@ for (const width of [360,390,430,1366]) test(`новичок: первые пя�
   await page.getByRole('button',{name:'Продолжить',exact:true}).click()
   await expect(page.getByRole('heading',{name:'Python с нуля',exact:true})).toBeVisible()
   await expect(page.getByRole('button').filter({hasText:'Число или текст?'})).toBeEnabled()
+  await page.getByRole('button',{name:'Предыдущая глава',exact:true}).click()
   await page.getByRole('button').filter({hasText:'Научим программу говорить'}).click()
   await expect(page.locator('.coach')).toHaveCount(0)
   expect(errors).toEqual([])

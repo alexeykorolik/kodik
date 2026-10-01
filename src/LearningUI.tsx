@@ -5,6 +5,15 @@ export function Modal({ title, onClose, children, success }: { title: string; on
   return <dialog ref={dialog} className={`sheet native-dialog ${success ? 'is-success' : ''}`} onCancel={e => { e.preventDefault(); onClose() }} aria-labelledby="dialog-title"><header className="sheet-heading">{success && <div className="result-mark">✓</div>}<h2 id="dialog-title">{title}</h2><button className="sheet-close" onClick={onClose} aria-label="Закрыть">×</button></header><div className="sheet-body">{children}</div></dialog>
 }
 export function Stars({ value, total = 3 }: { value: number; total?: number }) { return <span className="stars" aria-label={`${value} из ${total} звёзд`}>{Array.from({ length: total }, (_,i) => <span aria-hidden="true" key={i} className={i < value ? 'earned' : ''}>{i < value ? '★' : '☆'}</span>)}</span> }
+export function DrawingPreview({ segments }: { segments: { x1: number; y1: number; x2: number; y2: number }[] }) {
+  if (!segments.length) return null
+  const values = segments.flatMap(segment => [segment.x1, segment.x2, segment.y1, segment.y2])
+  const xs = segments.flatMap(segment => [segment.x1, segment.x2]), ys = segments.flatMap(segment => [segment.y1, segment.y2])
+  const minX = Math.min(...xs) - 20, minY = Math.min(...ys) - 20
+  const width = Math.max(90, Math.max(...xs) - Math.min(...xs) + 40), height = Math.max(90, Math.max(...ys) - Math.min(...ys) + 40)
+  if (!values.every(Number.isFinite)) return null
+  return <div className="drawing-preview"><strong>Твой рисунок</strong><svg role="img" aria-label="Рисунок программы" viewBox={`${minX} ${minY} ${width} ${height}`} preserveAspectRatio="xMidYMid meet">{segments.map((line, index) => <line key={index} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />)}</svg></div>
+}
 export function CodePreview({ code, highlights = [], sourceIds = [], onLineSelect }: { code: string; highlights?: number[]; sourceIds?: Array<string | undefined>; onLineSelect?: (sourceId: string) => void }) {
   return <pre className={`python-code ${onLineSelect ? 'interactive-code' : ''}`}><code>{code.split('\n').map((line, index) => {
     const sourceId = sourceIds[index], interactive = !!sourceId && !!onLineSelect

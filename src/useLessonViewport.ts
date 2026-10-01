@@ -48,16 +48,17 @@ export function useLessonViewport() {
         root.style.setProperty('--lesson-viewport-top', `${top}px`)
         root.style.setProperty('--lesson-keyboard-bottom', `${bottom}px`)
         root.style.setProperty('--lesson-action-height', `${actionRef.current?.getBoundingClientRect().height || 80}px`)
+        root.toggleAttribute('data-compact-lesson', mobile && height < 600)
         const host = document.querySelector<HTMLElement>('.screen-lesson .blockly-host')
         if (mobile && host) {
           const hostTop = host.getBoundingClientRect().top + window.scrollY
           const mirror = document.querySelector('.live-mirror')?.getBoundingClientRect().height || 44
           const add = document.querySelector('.workspace-actions')?.getBoundingClientRect().height || 64
           const actionHeight = actionRef.current?.getBoundingClientRect().height || 80
-          const available = height - hostTop - actionHeight - mirror - add - 18
+          const available = height - hostTop - actionHeight - mirror - add - 42
           // Blockly's SVG needs a definite pixel height. Percentage height in
           // an auto-sized flex item collapses the SVG and breaks hit testing.
-          root.style.setProperty('--lesson-workspace-height', `${Math.max(height < 600 ? 170 : 280, Math.min(560, available))}px`)
+          root.style.setProperty('--lesson-workspace-height', `${Math.max(140, Math.min(560, available))}px`)
         }
         const input = document.activeElement
         if (!mobile || !(input instanceof HTMLElement) || !input.matches('textarea, input:not([type="radio"]):not([type="checkbox"])')) return
@@ -68,14 +69,12 @@ export function useLessonViewport() {
           const action = actionRef.current?.getBoundingClientRect()
           const modal = input.closest('dialog')
           const limit = modal ? top + height - 16 : Math.min(top + height, action?.top || top + height) - 12
-          // Blockly positions its own field editor. Scroll the containing page
-          // only when a real input is outside the unobscured input area.
+          // The application frame never scrolls. Dialog contents may scroll
+          // internally; the code editor fits the remaining visible area.
           if (rect.bottom > limit) {
             if (modal) input.scrollIntoView({ block: 'nearest', behavior: 'instant' })
-            else window.scrollBy({ top: rect.bottom - limit, behavior: 'instant' })
           } else if (rect.top < top + 8) {
             if (modal) input.scrollIntoView({ block: 'nearest', behavior: 'instant' })
-            else window.scrollBy({ top: rect.top - top - 8, behavior: 'instant' })
           }
         })
       })
@@ -95,6 +94,7 @@ export function useLessonViewport() {
       window.removeEventListener('resize', update)
       document.removeEventListener('focusin', update); document.removeEventListener('focusout', update)
       for (const name of ['--lesson-viewport-height', '--lesson-viewport-top', '--lesson-keyboard-bottom', '--lesson-action-height', '--lesson-workspace-height']) root.style.removeProperty(name)
+      root.removeAttribute('data-compact-lesson')
     }
   }, [mobile])
   return { mobile, actionRef }

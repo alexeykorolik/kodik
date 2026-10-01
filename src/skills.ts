@@ -1,4 +1,4 @@
-export const skillIds = ['print','string','number','sequence','variable','assignment','arithmetic','comparison','if','loop','function','indentation','text_syntax'] as const
+export const skillIds = ['print','string','number','sequence','variable','assignment','arithmetic','comparison','if','loop','function','indentation','text_syntax','list','input','drawing'] as const
 export type SkillId = typeof skillIds[number]
 export type SupportLevel = 'blocks' | 'blocks_with_code' | 'guided_code' | 'code_tokens' | 'free_code'
 export type LessonSkills = { teaches: SkillId[]; practices: SkillId[]; requires: SkillId[] }
@@ -22,7 +22,10 @@ export const skills: Record<SkillId, SkillDefinition> = {
   loop: { id: 'loop', title: 'Циклы', prerequisites: ['sequence','number'] },
   function: { id: 'function', title: 'Функции', prerequisites: ['sequence'] },
   indentation: { id: 'indentation', title: 'Отступы Python', prerequisites: ['sequence'] },
-  text_syntax: { id: 'text_syntax', title: 'Синтаксис Python', prerequisites: ['print','string'] }
+  text_syntax: { id: 'text_syntax', title: 'Синтаксис Python', prerequisites: ['print','string'] },
+  list: { id: 'list', title: 'Списки', prerequisites: ['variable','loop'] },
+  input: { id: 'input', title: 'Ввод данных', prerequisites: ['variable','print'] },
+  drawing: { id: 'drawing', title: 'Рисование', prerequisites: ['loop','function'] }
 }
 
 export const supportRank: Record<SupportLevel, number> = {

@@ -4,7 +4,7 @@ import '../src/blocks'
 import { lessons } from '../src/course'
 import { checkLesson, renderPython, workspaceToProgram } from '../src/learningEngine'
 
-for (const lesson of lessons) {
+for (const lesson of lessons.filter(item => !item.extended)) {
   const workspace = new Blockly.Workspace()
   Blockly.serialization.workspaces.load(lesson.solution, workspace)
   const program = workspaceToProgram(workspace)
@@ -15,4 +15,4 @@ for (const lesson of lessons) {
   assert.equal(checkLesson(lesson, workspaceToProgram(workspace)).passed, false, `Starter must require work: ${lesson.title}`)
   workspace.dispose()
 }
-console.log(`✓ ${lessons.length} упражнений: Blockly → IR → Python → запуск → проверка; все стартовые состояния требуют решения.`)
+console.log(`✓ ${lessons.filter(item => !item.extended).length} упражнений: Blockly → IR → Python → запуск → проверка; все стартовые состояния требуют решения.`)

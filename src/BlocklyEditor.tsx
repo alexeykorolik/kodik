@@ -4,9 +4,21 @@ import * as ruModule from 'blockly/msg/ru'
 import './blocks'
 import { type Lesson, type Program, workspaceToProgram } from './learningEngine'
 import { readDraft, saveDraft } from './progress'
+import { KodikKeyboard } from './KodikKeyboard'
 import type { WorkspaceInfo } from './tutorial'
 
 Blockly.setLocale(Object.fromEntries(Object.entries(ruModule).filter(([key]) => key !== 'default')) as Record<string, string>)
+type EditableField = Blockly.FieldTextInput | Blockly.FieldNumber
+let mobileFieldEditor: ((field: EditableField) => void) | null = null
+const inputPrototype = Object.getPrototypeOf(Blockly.FieldTextInput.prototype) as { showEditor_: (event?: Event, quiet?: boolean, focus?: boolean) => void }
+const originalFieldEditor = inputPrototype.showEditor_
+inputPrototype.showEditor_ = function(this: EditableField, event?: Event, quiet?: boolean, focus?: boolean) {
+  if (mobileFieldEditor && window.matchMedia('(max-width: 767px)').matches && navigator.maxTouchPoints > 0) {
+    mobileFieldEditor(this)
+    return
+  }
+  originalFieldEditor.call(this, event, quiet, focus)
+}
 const theme = Blockly.Theme.defineTheme('kodik', {
   name: 'kodik', base: Blockly.Themes.Classic,
   blockStyles: {
@@ -36,6 +48,13 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
   const preferredVariableId = useRef<string | undefined>(undefined)
   const [selection, setSelection] = useState(false)
   const [notice, setNotice] = useState('')
+  const [fieldEdit, setFieldEdit] = useState<{ field: EditableField; value: string; numeric: boolean; error?: string } | null>(null)
+  mobileFieldEditor = field => {
+    const value = String(field.getValue())
+    setFieldEdit({ field, value, numeric: field instanceof Blockly.FieldNumber })
+    const block = field.getSourceBlock()
+    if (block) requestAnimationFrame(() => workspace.current?.centerOnBlock(block.id, true))
+  }
   onChangeRef.current = onChange
   const report = (w: Blockly.WorkspaceSvg, explicitId?: string | null) => {
     const selected = Blockly.common.getSelected()
@@ -177,7 +196,7 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
     observer.observe(host.current)
     const saveBeforeUnload = () => saveDraft(lesson.id, serialize(w))
     window.addEventListener('pagehide', saveBeforeUnload)
-    return () => { saveBeforeUnload(); window.removeEventListener('pagehide', saveBeforeUnload); observer.disconnect(); w.dispose(); workspace.current = null }
+    return () => { saveBeforeUnload(); window.removeEventListener('pagehide', saveBeforeUnload); observer.disconnect(); w.dispose(); workspace.current = null; mobileFieldEditor = null }
   }, [lesson.id])
 
   return <>
@@ -190,5 +209,12 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
       </div></details>
     </div>
     <p className="editor-note" aria-live="polite">{notice || 'Нажми на значение, чтобы изменить его. Новые блоки заполняют свободные места.'}</p>
+    {fieldEdit && <KodikKeyboard value={fieldEdit.value} numeric={fieldEdit.numeric} error={fieldEdit.error} onChange={value => setFieldEdit(current => current ? { ...current, value, error: undefined } : null)} onCancel={() => setFieldEdit(null)} onDone={() => {
+      const value = fieldEdit.value.trim()
+      if (fieldEdit.numeric && (value === '' || !Number.isFinite(Number(value)))) { setFieldEdit(current => current ? { ...current, error: 'Введи число, например 7.' } : null); return }
+      fieldEdit.field.setValue((fieldEdit.numeric ? Number(value) : fieldEdit.value) as never)
+      setFieldEdit(null)
+      publish()
+    }} />}
   </>
 })

@@ -25,6 +25,7 @@ export function applySupportDecision(lesson: Lesson, progress: Progress, decisio
     supportCheckpoint: { successes: { ...progress.supportCheckpoint?.successes, ...checkpoint.successes }, errors: {} } }
 }
 export function openLessonVariant(lesson: Lesson, progress: Progress) {
+  if (lesson.extended) return { lesson, progress }
   const saved = progress.sessions?.[lesson.id]
   // Resume keeps the actual editor format, including an unsent answer/draft.
   if (saved && !saved.finished && saved.supportLevel) return { lesson: materializeSupport(lesson, saved.supportLevel), progress, message: saved.supportMessage }

@@ -1,30 +1,28 @@
 import { useEffect, useState } from 'react'
 import { chapters, chapterLessons, lessons } from './course'
 import { loadCloudProgress, readLocalProgress, saveProgress, type Progress } from './progress'
-import { chapterMax, chapterStars, gate, isUnlocked, newSession } from './achievement'
+import { chapterStars, isUnlocked, newSession } from './achievement'
 import { LearningLesson } from './LearningLesson'
-import { Stars } from './LearningUI'
 import { exportEvents, track } from './analytics'
-import { skills } from './skills'
 import { selectNextExercise } from './exerciseSelector'
 import { getPracticeLesson, practicePool } from './practicePool'
 import { openLessonVariant } from './learningFlow'
 import { materializeSupport } from './supportVariants'
 import { useMobileLayout } from './useLessonViewport'
-import { Course100 } from './Course100'
+import { CoursePathScreen } from './CoursePathScreen'
 import { BottomNavigation, HomeScreen } from './MobileOverview'
-type Screen = 'home'|'path'|'lesson'|'finish'|'hundred'
+type Screen = 'home'|'path'|'lesson'|'finish'
 export default function App() {
   const mobile = useMobileLayout()
   const [progress, setProgress] = useState(readLocalProgress)
-  const [screen, setScreen] = useState<Screen>(() => new URLSearchParams(window.location.search).get('course') === '100' ? 'hundred' : 'home')
+  const [screen, setScreen] = useState<Screen>('home')
   const [lessonId, setLessonId] = useState(() => readLocalProgress().currentLesson || 1)
   const [runKey, setRunKey] = useState(0)
   const [offline, setOffline] = useState(!navigator.onLine)
   const [status, setStatus] = useState('Прогресс сохраняется на этом устройстве')
   const practice = progress.activePractice
   const sourceLesson = (practice?.lessonId === lessonId ? getPracticeLesson(practice.id, practice.supportLevel) : lessons.find(l => l.id === lessonId)) || lessons[0]
-  const lesson = materializeSupport(sourceLesson, progress.sessions?.[lessonId]?.supportLevel)
+  const lesson = sourceLesson.extended ? sourceLesson : materializeSupport(sourceLesson, progress.sessions?.[lessonId]?.supportLevel)
   const contextLesson = practice?.lessonId === lessonId ? lessons.find(item=>item.id===practice.returnLessonId) || lesson : lesson
   const lessonChapter = chapterLessons(contextLesson.chapter || 1)
   const lessonPosition = Math.max(1, lessonChapter.findIndex(item => item.id === contextLesson.id) + 1)
@@ -122,7 +120,6 @@ export default function App() {
     if (resume && !done) open(resume.id)
     else setScreen('path')
   }
-  if (screen === 'hundred') return <Course100 onExit={() => setScreen('home')} />
   return <main className={`app-shell screen-${screen} ${screen === 'lesson' ? `support-${activeSupport}` : ''}`}>
     <header className="lesson-header">
       {screen === 'lesson' ? <button className="back-button" onClick={() => setScreen('path')} aria-label="К карте курса">←</button> : <button className="brand" onClick={() => setScreen('home')} aria-label="Кодик — главная"><span aria-hidden="true">к.</span>Кодик</button>}
@@ -130,19 +127,11 @@ export default function App() {
       <div className={`header-progress ${screen === 'lesson' ? 'lesson-progress' : ''}`}><div className="progress-track" role="progressbar" aria-label={screen === 'lesson' && !mobile ? 'Прогресс главы' : 'Прогресс курса'} aria-valuemin={0} aria-valuemax={screen === 'lesson' && !mobile ? lessonChapter.length : lessons.length} aria-valuenow={screen === 'lesson' ? mobile ? coursePosition : lessonPosition : progress.completed.length}><i style={{ width: `${(screen === 'lesson' ? mobile ? coursePosition / lessons.length : lessonPosition / lessonChapter.length : progress.completed.length / lessons.length) * 100}%` }} /></div>{screen !== 'lesson' && <><b>{progress.completed.length}/{lessons.length}</b><span className="total-stars" aria-label={`Всего ${stars} звёзд`}>★ {stars}</span></>}</div>
     </header>
     {offline && <p className="network-note" role="status">Ты не в сети. Открытое занятие работает, прогресс сохраняется на устройстве.</p>}
-    {screen === 'home' && <HomeScreen progress={progress} resumeId={resume?.id} done={done} onStart={startOrResume} onPath={() => setScreen('path')} onHundred={() => setScreen('hundred')} onOpen={open} />}
-    {screen === 'path' && <section className="course-path"><p className="eyebrow">Твой маршрут</p><h1>Python с нуля</h1><p className="path-intro">От первых блоков к своим строкам кода. Шаг за шагом.</p><div className="path-progress-card" id="course-progress"><div><span>Прогресс курса</span><strong>{progress.completed.length} из {lessons.length} уроков</strong></div><div className="progress-track" role="progressbar" aria-label="Прогресс курса" aria-valuemin={0} aria-valuemax={lessons.length} aria-valuenow={progress.completed.length}><i style={{ width: `${progress.completed.length / lessons.length * 100}%` }} /></div><small>{stars} ★ за практику</small></div>{resume && !done && <button className="primary-button path-continue" onClick={startOrResume}>Продолжить обучение<span aria-hidden="true">→</span></button>}<details className="rating-rules"><summary>Звёзды и освоение — в чём разница?</summary><p>Звёзды показывают, насколько чисто пройдено конкретное упражнение. Подсказки и повторные проверки могут уменьшить результат, но не стирают понимание.</p><p>Освоение навыка считается отдельно по успешным решениям, самостоятельной практике и уровню поддержки. Именно оно открывает следующие темы.</p></details>{chapters.map(chapter => {
-      const access = gate(chapter.id,progress)
-      const count = chapterStars(chapter.id,progress)
-      const max = chapterMax(chapter.id)
-      return <section className="chapter" key={chapter.id} aria-labelledby={`chapter-${chapter.id}`}><div className="chapter-heading"><div><p>Глава {chapter.id}</p><h2 id={`chapter-${chapter.id}`}>{chapter.title}</h2></div><span>{count}/{max} ★</span></div><p className="chapter-description">{chapter.description}</p>{!access.open && <p className="gate-message" role="status">Чтобы открыть главу: {access.unfinished ? `заверши ещё ${access.unfinished} заданий в главе ${access.chapter}` : 'закрепи необходимые навыки'}{access.missingSkills.length ? `. Стоит повторить: ${access.missingSkills.map(id => skills[id].title.toLowerCase()).join(', ')}` : ''}. Количество звёзд доступ не ограничивает.</p>}<ol>{chapterLessons(chapter.id).map(item => {
-        const complete = progress.completed.includes(item.id), unlocked = isUnlocked(item.id,progress)
-        return <li key={item.id} className={`${complete ? 'complete' : ''} ${unlocked && !complete ? 'current' : ''}`}><button disabled={!unlocked} onClick={() => open(item.id)}><span className="path-number">{complete ? '✓' : lessons.indexOf(item) + 1}</span><span><small>{item.tutorial?.length ? 'Знакомство · без оценки' : item.mode !== 'blocks' ? 'Ближе к коду' : item.review ? 'Практика главы' : 'Практика'}</small><strong>{item.title}</strong>{!item.tutorial?.length && <Stars value={progress.bestStars?.[item.id] || 0} />}<em>{complete ? 'Пройти ещё раз' : unlocked ? 'Текущий шаг · можно начинать' : 'Пока закрыто'}</em></span><span className="path-arrow" aria-hidden="true">{unlocked ? '→' : '—'}</span></button>{!unlocked && <p className="lesson-lock-reason">{access.open ? 'Сначала выполни предыдущие задания этой главы.' : 'Сначала заверши и закрепи предыдущую главу.'}</p>}</li>
-      })}</ol>{chapter.id < chapters.length && <p className="chapter-threshold">Звёзды остаются твоим результатом за прохождение. Доступ дальше зависит от освоения навыков главы.</p>}</section>
-    })}</section>}
+    {screen === 'home' && <HomeScreen progress={progress} resumeId={resume?.id} done={done} onStart={startOrResume} onPath={() => setScreen('path')} onOpen={open} />}
+    {screen === 'path' && <CoursePathScreen progress={progress} resume={resume} onOpen={open} onContinue={startOrResume} />}
     {screen === 'lesson' && <LearningLesson key={`${lessonId}-${runKey}`} lesson={lesson} lessonPosition={lessonPosition} lessonTotal={lessonChapter.length} progress={progress} onProgress={setProgress} onContinue={next} practiceMessage={progress.activePractice?.lessonId===lesson.id ? progress.activePractice.message : undefined} />}
     {screen === 'finish' && <section className="finish-screen"><div className="finish-mark">✓</div><p className="eyebrow">{lessons.length} заданий · {stars} ★</p><h1>От блоков — к своим строкам.</h1><p>Ты собрал команды, познакомился с переменными, условиями, циклами и функциями. А последние строки написал сам. Возвращайся к практике, чтобы закрепить понимание.</p><button className="primary-button" onClick={() => setScreen('path')}>К карте курса →</button></section>}
-    {(screen === 'home' || screen === 'path' || screen === 'finish') && <BottomNavigation active={screen} onHome={() => setScreen('home')} onPath={() => setScreen('path')} onHundred={() => setScreen('hundred')} onProgress={() => { setScreen('path'); window.setTimeout(() => document.getElementById('course-progress')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60) }} />}
+    {(screen === 'home' || screen === 'path' || screen === 'finish') && <BottomNavigation active={screen} onHome={() => setScreen('home')} onPath={() => setScreen('path')} onProgress={() => setScreen('path')} />}
     {screen !== 'lesson' && <footer className="site-footer"><span>Кодик · от блоков к пониманию</span><span role="status">{status}</span><details><summary>Данные тестирования</summary><p>События хранятся только здесь. Записываются действия и время, без введённого текста.</p><button className="text-button" onClick={exportEvents}>Скачать события JSON</button></details></footer>}
     {screen === 'lesson' && <p className="lesson-storage" role="status">{status}</p>}
   </main>

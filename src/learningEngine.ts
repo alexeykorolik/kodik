@@ -34,6 +34,7 @@ export type Lesson = {
   choices?: string[]
   answer?: string
   codeAnswer?: string
+  extended?: { inputs: string[][]; required: RegExp[]; drawing?: boolean }
   prefix?: string
   suffix?: string
   tokens?: string[]
@@ -281,7 +282,7 @@ function bounded(value: number, real: boolean): Value {
   if (!Number.isFinite(value) || Math.abs(value) > 1e12) throw new LearningError('Число слишком большое для учебного запуска. Используй значения от −1 000 000 000 000 до 1 000 000 000 000.')
   return real ? { kind: 'real', value } : value
 }
-export type RunResult = { output: string[]; error?: string; systemError?: boolean; errorType?: ErrorType; affectedSkills?: SkillId[] }
+export type RunResult = { output: string[]; error?: string; systemError?: boolean; errorType?: ErrorType; affectedSkills?: SkillId[]; segments?: { x1: number; y1: number; x2: number; y2: number }[] }
 
 function evaluate(expr: Expr, memory: Map<string, Value>): Value {
   if (expr.kind === 'missing') throw new LearningError('В блоке осталось пустое место. Добавь туда значение.')
