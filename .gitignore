@@ -9,3 +9,4 @@ artifacts/
 initial-review.png
 local-server.pid
 .vercel/
+api/ai/tutor.js

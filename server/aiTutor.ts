@@ -1,9 +1,9 @@
-import { lessons } from '../../src/course'
-import { practiceLessons } from '../../src/practicePool'
-import { sanitizeTutorContext } from '../../src/ai/aiContext'
-import { tutorResponseSchema, makeTutorPrompt } from '../../src/ai/aiPrompt'
-import { validateTutorResponse } from '../../src/ai/aiResponseValidator'
-import type { TutorAction, TutorRequest } from '../../src/ai/aiTypes'
+import { lessons } from '../src/course'
+import { practiceLessons } from '../src/practicePool'
+import { sanitizeTutorContext } from '../src/ai/aiContext'
+import { tutorResponseSchema, makeTutorPrompt } from '../src/ai/aiPrompt'
+import { validateTutorResponse } from '../src/ai/aiResponseValidator'
+import type { TutorAction, TutorRequest } from '../src/ai/aiTypes'
 
 type Request = { method?: string; body?: unknown; headers: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }
 type Response = { status: (code: number) => Response; json: (value: unknown) => void; setHeader: (key: string, value: string) => void }

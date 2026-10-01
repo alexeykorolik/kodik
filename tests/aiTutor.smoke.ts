@@ -8,7 +8,7 @@ import type { TutorRequest, TutorResponse } from '../src/ai/aiTypes'
 import { validateTutorResponse } from '../src/ai/aiResponseValidator'
 import { instructionFor } from '../src/ai/aiPolicy'
 import { checkTextLesson } from '../src/textLearning'
-import handler from '../api/ai/tutor'
+import handler from '../server/aiTutor'
 
 const lesson = lessons.find(item => item.id === 20)!
 const session = { ...newSession(), attempts: 2, hintsUsed: 1 }
