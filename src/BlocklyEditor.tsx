@@ -1,3 +1,4 @@
+import { Icon } from './Icon'
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import * as Blockly from 'blockly'
 import * as ruModule from 'blockly/msg/ru'
@@ -29,7 +30,7 @@ const theme = Blockly.Theme.defineTheme('kodik', {
     loop_blocks: { colourPrimary: '#436d35', colourSecondary: '#375c2c', colourTertiary: '#2a4b20' }
   },
   componentStyles: { workspaceBackgroundColour: '#f6f4ee', scrollbarColour: '#b7c5bf', insertionMarkerColour: '#b44f29', insertionMarkerOpacity: 0.4 },
-  fontStyle: { family: 'Arial, sans-serif', weight: '600', size: 15 }
+  fontStyle: { family: 'Nunito, Arial, sans-serif', weight: '600', size: 15 }
 })
 export type EditorHandle = { showSolution: () => void; clear: () => void; addBlock: (type: string) => void; createVariable: (name: string) => void; focusBlock: (id: string) => void; getProgram: () => Program }
 type Props = { lesson: Lesson; onChange: (program: Program) => void; onInfo?: (info: WorkspaceInfo) => void; onAction?: (kind: string) => void; onReady?: () => void; focusType?: string; hideTools?: boolean }
@@ -133,7 +134,12 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
         block.select()
         void Blockly.renderManagement.finishQueuedRenders().then(() => {
           if (workspace.current !== w || !w.getBlockById(block.id)) return
-          w.centerOnBlock(block.id, true)
+          if (window.matchMedia('(max-width: 767px)').matches) {
+            const width = Math.max(...w.getTopBlocks(false).map(item => item.getHeightWidth().width), 1)
+            const fittingScale = Math.min(w.scale, ((host.current?.clientWidth || 350) - 48) / width)
+            w.setScale(Math.max(0.45, fittingScale))
+            w.scrollCenter()
+          } else w.centerOnBlock(block.id, true)
           publish()
         })
         setNotice(connected ? 'Блок добавлен в программу.' : 'Блок добавлен. Выбери его, чтобы заполнить пустые места.')
@@ -176,6 +182,10 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
     readyRef.current?.()
     void Blockly.renderManagement.finishQueuedRenders().then(() => {
       if (workspace.current !== w) return
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        const width = Math.max(...w.getTopBlocks(false).map(item => item.getHeightWidth().width), 1)
+        w.setScale(Math.max(0.45, Math.min(w.scale, ((host.current?.clientWidth || 350) - 48) / width)))
+      }
       const target = w.getAllBlocks(false).filter(b => b.type === focusType).at(-1)
       if (target) w.centerOnBlock(target.id, true)
       else w.scrollCenter()
@@ -202,8 +212,8 @@ export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEdi
   return <>
     <div className="blockly-host" ref={host} aria-label="Редактор блоков" />
     <div className={`editor-tools ${hideTools ? 'tools-compact' : ''}`} aria-label="Управление блоками">
-      <button className="undo-button" onClick={() => workspace.current?.undo(false)} aria-label="Отменить изменение">↶ <span>Отменить</span></button>
-      <details className="editor-menu"><summary aria-label="Другие действия">•••</summary><div>
+      <button className="undo-button" onClick={() => workspace.current?.undo(false)} aria-label="Отменить изменение"><Icon name="undo" size={20} /> <span>Отменить</span></button>
+      <details className="editor-menu"><summary aria-label="Другие действия"><Icon name="more" /></summary><div>
         <button onClick={() => workspace.current?.zoomToFit()}>Показать все блоки</button>
         <button disabled={!selection} onClick={() => { const b = Blockly.common.getSelected(); if (b instanceof Blockly.BlockSvg && b.workspace === workspace.current) { b.dispose(true); publish() } }}>Удалить выбранный блок</button>
       </div></details>

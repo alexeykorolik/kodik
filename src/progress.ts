@@ -7,9 +7,10 @@ import type { SupportLevel } from './skills'
 import { getPracticeLesson, practiceLessonId, practiceLessons, practicePool } from './practicePool'
 import { materializeSupport } from './supportVariants'
 import { supportLevels, type SupportCheckpoint } from './adaptiveSupport'
+import type { FirstAttempt, LearningError } from './learningHistory'
 
 export type PracticeRecommendation = { id: string; lessonId: number; returnLessonId?: number; message: string; reason: 'corrective'|'review'; supportLevel?: SupportLevel }
-export type Progress = LearningProgress & { completed: number[]; currentLesson?: number; started?: boolean; drafts?: Record<string, object>; recommendedPractice?: PracticeRecommendation; activePractice?: PracticeRecommendation; completedPracticeIds?: string[]; supportOverrides?: Record<string,SupportLevel>; skillSupport?: Partial<Record<SkillId, SupportLevel>>; supportCheckpoint?: SupportCheckpoint }
+export type Progress = LearningProgress & { completed: number[]; currentLesson?: number; started?: boolean; drafts?: Record<string, object>; recommendedPractice?: PracticeRecommendation; activePractice?: PracticeRecommendation; completedPracticeIds?: string[]; supportOverrides?: Record<string,SupportLevel>; skillSupport?: Partial<Record<SkillId, SupportLevel>>; supportCheckpoint?: SupportCheckpoint; errorHistory?: LearningError[]; firstAttemptResults?: Record<string, FirstAttempt>; profile?: { displayName: string } }
 const storageKey = 'kodik-progress-v1'
 const url = typeof import.meta.env === 'undefined' ? undefined : import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = typeof import.meta.env === 'undefined' ? undefined : import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -66,7 +67,19 @@ export function cleanProgress(value: unknown): Progress {
       skillStates[skillId] = { ...prior, mastery: Math.min(0.8, prior.mastery + (lesson?.tutorial?.length ? 0.14 : 0.2)), attempts: prior.attempts + 1, successes: prior.successes + 1, independentSuccesses: prior.independentSuccesses + (lesson?.tutorial?.length ? 0 : 1) }
     }
   }
-  return { completed, version: 4, bestStars, sessions, introducedConcepts,
+  // Previous versions kept only the latest check. Preserve that known error;
+  // do not invent missing historical attempts or their scores.
+  const previousErrors: LearningError[] = Array.isArray(p.errorHistory) ? p.errorHistory : Object.entries(sessions).flatMap(([id, session]) => session.lastCheck && !session.lastCheck.passed && !session.lastCheck.systemError ? [{ id: `legacy-${id}`, lessonId: Number(id), type: session.lastCheck.errorType || 'wrong_structure', message: session.lastCheck.message, skills: session.lastCheck.affectedSkills || [], occurredAt: 0, attempt: session.attempts, imported: true }] : [])
+  const errorHistory: LearningError[] = previousErrors.filter(error => error && typeof error.id === 'string' && typeof error.lessonId === 'number' && typeof error.message === 'string').map(error => ({ id: error.id, lessonId: error.lessonId, type: (typeof error.type === 'string' ? error.type : 'wrong_structure') as LearningError['type'], message: error.message, skills: Array.isArray(error.skills) ? error.skills.filter(id => skillIds.includes(id)) : [], occurredAt: count(error.occurredAt), resolvedAt: error.resolvedAt ? count(error.resolvedAt) : undefined, attempt: count(error.attempt), imported: error.imported === true }))
+  const firstAttemptResults: Record<string, FirstAttempt> = {}
+  if (p.firstAttemptResults && typeof p.firstAttemptResults === 'object') for (const [id, result] of Object.entries(p.firstAttemptResults)) {
+    if (result && typeof result.stars === 'number' && result.stars >= 0 && result.stars <= 3 && lessons.some(lesson => lesson.id === Number(id) && !lesson.tutorial?.length)) firstAttemptResults[id] = { stars: result.stars, passed: result.passed === true, at: count(result.at) }
+  }
+  else for (const lesson of lessons.filter(item => !item.tutorial?.length)) {
+    const session = sessions[lesson.id]
+    if (p.attempts?.[lesson.id] === 1 && session?.attempts === 1 && session.lastCheck && !session.lastCheck.systemError) firstAttemptResults[lesson.id] = { stars: session.lastCheck.passed ? session.lastCheck.stars || bestStars[lesson.id] || 0 : 0, passed: session.lastCheck.passed, at: session.startedAt }
+  }
+  return { completed, version: 4, bestStars, sessions, introducedConcepts, errorHistory, firstAttemptResults, profile: { displayName: typeof p.profile?.displayName === 'string' ? p.profile.displayName.trim().slice(0, 40) : '' },
     attempts: p.attempts && typeof p.attempts === 'object' ? p.attempts : {}, hintsUsed: p.hintsUsed && typeof p.hintsUsed === 'object' ? p.hintsUsed : {}, tutorialSteps: p.tutorialSteps || {}, currentChapter: lessons.find(l => l.id === p.currentLesson)?.chapter || 1,
     currentLesson: lessons.some(l => l.id === p.currentLesson) ? p.currentLesson : undefined,
     started: p.started === true || (Array.isArray(p.completed) && p.completed.length > 0),

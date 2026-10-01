@@ -1,10 +1,11 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Icon } from './Icon'
 export function Modal({ title, onClose, children, success }: { title: string; onClose: () => void; children: ReactNode; success?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null)
   useEffect(() => { const previous = document.activeElement as HTMLElement | null; const d = dialog.current!; d.showModal(); const overflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { d.close(); document.body.style.overflow = overflow; previous?.focus() } }, [])
-  return <dialog ref={dialog} className={`sheet native-dialog ${success ? 'is-success' : ''}`} onCancel={e => { e.preventDefault(); onClose() }} aria-labelledby="dialog-title"><header className="sheet-heading">{success && <div className="result-mark">✓</div>}<h2 id="dialog-title">{title}</h2><button className="sheet-close" onClick={onClose} aria-label="Закрыть">×</button></header><div className="sheet-body">{children}</div></dialog>
+  return <dialog ref={dialog} className={`sheet native-dialog ${success ? 'is-success' : ''}`} onCancel={e => { e.preventDefault(); onClose() }} aria-labelledby="dialog-title"><header className="sheet-heading">{success && <div className="result-mark"><Icon name="check" /></div>}<h2 id="dialog-title">{title}</h2><button className="sheet-close" onClick={onClose} aria-label="Закрыть"><Icon name="close" /></button></header><div className="sheet-body">{children}</div></dialog>
 }
-export function Stars({ value, total = 3 }: { value: number; total?: number }) { return <span className="stars" aria-label={`${value} из ${total} звёзд`}>{Array.from({ length: total }, (_,i) => <span aria-hidden="true" key={i} className={i < value ? 'earned' : ''}>{i < value ? '★' : '☆'}</span>)}</span> }
+export function Stars({ value, total = 3 }: { value: number; total?: number }) { return <span className="stars" aria-label={`${value} из ${total} звёзд`}>{Array.from({ length: total }, (_,i) => <span aria-hidden="true" key={i} className={i < value ? 'earned' : ''}><Icon name="star" size={18} style={i < value ? { fill: "currentColor" } : undefined} /></span>)}</span> }
 export function DrawingPreview({ segments }: { segments: { x1: number; y1: number; x2: number; y2: number }[] }) {
   if (!segments.length) return null
   const values = segments.flatMap(segment => [segment.x1, segment.x2, segment.y1, segment.y2])

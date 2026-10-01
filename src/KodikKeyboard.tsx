@@ -1,3 +1,4 @@
+import { Icon } from './Icon'
 import { useEffect, useState } from 'react'
 
 const layouts = {
@@ -23,7 +24,7 @@ export function KodikKeyboard({ value, numeric, error, onChange, onDone, onCance
     return () => document.removeEventListener('keydown', key)
   }, [value, onChange, onCancel, onDone])
   return <div className="kodik-keyboard" role="dialog" aria-label="Клавиатура Кодик">
-    <div className="kodik-keyboard-heading"><span>Введи значение</span><button className="keyboard-clear" onClick={() => onChange('')}>Очистить</button><button onClick={onCancel} aria-label="Отменить ввод">×</button></div>
+    <div className="kodik-keyboard-heading"><span>Введи значение</span><button className="keyboard-clear" onClick={() => onChange('')}>Очистить</button><button onClick={onCancel} aria-label="Отменить ввод"><Icon name="close" size={20} /></button></div>
     <div className="kodik-keyboard-value" aria-live="polite">{value || <span>Нажми клавиши ниже</span>}<i aria-hidden="true" /></div>
     {error && <p className="keyboard-error" role="status">{error}</p>}
     <div className="kodik-keyboard-keys">{rows.map((row, index) => <div className="kodik-keyboard-row" key={`${layout}-${index}`}>{row.split(' ').filter(Boolean).map(key => <button key={key} onClick={() => press(key)} aria-label={shift ? key.toUpperCase() : key}>{shift ? key.toUpperCase() : key}</button>)}</div>)}

@@ -4,6 +4,7 @@ import App from './App'
 import './styles.css'
 import './mobileLesson.css'
 import './designSystem.css'
+import './appPolish.css'
 
 class AppBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false }

@@ -1,3 +1,4 @@
+import { mergeLearningRecords } from './learningHistory'
 import { useEffect, useState } from 'react'
 import { chapters, chapterLessons, lessons } from './course'
 import { loadCloudProgress, readLocalProgress, saveProgress, type Progress } from './progress'
@@ -11,7 +12,10 @@ import { materializeSupport } from './supportVariants'
 import { useMobileLayout } from './useLessonViewport'
 import { CoursePathScreen } from './CoursePathScreen'
 import { BottomNavigation, HomeScreen } from './MobileOverview'
-type Screen = 'home'|'path'|'lesson'|'finish'
+import { ProgressScreen } from './ProgressScreen'
+import { AccountScreen } from './AccountScreen'
+import { Icon } from './Icon'
+type Screen = 'home'|'path'|'lesson'|'finish'|'progress'|'account'
 export default function App() {
   const mobile = useMobileLayout()
   const [progress, setProgress] = useState(readLocalProgress)
@@ -43,6 +47,8 @@ export default function App() {
       const bestStars = { ...cloud.bestStars }
       for (const [id,value] of Object.entries(local.bestStars || {})) bestStars[id] = Math.max(value, bestStars[id] || 0)
       const merged = { ...cloud, ...local, currentLesson: local.currentLesson || cloud.currentLesson, started: local.started || cloud.started, completed: [...new Set([...cloud.completed,...local.completed])], bestStars, introducedConcepts: [...new Set([...(cloud.introducedConcepts || []),...(local.introducedConcepts || [])])], sessions: { ...cloud.sessions,...local.sessions } }
+      Object.assign(merged, mergeLearningRecords(cloud, local))
+      merged.profile = local.profile?.displayName ? local.profile : cloud.profile
       saveProgress(merged,false); setProgress(merged)
     })
     return () => { mounted = false; window.removeEventListener('online',network); window.removeEventListener('offline',network); window.removeEventListener('kodik-storage',storage) }
@@ -122,16 +128,18 @@ export default function App() {
   }
   return <main className={`app-shell screen-${screen} ${screen === 'lesson' ? `support-${activeSupport}` : ''}`}>
     <header className="lesson-header">
-      {screen === 'lesson' ? <button className="back-button" onClick={() => setScreen('path')} aria-label="К карте курса">←</button> : <button className="brand" onClick={() => setScreen('home')} aria-label="Кодик — главная"><span aria-hidden="true">к.</span>Кодик</button>}
-      {screen === 'lesson' ? <div className="lesson-position"><span>{practice ? 'Короткая практика' : 'Задание'}</span><strong><span className="desktop-only">{practice ? '↺' : `${lessonPosition}/${lessonChapter.length}`}</span><span className="mobile-only">{practice ? '↺' : `${coursePosition}/${lessons.length}`}</span></strong></div> : <button className="nav-link" onClick={() => setScreen('path')}>Карта курса ↗</button>}
-      <div className={`header-progress ${screen === 'lesson' ? 'lesson-progress' : ''}`}><div className="progress-track" role="progressbar" aria-label={screen === 'lesson' && !mobile ? 'Прогресс главы' : 'Прогресс курса'} aria-valuemin={0} aria-valuemax={screen === 'lesson' && !mobile ? lessonChapter.length : lessons.length} aria-valuenow={screen === 'lesson' ? mobile ? coursePosition : lessonPosition : progress.completed.length}><i style={{ width: `${(screen === 'lesson' ? mobile ? coursePosition / lessons.length : lessonPosition / lessonChapter.length : progress.completed.length / lessons.length) * 100}%` }} /></div>{screen !== 'lesson' && <><b>{progress.completed.length}/{lessons.length}</b><span className="total-stars" aria-label={`Всего ${stars} звёзд`}>★ {stars}</span></>}</div>
+      {screen === 'lesson' ? <button className="back-button" onClick={() => setScreen('path')} aria-label="К карте курса"><Icon name="arrowLeft" /></button> : <button className="brand" onClick={() => setScreen('home')} aria-label="Кодик — главная"><span aria-hidden="true">к.</span>Кодик</button>}
+      {screen === 'lesson' ? <div className="lesson-position"><span>{practice ? 'Короткая практика' : 'Задание'}</span><strong><span className="desktop-only">{practice ? '↺' : `${lessonPosition}/${lessonChapter.length}`}</span><span className="mobile-only">{practice ? '↺' : `${coursePosition}/${lessons.length}`}</span></strong></div> : <button className="nav-link" aria-label="Карта курса ↗" onClick={() => setScreen('path')}>Карта курса <Icon name="arrowRight" size={18} /></button>}
+      <div className={`header-progress ${screen === 'lesson' ? 'lesson-progress' : ''}`}><div className="progress-track" role="progressbar" aria-label={screen === 'lesson' && !mobile ? 'Прогресс главы' : 'Прогресс курса'} aria-valuemin={0} aria-valuemax={screen === 'lesson' && !mobile ? lessonChapter.length : lessons.length} aria-valuenow={screen === 'lesson' ? mobile ? coursePosition : lessonPosition : progress.completed.length}><i style={{ width: `${(screen === 'lesson' ? mobile ? coursePosition / lessons.length : lessonPosition / lessonChapter.length : progress.completed.length / lessons.length) * 100}%` }} /></div>{screen !== 'lesson' && <><b>{progress.completed.length}/{lessons.length}</b><span className="total-stars" aria-label={`Всего ${stars} звёзд`}><Icon name="star" size={15} /> {stars}</span></>}</div>
     </header>
     {offline && <p className="network-note" role="status">Ты не в сети. Открытое занятие работает, прогресс сохраняется на устройстве.</p>}
     {screen === 'home' && <HomeScreen progress={progress} resumeId={resume?.id} done={done} onStart={startOrResume} onPath={() => setScreen('path')} onOpen={open} />}
     {screen === 'path' && <CoursePathScreen progress={progress} resume={resume} onOpen={open} onContinue={startOrResume} />}
+    {screen === 'progress' && <ProgressScreen progress={progress} />}
+    {screen === 'account' && <AccountScreen progress={progress} onSave={persist} />}
     {screen === 'lesson' && <LearningLesson key={`${lessonId}-${runKey}`} lesson={lesson} lessonPosition={lessonPosition} lessonTotal={lessonChapter.length} progress={progress} onProgress={setProgress} onContinue={next} practiceMessage={progress.activePractice?.lessonId===lesson.id ? progress.activePractice.message : undefined} />}
-    {screen === 'finish' && <section className="finish-screen"><div className="finish-mark">✓</div><p className="eyebrow">{lessons.length} заданий · {stars} ★</p><h1>От блоков — к своим строкам.</h1><p>Ты собрал команды, познакомился с переменными, условиями, циклами и функциями. А последние строки написал сам. Возвращайся к практике, чтобы закрепить понимание.</p><button className="primary-button" onClick={() => setScreen('path')}>К карте курса →</button></section>}
-    {(screen === 'home' || screen === 'path' || screen === 'finish') && <BottomNavigation active={screen} onHome={() => setScreen('home')} onPath={() => setScreen('path')} onProgress={() => setScreen('path')} />}
+    {screen === 'finish' && <section className="finish-screen"><div className="finish-mark"><Icon name="check" size={32} /></div><p className="eyebrow">{lessons.length} заданий · {stars} ★</p><h1>От блоков — к своим строкам.</h1><p>Ты собрал команды, познакомился с переменными, условиями, циклами и функциями. А последние строки написал сам. Возвращайся к практике, чтобы закрепить понимание.</p><button className="primary-button" onClick={() => setScreen('path')}>К карте курса <Icon name="arrowRight" /></button></section>}
+    {screen !== 'lesson' && <BottomNavigation active={screen} onHome={() => setScreen('home')} onPath={() => setScreen('path')} onProgress={() => setScreen('progress')} onAccount={() => setScreen('account')} />}
     {screen !== 'lesson' && <footer className="site-footer"><span>Кодик · от блоков к пониманию</span><span role="status">{status}</span><details><summary>Данные тестирования</summary><p>События хранятся только здесь. Записываются действия и время, без введённого текста.</p><button className="text-button" onClick={exportEvents}>Скачать события JSON</button></details></footer>}
     {screen === 'lesson' && <p className="lesson-storage" role="status">{status}</p>}
   </main>

@@ -1,0 +1,190 @@
+@font-face { font-family: Nunito; src: url('/fonts/Nunito.ttf') format('truetype'); font-weight: 200 900; font-style: normal; font-display: swap; }
+:root { font-family: Nunito, 'Segoe UI', sans-serif; }
+body, button, input, select, summary { font-family: Nunito, 'Segoe UI', sans-serif; }
+.app-icon { display: inline-block; flex: 0 0 auto; vertical-align: middle; }
+.icon-button { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: var(--surface-alt); color: var(--green); }
+.nav-link, .text-button, .add-block-button, .primary-button, .sheet-close, .back-button, .undo-button { align-items: center; justify-content: center; gap: 8px; }
+.nav-link, .text-button, .add-block-button, .sheet-close, .back-button, .undo-button { display: inline-flex; }
+.primary-button { display: flex; justify-content: space-between; }
+.chapter-switcher button, .path-number, .path-page-controls button { display: inline-grid; place-items: center; }
+.stars { display: inline-flex; gap: 3px; }
+.insights-screen, .account-screen { max-width: 720px; margin: 28px auto 100px; }
+.insights-heading h1 { margin: 0; font-size: 34px; line-height: 1.1; letter-spacing: -.025em; }
+.insights-heading .eyebrow { margin: 0 0 6px; }
+.insights-heading > p:last-child:not(.eyebrow) { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.insights-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+.metric-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: 18px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); color: var(--ink); text-align: left; }
+.metric-primary { background: var(--green-soft); }
+.metric-card > .app-icon { color: var(--green); }
+.metric-card > strong { margin: 6px 0; font-size: 34px; line-height: 1.1; font-weight: 800; }
+.metric-card small { font-size: 16px; font-weight: 600; color: var(--muted); }
+.metric-card > span { font-size: 13px; line-height: 1.25; color: var(--muted); }
+.metric-card .metric-info { position: absolute; top: 17px; right: 15px; }
+.history-heading { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; gap: 12px; }
+.history-heading h2 { font-size: 21px; margin: 0; }
+.history-heading p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.history-filters { display: flex; gap: 7px; margin: 14px 0; }
+.history-filters button { flex: 1; min-height: 38px; padding: 5px; color: var(--muted); border: 1px solid var(--line); border-radius: 12px; background: transparent; font-size: 13px; }
+.history-filters button[aria-pressed=true] { background: var(--green); border-color: var(--green); color: white; font-weight: 700; }
+.history-list { display: flex; flex-direction: column; gap: 9px; }
+.history-row { display: flex; align-items: center; text-align: left; gap: 11px; padding: 13px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); color: var(--ink); }
+.history-status { flex: 0 0 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: var(--error-soft); color: #b3664c; }
+.history-row.is-fixed .history-status { color: var(--green); background: var(--green-soft); }
+.history-copy { flex: 1; min-width: 0; }
+.history-copy strong, .history-copy small, .history-copy > span { display: block; }
+.history-copy strong { font-size: 14px; line-height: 1.3; }
+.history-copy small { color: var(--muted); font-size: 12px; margin: 2px 0; }
+.history-copy > span { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-empty { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 15px; border: 1px dashed #cdd7cb; border-radius: 22px; min-height: 160px; }
+.history-empty > span { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 19px; background: var(--green-soft); color: var(--green); }
+.history-empty h3 { font-size: 18px; margin: 12px 0 6px; }
+.history-empty p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; max-width: 300px; }
+.history-date { color: var(--muted); font-size: 13px; }
+.account-identity { text-align: center; margin: 20px 0; }
+.account-avatar { display: inline-grid; place-items: center; width: 80px; height: 80px; border-radius: 28px; background: var(--green-soft); color: var(--green); }
+.account-identity h2 { font-size: 23px; margin: 10px 0 2px; overflow-wrap: anywhere; }
+.account-identity p { font-size: 13px; color: var(--muted); margin: 0; }
+.account-name-card { padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
+.account-name-card label { font-size: 15px; font-weight: 700; }
+.account-name-card > div { display: flex; gap: 8px; margin-top: 9px; }
+.account-name-card input { flex: 1; width: 0; min-width: 0; height: 44px; padding: 8px 12px; font-size: 16px; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); }
+.account-name-card p { color: var(--muted); font-size: 12px; margin: 8px 0 0; min-height: 17px; }
+.account-note { display: flex; gap: 13px; align-items: flex-start; padding: 16px; margin-top: 12px; background: var(--green-soft); border-radius: 19px; }
+.account-note > .app-icon { margin-top: 2px; }
+.account-note h3 { font-size: 15px; margin: 0 0 5px; }
+.account-note p { color: var(--muted); font-size: 13px; line-height: 1.4; margin: 0; }
+.account-soon { background: transparent; border: 1px solid var(--line); }
+.account-soon h3 span { display: inline-block; font-size: 10px; padding: 2px 7px; margin-left: 4px; border-radius: 6px; background: #f4e4d8; color: #995735; vertical-align: 1px; }
+.bottom-navigation { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; z-index: 20; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 8px; }
+.bottom-navigation button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 54px; border: 0; background: transparent; color: var(--muted); font-size: 12px; }
+.bottom-navigation button > span { display: grid; place-items: center; width: 48px; height: 30px; border-radius: 14px; }
+.bottom-navigation button.active { color: var(--green); font-weight: 800; }
+.bottom-navigation button.active > span { background: var(--green-soft); }
+@media (min-width: 768px) { .bottom-navigation { width: 560px; left: 50%; transform: translateX(-50%); border: 1px solid var(--line); border-bottom: 0; border-radius: 20px 20px 0 0; } }
+@media (max-width: 767px) {
+  .site-footer { display: none; }
+  .app-shell:not(.screen-lesson) { display: flex; flex-direction: column; padding: 12px 18px calc(82px + env(safe-area-inset-bottom)); }
+  .app-shell:not(.screen-lesson) .lesson-header { flex: 0 0 50px; min-height: 50px; padding: 0; border: 0; }
+  .app-shell:not(.screen-lesson) .brand { font-size: 32px; }
+  .app-shell:not(.screen-lesson) .nav-link { font-size: 13px; }
+  .app-shell:not(.screen-lesson) .header-progress { display: none; }
+  .bottom-navigation { left: 0; right: 0; padding: 7px 5px max(8px, env(safe-area-inset-bottom)); }
+  .bottom-navigation button { min-width: 0; font-size: 11px; }
+  .bottom-navigation button.active span { padding: 0; }
+  .home-overview { display: flex; flex-direction: column; flex: 1; width: 100%; height: auto; min-height: 0; margin: 10px 0 0; }
+  .home-greeting { flex: 0 0 auto; }
+  .home-greeting h1 { font-size: 30px; line-height: 1.08; letter-spacing: -.035em; margin: 8px 0; }
+  .home-greeting > p:last-child { font-size: 14px; margin-bottom: 13px; }
+  .home-greeting .eyebrow { font-size: 11px; margin: 0; }
+  .home-progress-card { flex: 0 0 auto; padding: 12px 15px; border-radius: 21px; }
+  .progress-ring { width: 64px; height: 64px; flex-basis: 64px; }
+  .progress-ring strong { font-size: 15px; }
+  .home-resume-card { flex: 0 0 auto; gap: 12px; }
+  .home-resume-card strong { font-size: 17px; }
+  .home-resume-card small { font-size: 13px; }
+  .resume-icon { width: 48px; height: 48px; flex-basis: 48px; }
+  .home-main-action { flex: 0 0 auto; min-height: 50px; font-size: 17px; }
+  .home-path-preview { display: flex; flex-direction: column; justify-content: flex-end; flex: 1 1 auto; min-height: 116px; margin-top: 14px; padding-bottom: 6px; }
+  .home-path-preview .section-heading { align-items: center; }
+  .home-path-preview h2 { font-size: 18px; }
+  .home-path-preview .section-label { font-size: 11px; margin-bottom: 1px; }
+  .home-path-preview .text-button { font-size: 12px; min-height: 38px; }
+  .home-path-preview ol { margin-top: 7px; }
+  .home-path-preview li { min-height: 72px; }
+  .home-path-preview li:not(:last-child)::before { display: none; }
+  .home-path-preview li > button { margin: 0; padding: 10px 12px; }
+  .home-practice-note { margin: 6px 0 0; font-size: 12px; }
+  .course-path-fixed { flex: 1; width: 100%; height: auto; margin: 10px 0 0; }
+  .path-fixed-head, .chapter-switcher, .path-chapter-description, .path-page-controls, .path-fixed-continue, .path-gate-note { flex: 0 0 auto; }
+  .path-fixed-head .eyebrow { display: none; }
+  .path-fixed-head h1 { font-size: 26px; }
+  .chapter-switcher { min-height: 60px; padding: 5px 0; }
+  .chapter-switcher > div { min-width: 0; }
+  .chapter-switcher h2 { font-size: 18px; line-height: 1.2; overflow-wrap: anywhere; }
+  .chapter-switcher button { padding: 0; }
+  .path-chapter-description { display: none; }
+  .path-fixed-lessons { grid-template-rows: repeat(var(--path-rows, 3), minmax(0, 1fr)); margin-top: 12px; gap: 8px; }
+  .path-fixed-lessons li button { padding: 9px 12px; min-height: 58px; gap: 11px; }
+  .path-fixed-lessons .path-lesson-copy strong { font-size: 15px; }
+  .path-page-controls button { min-height: 40px; }
+  .path-gate-note { margin: 6px 0 0; font-size: 12px; }
+  .path-fixed-continue { font-size: 16px; margin-bottom: 2px; }
+  .insights-screen, .account-screen { flex: 1; display: flex; flex-direction: column; width: 100%; min-height: 0; margin: 14px 0 0; overflow: hidden; }
+  .insights-heading, .insights-metrics, .history-heading, .history-filters, .history-pages { flex: 0 0 auto; }
+  .insights-heading h1 { font-size: 29px; }
+  .insights-metrics { margin-top: 14px; gap: 9px; }
+  .metric-card { padding: 13px 15px; border-radius: 18px; }
+  .metric-card > strong { font-size: 30px; margin: 4px 0; }
+  .metric-card > span { font-size: 12px; }
+  .metric-card > .app-icon { width: 21px; height: 21px; }
+  .history-heading { margin-top: 17px; }
+  .history-heading h2 { font-size: 19px; }
+  .history-filters { margin: 10px 0; }
+  .history-list { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-bottom: 3px; }
+  .history-row { flex: 0 0 auto; min-height: 73px; padding: 10px; }
+  .history-empty { min-height: 120px; }
+  .history-pages { margin-top: 5px; }
+  .account-screen { overflow: auto; overscroll-behavior: contain; padding-bottom: 8px; }
+  .account-screen > * { flex: 0 0 auto; }
+  .account-identity { margin: 16px 0; }
+  .account-screen .account-identity { margin: 10px 0; }
+  .account-screen .account-avatar { width: 54px; height: 54px; border-radius: 19px; }
+  .account-screen .account-identity h2 { font-size: 21px; margin-top: 7px; }
+  .account-screen .account-name-card { padding: 12px; }
+  .account-screen .account-note { margin-top: 9px; padding: 11px 12px; }
+  .account-avatar { width: 66px; height: 66px; border-radius: 23px; }
+  .account-note { padding: 13px; }
+  .screen-lesson .lesson-header { min-height: 48px; }
+  .screen-lesson .lesson-flow { margin-top: 6px; }
+  .screen-lesson .is-guided .task-intro { margin-bottom: 0; }
+  .task-intro h1::before, .lesson-help .hint-button::before { display: none; }
+  .task-intro h1, .novice-flow .task-intro h1 { display: flex; align-items: center; gap: 9px; font-size: 18px; margin-bottom: 8px; line-height: 1.2; }
+  .task-icon { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--orange); color: white; }
+  .task-copy, .novice-flow .task-copy { font-size: 20px; line-height: 1.3; letter-spacing: -.01em; }
+  .lesson-help { margin-top: 3px; gap: 3px 15px; }
+  .lesson-help .text-button { min-height: 44px; font-size: 13px; padding: 4px 0; }
+  .learning-work { margin-top: 5px; }
+  .coach { padding: 8px 11px; margin-bottom: 8px; }
+  .coach p { font-size: 13px; }
+  .workspace-heading, .is-guided .workspace-heading { display: flex; gap: 3px; top: 4px; right: 5px; }
+  .workspace-heading .icon-button { background: #fffefaed; border: 1px solid var(--line); }
+  .is-guided .workspace-menu { display: none; }
+  .workspace-menu summary { display: grid; place-items: center; width: 44px; padding: 0; }
+  .workspace-actions { padding: 8px; }
+  .workspace-actions .add-block-button { min-height: 46px; font-size: 16px; }
+  .live-mirror { margin-top: 0; padding: 0 12px; }
+  .live-mirror > div:first-child { min-height: 42px; }
+  .live-mirror h2 { font-size: 15px; margin: 0; }
+  .live-mirror .compact-code-toggle { min-height: 42px; font-size: 13px; }
+  .python-inline-preview, .live-mirror .python-nudge { display: none; }
+  .block-workspace-grid { gap: 7px; }
+  .block-workspace-grid.is-expanded { position: fixed; z-index: 25; top: calc(var(--lesson-viewport-top, 0px) + 12px); bottom: calc(var(--lesson-keyboard-bottom, 0px) + var(--lesson-action-height, 80px) + 12px); left: 14px; right: 14px; width: auto; padding: 0; border-radius: 20px; background: var(--surface); box-shadow: 0 0 0 80vmax var(--canvas); }
+  .block-workspace-grid.is-expanded .live-mirror { display: none; }
+  .primary-action { min-height: 74px; padding-top: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .primary-action > button { min-height: 56px; }
+  [data-compact-lesson] .screen-lesson .workspace-heading { display: flex; }
+}
+@media (max-width: 767px) and (max-height: 620px) {
+  .home-greeting h1 { font-size: 25px; }
+  .home-greeting > p:last-child { margin-bottom: 9px; font-size: 12px; }
+  .home-progress-card { padding: 9px 12px; gap: 12px; }
+  .progress-ring { width: 50px; height: 50px; flex-basis: 50px; }
+  .progress-ring strong { font-size: 12px; }
+  .progress-ring::before { inset: 6px; }
+  .home-progress-card h2 { font-size: 17px; }
+  .home-progress-card p { font-size: 12px; }
+  .home-resume-card { margin-top: 8px; padding: 8px 10px; min-height: 62px; }
+  .home-resume-card strong { font-size: 15px; }
+  .resume-icon { width: 40px; height: 40px; flex-basis: 40px; }
+  .home-path-preview { min-height: 103px; margin-top: 8px; }
+  .home-path-preview li { min-height: 58px; }
+  .home-path-preview h2 { font-size: 16px; }
+  .home-path-preview li > button strong { font-size: 14px; }
+  .home-path-preview .section-label { display: none; }
+  .insights-heading .eyebrow { display: none; }
+  .metric-card > .app-icon:not(.metric-info) { display: none; }
+  .history-empty > span { display: none; }
+  .history-empty { padding: 10px; }
+  .account-identity { margin: 10px 0; }
+  .account-avatar { width: 50px; height: 50px; border-radius: 18px; }
+}
