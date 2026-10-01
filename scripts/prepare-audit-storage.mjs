@@ -4,7 +4,8 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import { build } from 'esbuild'
 const token = randomBytes(32).toString('hex'), route = `setup${randomBytes(16).toString('hex')}`
-const sql = await readFile('supabase/migrations/003_events_and_ai_budget.sql', 'utf8')
+const sql = (await Promise.all(['003_events_and_ai_budget.sql','004_event_versions.sql'].map(file=>readFile(`supabase/migrations/${file}`,'utf8')))).join('\n')
+const report = await readFile('supabase/pilot_report.sql','utf8')
 const eventId = randomUUID(), sessionId = randomUUID(), learnerId = randomUUID()
 const code = `import pg from 'pg';
 export default async function handler(req,res) {
@@ -17,12 +18,13 @@ export default async function handler(req,res) {
  try {
   await client.connect();
   if(req.body?.action==='verify') {
-   const result=await client.query('select data from public.learning_events where id=$1',[${JSON.stringify(eventId)}]);
-   return res.status(200).json({count:result.rowCount,privateFieldsAbsent:result.rows.every(row=>!('code' in row.data)&&!('email' in row.data)),data:result.rows[0]?.data});
+   const result=await client.query('select data,curriculum_version,app_version,lesson_key from public.learning_events where id=$1',[${JSON.stringify(eventId)}]);
+   return res.status(200).json({count:result.rowCount,privateFieldsAbsent:result.rows.every(row=>!('code' in row.data)&&!('email' in row.data)),event:result.rows[0]});
   }
   await client.query('begin');
   await client.query(${JSON.stringify(sql)});
   await client.query('commit');
+  await client.query(${JSON.stringify(report)});
   const qa='qa:'+crypto.randomUUID();
   const pool=new pg.Pool({...config,max:20});
   const buckets=JSON.stringify([{key:qa,limit:8,expires:new Date(Date.now()+60000).toISOString()}]);
@@ -40,7 +42,7 @@ export default async function handler(req,res) {
    let errorCode; if(!response.ok) {const body=await response.json().catch(()=>({}));errorCode=body.code;}
    rest={status:response.status,errorCode};
   }catch(error){rest={error:error.name};}
-  return res.status(200).json({migration:true,concurrentAllowed:allowed,concurrentRejected:20-allowed,anonymousAccess:access.rows[0],rest});
+  return res.status(200).json({migration:true,reportQueriesValid:true,concurrentAllowed:allowed,concurrentRejected:20-allowed,anonymousAccess:access.rows[0],rest});
  } catch(error) {await client.query('rollback').catch(()=>{});return res.status(500).json({error:'setup_failed',code:error.code || error.name});}
  finally {await client.end();}
 }`

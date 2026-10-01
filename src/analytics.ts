@@ -1,5 +1,6 @@
 import { cleanEventData, type EventData, type EventName } from './eventSchema'
-export type LearningEvent = { id: string; sessionId: string; name: EventName; lesson: number; at: number; data?: EventData }
+import { appVersion, curriculumVersion } from './release'
+export type LearningEvent = { id: string; sessionId: string; name: EventName; lesson: number; at: number; curriculumVersion?: string; appVersion?: string; data?: EventData }
 const key = 'kodik-events-v1', pendingKey = 'kodik-events-pending-v1'
 const enabled = typeof import.meta.env !== 'undefined' && import.meta.env.VITE_ANALYTICS_ENABLED === 'true'
 let sending = false, timer: ReturnType<typeof setTimeout> | undefined
@@ -18,7 +19,7 @@ export async function flushEvents() {
 }
 export function track(name: EventName, lesson: number, data?: EventData) {
   try {
-    const event: LearningEvent = { id: crypto.randomUUID(), sessionId: stableId(sessionStorage, 'kodik-session-id-v1'), name, lesson, at: Date.now(), data: cleanEventData(data) }
+    const event: LearningEvent = { id: crypto.randomUUID(), sessionId: stableId(sessionStorage, 'kodik-session-id-v1'), name, lesson, at: Date.now(), curriculumVersion, appVersion, data: cleanEventData(data) }
     localStorage.setItem(key, JSON.stringify([...read(key), event].slice(-500)))
     if (enabled) {
       localStorage.setItem(pendingKey, JSON.stringify([...read(pendingKey), event].slice(-5000)))

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import handler from '../server/events'
 import { identity, digest } from '../server/storage'
+import { curriculumVersion } from '../src/release'
 const originalFetch=globalThis.fetch
 const prior=[process.env.SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY]
 process.env.SUPABASE_URL='https://storage.example.com';process.env.SUPABASE_SERVICE_ROLE_KEY='unit-test-secret'
@@ -18,6 +19,15 @@ await handler(request,res)
 assert.equal(status,200);assert.deepEqual(body,{accepted:[event.id]})
 assert.equal(JSON.stringify(inserted).includes('secret'),false)
 assert.equal(JSON.stringify(inserted).includes((request.body.learnerId)),false)
+assert.equal((inserted as Record<string,unknown>[])[0].curriculum_version,'legacy')
+assert.equal((inserted as Record<string,unknown>[])[0].lesson_key,'legacy:58')
+await handler({...request,body:{...request.body,events:[{...event,curriculumVersion,appVersion:'abcdef1',lessonKey:'attacker-override'}]}},res)
+assert.equal(status,200)
+assert.equal((inserted as Record<string,unknown>[])[0].curriculum_version,curriculumVersion)
+assert.equal((inserted as Record<string,unknown>[])[0].app_version,'abcdef1')
+assert.equal((inserted as Record<string,unknown>[])[0].lesson_key,'functions.square')
+await handler({...request,body:{...request.body,events:[{...event,curriculumVersion,appVersion:'private@example.com'}]}},res)
+assert.equal(status,400)
 assert.ok(headers['Set-Cookie'].includes('HttpOnly; Secure; SameSite=Lax'))
 const first=identity({...request,headers:{...request.headers,cookie:headers['Set-Cookie']}},res)
 const repeated=identity({...request,headers:{...request.headers,cookie:headers['Set-Cookie']}},res)

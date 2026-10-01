@@ -8,6 +8,7 @@ try {
   await client.connect()
   await client.query('begin')
   await client.query(await readFile(new URL('../supabase/migrations/003_events_and_ai_budget.sql', import.meta.url), 'utf8'))
+  await client.query(await readFile(new URL('../supabase/migrations/004_event_versions.sql', import.meta.url), 'utf8'))
   await client.query('commit')
   const result = await client.query("select tablename, rowsecurity from pg_tables where schemaname='public' and tablename in ('learning_events','learning_budgets')")
   console.log(JSON.stringify(result.rows))

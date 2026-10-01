@@ -54,14 +54,54 @@ export const practicePool: PracticeItem[] = [
 ]
 
 // Negative IDs isolate practice drafts, attempts and sessions from curriculum rewards.
-export function practiceLessonId(id: string) { const index = practicePool.findIndex(item => item.id === id); return index < 0 ? undefined : -100 - index }
+const practiceNumericIds: Record<string, number> = {
+  "print-review-1": -100,
+  "string-corrective-1": -101,
+  "number-review-1": -102,
+  "sequence-review-1": -103,
+  "variable-review-1": -104,
+  "assignment-corrective-1": -105,
+  "arithmetic-review-1": -106,
+  "comparison-review-1": -107,
+  "if-corrective-1": -108,
+  "loop-review-1": -109,
+  "comparison-if-review": -110,
+  "function-review-1": -111,
+  "text-syntax-review-1": -112,
+  "code-string-fix": -113,
+  "code-arithmetic-fix": -114,
+  "code-variable-fix": -115,
+  "code-assignment-fix": -116,
+  "code-if-fix": -117,
+  "code-comparison-fix": -118,
+  "code-loop-fix": -119,
+  "code-function-fix": -120,
+  "list-index-fix": -121,
+  "list-loop-fix": -122,
+  "list-review": -123,
+  "input-fix": -124,
+  "input-number-fix": -125,
+  "input-review": -126,
+  "drawing-fix": -127,
+  "drawing-loop-fix": -128,
+  "drawing-review": -129,
+  "code-arithmetic-review": -130,
+  "code-variable-review": -131,
+  "code-if-review": -132,
+  "code-comparison-review": -133,
+  "code-loop-review": -134,
+  "code-function-review": -135,
+  "code-string-review": -136,
+  "code-assignment-review": -137
+}
+export function practiceLessonId(id: string) { return practiceNumericIds[id] }
 export function getPracticeLesson(id: string, support?: SupportLevel) {
   const item = practicePool.find(candidate => candidate.id === id)
   const source = lessons.find(lesson => lesson.id === item?.sourceLessonId)
   if (!item || !source) return undefined
   const prepared = item.code && source.extended ? { ...source, goal: item.prompt, hint: 'Проверь команду, её данные и порядок действий.', progressiveHints: ['Найди в задании данные, с которыми должна работать команда.', 'Используй конструкцию из разбора темы и подставь данные короткой задачи.', 'Сравни порядок команд с целью задания.'], success: 'Закрепили тему!', codeAnswer: item.code, answer: item.code, mode: 'text' as const, supportLevel: 'free_code' as const, expectedOutput: runCourseProgram(item.code, source.extended.inputs[0]).output, prefix: undefined, suffix: undefined, choices: undefined, extended: { ...source.extended, rules: item.rules || source.extended.rules } } : source
-  const variant = materializeSupport(prepared, support || item.supportLevel)
-  return { ...variant, id: practiceLessonId(id)!, title: item.title, instruction: item.code ? item.prompt : `${item.prompt} ${source.instruction}`, tutorial: undefined, review: true,
+  const variant = materializeSupport({ ...prepared, skills: { primarySkill: item.skills[0], teaches: [], practices: item.skills, requires: item.requires } }, support || item.supportLevel)
+  return { ...variant, id: practiceLessonId(id)!, key: `practice.${id}`, title: item.title, instruction: item.code ? item.prompt : `${item.prompt} ${source.instruction}`, tutorial: undefined, review: true,
     skills: { primarySkill: item.skills[0], teaches: [], practices: item.skills, requires: item.requires } }
 }
 export const practiceLessons = practicePool.map(item => getPracticeLesson(item.id)!)

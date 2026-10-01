@@ -1,4 +1,7 @@
 import { eventNames, cleanEventData } from '../src/eventSchema'
+import { eventRelease } from '../src/release'
+import { lessons } from '../src/course'
+import { practiceLessons } from '../src/practicePool'
 import { bucket, claim, database, digest, identity, sameOrigin, type Request, type Response } from './storage'
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export default async function handler(req: Request, res: Response) {
@@ -11,7 +14,10 @@ export default async function handler(req: Request, res: Response) {
   const now = Date.now(), rows = []
   for (const event of body.events) {
     if (!event || !uuid.test(event.id || '') || !uuid.test(event.sessionId || '') || !eventNames.includes(event.name) || !Number.isInteger(event.lesson) || event.lesson < -1000 || event.lesson > 100 || typeof event.at !== 'number' || event.at < now - 90 * 86400000 || event.at > now + 60000) return res.status(400).json({ error: 'invalid_event' })
-    rows.push({ id: event.id, learner_id: digest(body.learnerId), session_id: event.sessionId, name: event.name, lesson: event.lesson, occurred_at: new Date(event.at).toISOString(), data: cleanEventData(event.data) })
+    const release = eventRelease(event)
+    if (!release) return res.status(400).json({ error: 'invalid_release' })
+    const key = [...lessons, ...practiceLessons].find(item => item.id === event.lesson)?.key
+    rows.push({ id: event.id, learner_id: digest(body.learnerId), session_id: event.sessionId, name: event.name, lesson: event.lesson, curriculum_version: release.curriculumVersion, app_version: release.appVersion, lesson_key: release.curriculumVersion === 'legacy' ? `legacy:${event.lesson}` : key || 'navigation', occurred_at: new Date(event.at).toISOString(), data: cleanEventData(event.data) })
   }
   try {
     const user = identity(req, res)

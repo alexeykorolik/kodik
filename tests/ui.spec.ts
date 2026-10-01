@@ -171,7 +171,8 @@ test('все 100 заданий основного курса подряд, от
     if (l.extended) {
       const className = await page.locator('.lesson-flow').getAttribute('class')
       const support = className?.match(/support-(guided_code|code_tokens|free_code)/)?.[1] as 'guided_code'|'code_tokens'|'free_code'|undefined
-      const active = materializeSupport(l,support)
+        const focus = await page.evaluate(id => JSON.parse(localStorage.getItem('kodik-progress-v1')!).sessions[id].scaffoldSkill,l.id)
+        const active = materializeSupport(l,support,focus)
       if (active.mode === 'completion') await page.getByRole('radio',{name:active.answer!,exact:true}).check()
       else if (active.mode === 'tokens') { const buttons=page.locator('.token-options button'); for(let i=active.tokens!.length-1;i>=0;i--) await buttons.nth(i).click() }
       else await page.getByLabel('Твой Python',{exact:true}).fill(active.answer!)

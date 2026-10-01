@@ -1,12 +1,13 @@
 import { checkLesson, renderPython, runProgram, type Lesson } from './learningEngine'
 import { parsePythonProgram } from './textLearning'
-import type { SupportLevel } from './skills'
+import type { SkillId, SupportLevel } from './skills'
 import { checkExtendedLesson } from './extendedChecker'
+import { scaffoldForSkill } from './skillScaffolds'
 
-function codeFirstVariant(source: Lesson, level: SupportLevel): Lesson | null {
+function codeFirstVariant(source: Lesson, level: SupportLevel, focus?: SkillId): Lesson | null {
   if (level === 'blocks' || level === 'blocks_with_code' || !source.codeAnswer) return null
   const code = source.codeAnswer
-  const base = { ...source, supportLevel: level, tutorial: undefined, choices: undefined, tokens: undefined, prefix: undefined, suffix: undefined }
+  const base = { ...source, scaffoldSkill: focus || source.scaffoldSkill, supportLevel: level, tutorial: undefined, choices: undefined, tokens: undefined, prefix: undefined, suffix: undefined }
   if (level === 'free_code') return { ...base, mode: 'text', answer: code }
   if (level === 'code_tokens') {
     const tokens = code.split(/(?<=\n)/).filter(Boolean)
@@ -17,25 +18,21 @@ function codeFirstVariant(source: Lesson, level: SupportLevel): Lesson | null {
     }
     return { ...base, mode: 'tokens', answer: code, tokens: [...tokens].reverse() }
   }
-  const skill = source.skills?.primarySkill
-  const gap = skill === 'loop' ? /(?:range\(([^\n)]+)\)|while\s+([^\n:]+):)/.exec(code)
-    : skill === 'if' || skill === 'comparison' ? /if\s+([^\n:]+):/.exec(code)
-    : skill === 'function' ? /return\s+([^\n]+)/.exec(code)
-    : skill === 'list' ? /print\(([^\n]+)\)/.exec(code)
-    : /print\(([^\n]+)\)/.exec(code) || /forward\(([^\n]+)\)/.exec(code)
-  const fallback = /print\(([^\n]+)\)/.exec(code) || /forward\(([^\n]+)\)/.exec(code)
-  const match = gap || fallback
-  if (!match) return null
-  const answer = match[1] || match[2], index = match.index + match[0].indexOf(answer)
+  const skill = focus || source.skills?.primarySkill || 'print'
+  const gap = scaffoldForSkill(code, skill) || (source.skills?.primarySkill ? scaffoldForSkill(code, source.skills.primarySkill) : undefined)
+  if (!gap) return null
+  const { answer, index } = gap
   const choices = [...new Set([answer, '0', '"другое значение"'])]
-  const variant: Lesson = { ...base, mode: 'completion', answer, choices, prefix: code.slice(0, index), suffix: code.slice(index + answer.length) }
+  const variant: Lesson = { ...base, scaffoldSkill: gap.skill, mode: 'completion', answer, choices, prefix: code.slice(0, index), suffix: code.slice(index + answer.length) }
   return checkExtendedLesson(variant, answer).passed ? variant : null
 }
 
 // A variant keeps the curriculum goal and checker. Only the input scaffold changes.
-export function createSupportVariant(source: Lesson, level: SupportLevel): Lesson | null {
+export function createSupportVariant(source: Lesson, level: SupportLevel, focus?: SkillId): Lesson | null {
+  // Preserve saved, pre-calibration completion drafts for the four introductions.
+  if (source.extended && source.mode === 'completion' && source.supportLevel === level && !focus) return source
+  if (source.extended) return codeFirstVariant(source, level, focus)
   if (level === source.supportLevel) return source
-  if (source.extended) return codeFirstVariant(source, level)
   if (level === 'blocks' || level === 'blocks_with_code') {
     if (source.mode !== 'blocks' && source.mode !== 'text') return null
     return { ...source, mode: 'blocks', supportLevel: level }
@@ -70,8 +67,8 @@ export function createSupportVariant(source: Lesson, level: SupportLevel): Lesso
   } catch { return null }
 }
 
-export function materializeSupport(source: Lesson, level?: SupportLevel): Lesson {
-  return level ? createSupportVariant(source, level) || source : source
+export function materializeSupport(source: Lesson, level?: SupportLevel, focus?: SkillId): Lesson {
+  return level ? createSupportVariant(source, level, focus) || source : source
 }
 
 export const supportExplanation: Record<SupportLevel, string> = {

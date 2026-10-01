@@ -28,6 +28,8 @@ export type Program = { statements: Stmt[]; issues?: string[]; normalizedStructu
 
 export type Lesson = {
   id: number
+  key?: string
+  scaffoldSkill?: SkillId
   chapter?: number
   tutorial?: string[]
   mode?: 'blocks' | 'recognition' | 'completion' | 'tokens' | 'text'

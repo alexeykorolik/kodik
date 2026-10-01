@@ -12,6 +12,7 @@ import { CodePreview, DrawingPreview, Modal, Stars } from './LearningUI'
 import { runCourseProgram } from './pythonRuntime'
 import { parseCourseProgram } from './pythonRuntime'
 import { summarizePython } from './pythonStructure'
+import { normalizeInvalidPython } from './pythonEvidence'
 import { courseMaterials } from './courseMaterials'
 import { recordLearningCheck } from './learningHistory'
 import { Icon } from './Icon'
@@ -181,7 +182,10 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
         if (checked.result.systemError) { setOutcome({ ...checked, code: '' }); return }
         const rawAnswer = blocksMode ? currentProgram.statements.length ? renderPython(currentProgram) : '' : currentAnswer
         let evidenceAnswer = (lesson.mode === 'text' || lesson.mode === 'tokens') && checked.program.statements.length ? renderPython(checked.program) : rawAnswer.trimEnd()
-        if (lesson.extended) try { evidenceAnswer = JSON.stringify(parseCourseProgram(lesson.mode === 'completion' ? (lesson.prefix || '') + rawAnswer + (lesson.suffix || '') : rawAnswer)) } catch { /* Invalid syntax still counts only once per answer. */ }
+        if (lesson.extended) {
+          const fullCode = lesson.mode === 'completion' ? (lesson.prefix || '') + rawAnswer + (lesson.suffix || '') : rawAnswer
+          try { evidenceAnswer = JSON.stringify(parseCourseProgram(fullCode)) } catch { evidenceAnswer = normalizeInvalidPython(fullCode) }
+        } else if (!blocksMode && checked.result.errorType === 'syntax_error') evidenceAnswer = normalizeInvalidPython(evidenceAnswer)
         const fingerprint = answerFingerprint(evidenceAnswer)
         const meaningful = meaningfulAnswer(rawAnswer) && !(session.checkedFingerprints || []).includes(fingerprint)
         const nextBase = { ...session, attempts: session.attempts + 1, finished: checked.passed, checkedFingerprints: meaningful ? [...(session.checkedFingerprints || []),fingerprint] : session.checkedFingerprints,
@@ -198,9 +202,9 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
         if (!checked.passed && meaningful && nextBase.meaningfulErrors >= 2 && !session.recoveryOffered && !p.activePractice) {
           const decision = decideLessonSupport(lesson,{...p,skillStates},true,lesson.supportLevel)
           const updated = applySupportDecision(lesson,{...p,skillStates},decision)
-          extra.supportOverrides = updated.supportOverrides; extra.skillSupport = updated.skillSupport; extra.supportCheckpoint = updated.supportCheckpoint
+          extra.scaffoldSkills = updated.scaffoldSkills; extra.supportOverrides = updated.supportOverrides; extra.skillSupport = updated.skillSupport; extra.supportCheckpoint = updated.supportCheckpoint
           track('adaptive_decision', lesson.id, { ...decision, skillId: decision.skillId || '' })
-          if (decision.reason === 'restore') track('support_changed', lesson.id, { previousSupport: decision.previousSupport, nextSupport: decision.nextSupport, reason: 'restore' })
+          if (decision.reason === 'restore') track('support_changed', lesson.id, { runStartedAt: session.startedAt, previousSupport: decision.previousSupport, nextSupport: decision.nextSupport, reason: 'restore' })
           const selected=selectNextExercise({lessons,pool:practicePool,completed:p.completed,targetLessonId:lesson.id,correctiveOnly:true,skillStates,practiceSequence,completedPracticeIds:p.completedPracticeIds})
           if (selected?.reason==='corrective' && selected.practiceId && selected.message) {
             const practice = getPracticeLesson(selected.practiceId,decision.nextSupport)!
@@ -219,8 +223,9 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
         const next = { ...nextBase, lastCheck: { passed: checked.passed, message: checked.message, output: checked.result.output, error: checked.result.error, systemError: checked.result.systemError, errorType: checked.result.errorType, affectedSkills: checked.result.affectedSkills, stars, code } }
         persistSession(next, extra)
         setOutcome({ ...checked, stars, code })
-        track('check', lesson.id, { passed: checked.passed, attempt: next.attempts, stars: stars || 0 })
-        if (checked.passed && !session.finished) track('lesson_completed', lesson.id, { completionMs: Date.now() - session.startedAt, attempt: next.attempts, stars: stars || 0, supportLevel: lesson.supportLevel || 'blocks_with_code' })
+        const evidence = { runStartedAt: session.startedAt, supportLevel: lesson.supportLevel || 'blocks_with_code', hintsUsed: session.hintsUsed, solution: session.solutionUsed, independent: !guided && session.hintsUsed === 0 && !session.solutionUsed }
+        track('check', lesson.id, { ...evidence, passed: checked.passed, attempt: next.attempts, stars: stars || 0 })
+        if (checked.passed && !session.finished) track('lesson_completed', lesson.id, { ...evidence, completionMs: Date.now() - session.startedAt, attempt: next.attempts, stars: stars || 0 })
       } catch { setOutcome({ passed: false, message: 'Не удалось проверить. Прогресс сохранён. Попробуй ещё раз.', result: { output: [], systemError: true }, code: '' }) }
       finally { setChecking(false) }
     }, 80)

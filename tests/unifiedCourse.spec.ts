@@ -5,7 +5,7 @@ async function seed(page: Page, id: number) {
   const prior = lessons.slice(0, lessons.findIndex(lesson => lesson.id === id))
   await page.addInitScript(data => {
     if (!localStorage.getItem('kodik-progress-v1')) localStorage.setItem('kodik-progress-v1', JSON.stringify(data))
-  }, { version: 4, completed: prior.map(lesson => lesson.id), currentLesson: id, started: true, bestStars: {}, introducedConcepts: prior.flatMap(lesson => lesson.tutorial || []) })
+  }, { version: 4, completed: prior.map(lesson => lesson.id), currentLesson: id, started: true, bestStars: {}, introducedConcepts: prior.flatMap(lesson => lesson.tutorial || []), sessions: id >= 23 ? { [id]: { attempts: 0, hintsUsed: 0, solutionUsed: false, startedAt: Date.now(), supportLevel: 'free_code' } } : {} })
   await page.goto('/')
   await page.getByRole('button', { name: /Продолжить обучение/ }).click()
 }

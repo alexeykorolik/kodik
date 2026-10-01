@@ -88,9 +88,11 @@ const hintsFor = (lesson: Lesson) => {
   return [first[concept!] || lesson.starterHint, lesson.starterHint, lesson.hint]
 }
 
+const lessonKeys: Record<number, string> = {"1": "intro.first-print", "13": "intro.your-message", "14": "intro.python-print", "7": "intro.sequence", "22": "intro.sequence-review", "6": "data.first-number", "2": "data.first-variable", "3": "data.first-sum", "8": "data.expression-order", "15": "data.read-variable", "9": "conditions.first-comparison", "5": "conditions.first-if", "10": "conditions.first-else", "16": "conditions.operator-choice", "17": "conditions.check-pass", "4": "loops.first-repeat", "18": "loops.independent-repeat", "19": "loops.python-header", "11": "functions.first-definition", "12": "functions.repeat-call", "20": "data.independent-variable", "21": "functions.independent-loop"}
+
 export const lessons: Lesson[] = [...newLessons.map((source): Lesson => {
   const mode = source.mode || 'blocks'
-  const lesson: Lesson = { ...source, mode, codeAnswer:codeAnswers[source.id], skills: metadata[source.id], difficulty: Math.min(5, Math.max(1, source.chapter || 1)) as 1|2|3|4|5, supportLevel: source.tutorial?.length ? 'blocks' : supportForMode(mode) }
+  const lesson: Lesson = { ...source, key: lessonKeys[source.id], mode, codeAnswer:codeAnswers[source.id], skills: metadata[source.id], difficulty: Math.min(5, Math.max(1, source.chapter || 1)) as 1|2|3|4|5, supportLevel: source.tutorial?.length ? 'blocks' : supportForMode(mode) }
   return { ...lesson, progressiveHints: hintsFor(lesson) }
 }), ...extendedLessons]
 export function chapterLessons(id: number) { return lessons.filter(l => l.chapter === id) }

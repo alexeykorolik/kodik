@@ -26,7 +26,7 @@ export default function App() {
   const [status, setStatus] = useState('Прогресс сохраняется на этом устройстве')
   const practice = progress.activePractice
   const sourceLesson = (practice?.lessonId === lessonId ? getPracticeLesson(practice.id, practice.supportLevel) : lessons.find(l => l.id === lessonId)) || lessons[0]
-  const lesson = materializeSupport(sourceLesson, progress.sessions?.[lessonId]?.supportLevel)
+  const lesson = materializeSupport(sourceLesson, progress.sessions?.[lessonId]?.supportLevel, progress.sessions?.[lessonId]?.scaffoldSkill)
   const contextLesson = practice?.lessonId === lessonId ? lessons.find(item=>item.id===practice.returnLessonId) || lesson : lesson
   const lessonChapter = chapterLessons(contextLesson.chapter || 1)
   const lessonPosition = Math.max(1, lessonChapter.findIndex(item => item.id === contextLesson.id) + 1)
@@ -75,12 +75,12 @@ export default function App() {
     // Evaluate before starting a replay; do not clear an unfinished resumed session.
     const opened = active ? { lesson: target, progress: p, message: active.reason === 'corrective' ? 'Давай закрепим это ещё на одном примере.' : undefined, decision: undefined } : openLessonVariant(target,p)
     p = opened.progress
-    if (opened.decision) track('adaptive_decision', id, { ...opened.decision, skillId: opened.decision.skillId || '' })
-    if (opened.decision?.reason === 'advance') track('support_changed', id, { previousSupport: opened.decision.previousSupport, nextSupport: opened.decision.nextSupport, reason: 'advance' })
-    if (replay || !sessions[id]) { sessions[id] = { ...newSession(), supportLevel: opened.lesson.supportLevel, supportMessage: opened.message }; if (replay) delete drafts[id] }
-    else sessions[id] = { ...sessions[id], supportLevel: opened.lesson.supportLevel, supportMessage: opened.message }
+    if (replay || !sessions[id]) { sessions[id] = { ...newSession(), supportLevel: opened.lesson.supportLevel, scaffoldSkill: opened.lesson.scaffoldSkill, supportMessage: opened.message }; if (replay) delete drafts[id] }
+    else sessions[id] = { ...sessions[id], supportLevel: opened.lesson.supportLevel, scaffoldSkill: opened.lesson.scaffoldSkill, supportMessage: opened.message }
     persist({ ...p, sessions, drafts, started: true, currentLesson: active ? active.returnLessonId : id, currentChapter: target.chapter })
-    track(replay ? 'replay' : 'lesson_open', id, { supportLevel: opened.lesson.supportLevel || 'blocks_with_code' })
+    if (opened.decision) track('adaptive_decision', id, { ...opened.decision, runStartedAt: sessions[id].startedAt, skillId: opened.decision.skillId || '' })
+    if (opened.decision && ['advance','restore'].includes(opened.decision.reason)) track('support_changed', id, { runStartedAt: sessions[id].startedAt, previousSupport: opened.decision.previousSupport, nextSupport: opened.decision.nextSupport, reason: opened.decision.reason })
+    track(replay ? 'replay' : 'lesson_open', id, { runStartedAt: sessions[id].startedAt, supportLevel: opened.lesson.supportLevel || 'blocks_with_code' })
     setLessonId(id); setRunKey(n => n + 1); setScreen('lesson')
   }
   const next = () => {
@@ -92,7 +92,9 @@ export default function App() {
       const sessions = { ...p.sessions }
       if (returnLessonId && p.activePractice.reason === 'corrective' && sessions[returnLessonId]) {
         const old = sessions[returnLessonId], supportLevel = p.supportOverrides?.[returnLessonId] || old.supportLevel
-        sessions[returnLessonId] = { ...old, supportLevel, answer: supportLevel !== old.supportLevel ? '' : old.answer, tokens: supportLevel !== old.supportLevel ? [] : old.tokens, lastCheck: undefined, meaningfulErrors: 0, recoveryOffered: false, supportMessage: 'Закрепили. Вернёмся к тому же заданию — твой прогресс сохранён.' }
+        const scaffoldSkill = p.scaffoldSkills?.[returnLessonId] || old.scaffoldSkill
+        const changed = supportLevel !== old.supportLevel || scaffoldSkill !== old.scaffoldSkill
+        sessions[returnLessonId] = { ...old, supportLevel, scaffoldSkill, answer: changed ? '' : old.answer, tokens: changed ? [] : old.tokens, lastCheck: undefined, meaningfulErrors: 0, recoveryOffered: false, supportMessage: 'Закрепили. Вернёмся к тому же заданию — твой прогресс сохранён.' }
       }
       persist({ ...p, sessions, activePractice: undefined, recommendedPractice: undefined, completedPracticeIds: [...new Set([...(p.completedPracticeIds || []),p.activePractice.id])] })
       if (returnLessonId && isUnlocked(returnLessonId,readLocalProgress())) { open(returnLessonId); return }
