@@ -1,4 +1,4 @@
-export type LearningEvent = { name: 'lesson_open'|'first_action'|'block_added'|'check'|'hint'|'tutorial_step'|'python_view'|'replay'|'adaptive_decision'|'support_changed'|'corrective_inserted'|'corrective_completed'; lesson: number; at: number; data?: Record<string, string|number|boolean> }
+export type LearningEvent = { name: 'lesson_open'|'first_action'|'block_added'|'check'|'hint'|'tutorial_step'|'python_view'|'replay'|'adaptive_decision'|'support_changed'|'corrective_inserted'|'corrective_completed'|'ai_hint_requested'|'ai_hint_generated'|'ai_hint_fallback'|'ai_explanation_requested'|'ai_example_requested'|'ai_response_failed'|'ai_hint_outcome'; lesson: number; at: number; data?: Record<string, string|number|boolean> }
 const key = 'kodik-events-v1'
 export function track(name: LearningEvent['name'], lesson: number, data?: LearningEvent['data']) {
   const event = { name, lesson, at: Date.now(), data }

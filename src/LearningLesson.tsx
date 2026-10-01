@@ -7,6 +7,7 @@ import { saveProgress, readLocalProgress, type Progress } from './progress'
 import { newSession, starsFor, type Session } from './achievement'
 import { track } from './analytics'
 import { checkTextLesson } from './textLearning'
+import { parsePythonProgram } from './textLearning'
 import { CodePreview, Modal, Stars } from './LearningUI'
 import { applyMasteryEvent } from './mastery'
 import { lessons } from './course'
@@ -18,7 +19,13 @@ import { supportExplanation } from './supportVariants'
 import { useLessonViewport } from './useLessonViewport'
 import { mobileGoal, mobileGuide } from './mobileLesson'
 import { MinimalCodeEditor } from './MinimalCodeEditor'
+import { AITutor } from './ai/aiTutor'
+import { HttpAIProvider } from './ai/aiProvider'
+import { buildTutorContext } from './ai/aiContext'
+import { tutorFlags } from './ai/aiFlags'
+import type { TutorAction, TutorResult } from './ai/aiTypes'
 const BlocklyEditor = lazy(() => import('./BlocklyEditor').then(m => ({ default: m.BlocklyEditor })))
+const aiTutor = new AITutor(new HttpAIProvider(), tutorFlags.tutor)
 type Result = { passed: boolean; message: string; result: RunResult; stars?: number; code: string }
 function solvedTokenOrder(tokens: string[], answer = '') {
   const search = (prefix: string, used: number[]): number[] | null => {
@@ -48,6 +55,10 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
     code: initialSession.lastCheck.code
   } : null)
   const [checking, setChecking] = useState(false)
+  const [tutorAnswer, setTutorAnswer] = useState<{ action: TutorAction; level: number; result: TutorResult } | null>(null)
+  const [tutorLoading, setTutorLoading] = useState(false)
+  const tutorSerial = useRef(0)
+  const awaitingHintAttempt = useRef<number | null>(null)
   const [editorReady, setEditorReady] = useState(false)
   const [codeExpanded, setCodeExpanded] = useState(() => lesson.supportLevel !== 'blocks' && window.matchMedia('(min-width: 768px)').matches)
   const editor = useRef<EditorHandle>(null)
@@ -77,6 +88,7 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
     setPythonSource(previous => info.selectedId || (info.blocks.some(block => block.id === previous) ? previous : undefined))
   }, [info])
   useEffect(() => () => window.clearTimeout(verifyTimer.current), [])
+  useEffect(() => { tutorSerial.current++; setTutorAnswer(null); setTutorLoading(false); awaitingHintAttempt.current = null }, [lesson.id])
   useEffect(() => {
     if (modal || !pendingSource.current) return
     const sourceId = pendingSource.current
@@ -111,6 +123,34 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
     persistSession(next, { hintsUsed: { ...p.hintsUsed, [lesson.id]: (p.hintsUsed?.[lesson.id] || 0) + 1 } })
     track('hint', lesson.id, { level: next.hintsUsed })
   }
+  const requestTutor = async (kind: TutorAction, level = Math.min(3, session.hintsUsed || 1)) => {
+    if (!tutorFlags.tutor || (kind === 'example' && !tutorFlags.examples) || ((kind === 'concept' || kind === 'error_explanation') && !tutorFlags.explanations)) return
+    const serial = ++tutorSerial.current
+    setTutorLoading(true)
+    setTutorAnswer(null)
+    let currentProgram = editor.current?.getProgram() || program
+    if (lesson.mode === 'text') { try { currentProgram = parsePythonProgram(currentAnswer) } catch { currentProgram = { statements: [] } } }
+    const request = { action: kind, hintLevel: level as 1 | 2 | 3,
+      context: buildTutorContext(lesson, progress, { ...session, hintsUsed: kind === 'hint' ? level : session.hintsUsed }, currentProgram, outcome && !outcome.passed ? outcome.result.errorType : undefined) }
+    const metadata = { action: kind, level, skillId: request.context.skill.id, supportLevel: request.context.task.supportLevel, errorType: request.context.lastError?.type || '' }
+    track(kind === 'hint' ? 'ai_hint_requested' : kind === 'example' ? 'ai_example_requested' : 'ai_explanation_requested', lesson.id, metadata)
+    const result = await aiTutor.respond(request, lesson)
+    if (serial !== tutorSerial.current) return
+    setTutorAnswer({ action: kind, level, result })
+    setTutorLoading(false)
+    if (result.source === 'ai') {
+      track('ai_hint_generated', lesson.id, { ...metadata, latencyMs: result.latencyMs, provider: result.provider })
+      if (kind === 'hint') awaitingHintAttempt.current = session.attempts
+    } else {
+      track('ai_hint_fallback', lesson.id, { ...metadata, reason: result.reason || 'unknown' })
+      if (result.reason === 'invalid_response') track('ai_response_failed', lesson.id, { reason: result.reason })
+    }
+  }
+  const showHint = () => {
+    const level = Math.min(3, session.hintsUsed + 1)
+    useHint()
+    void requestTutor('hint', level)
+  }
   const solution = () => {
     persistSession({ ...session, solutionUsed: true, hintsUsed: Math.max(3, session.hintsUsed), answer: !blocksMode ? lesson.answer : session.answer, tokens: lesson.mode === 'tokens' ? solvedTokenOrder(lesson.tokens || [],lesson.answer) : session.tokens })
     if (blocksMode) editor.current?.showSolution()
@@ -123,6 +163,10 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
       try {
         const currentProgram = editor.current?.getProgram() || program
         const checked = blocksMode ? { ...checkLesson(lesson, currentProgram), program: currentProgram } : checkTextLesson(lesson, currentAnswer)
+        if (awaitingHintAttempt.current !== null && session.attempts >= awaitingHintAttempt.current) {
+          track('ai_hint_outcome', lesson.id, { passed: checked.passed, nextAttempt: session.attempts + 1, errorType: checked.result.errorType || '', skillId: lesson.skills?.teaches[0] || lesson.skills?.practices[0] || '', supportLevel: lesson.supportLevel || 'blocks_with_code' })
+          awaitingHintAttempt.current = null
+        }
         if (checked.result.systemError) { setOutcome({ ...checked, code: '' }); return }
         const rawAnswer = blocksMode ? currentProgram.statements.length ? renderPython(currentProgram) : '' : currentAnswer
         const evidenceAnswer = (lesson.mode === 'text' || lesson.mode === 'tokens') && checked.program.statements.length ? renderPython(checked.program) : rawAnswer.trimEnd()
@@ -205,8 +249,10 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
         <h1 id="lesson-title" aria-label={lesson.title}>{mobile ? 'Задание' : lesson.title}</h1><p className="task-copy">{mobile ? mobileGoal(lesson.goal) : lesson.goal}</p>
         <p className="format-explanation">{supportExplanation[lesson.supportLevel || 'blocks_with_code']}</p>
         <details className="task-details"><summary>Подробнее о задании</summary><p className="instruction">{lesson.instruction}</p>{!guided && <p className="next-action">{assistance}</p>}</details>
-        <div className="lesson-help"><button disabled={checking} className="text-button help-button" aria-label={mobile ? 'Помощь с заданием' : undefined} onClick={() => setModal('help')}>{mobile ? 'Подробнее' : blocksMode ? 'Как работать с блоками' : 'Как выполнить задание'}</button>{!guided && <button className="text-button hint-button" aria-label={session.hintsUsed ? 'Ещё подсказка' : 'Нужна подсказка?'} onClick={() => useHint()} disabled={checking || session.hintsUsed >= 3}>{mobile ? session.hintsUsed ? 'Ещё подсказка' : '? Подсказка' : session.hintsUsed ? 'Ещё подсказка' : 'Нужна подсказка?'}</button>}</div>
-        {!guided && session.hintsUsed > 0 && <div className="hint-area"><p className="hint-text" role="status"><span>Подсказка {Math.min(session.hintsUsed, 3)}/3</span>{lesson.progressiveHints?.[Math.min(session.hintsUsed - 1, lesson.progressiveHints.length - 1)] || (session.hintsUsed === 1 ? firstHint : lesson.hint)}</p>{session.hintsUsed >= 3 && <button className="text-button" onClick={solution}>Показать готовый вариант{!tutorial ? ' · 1 ★' : ''}</button>}</div>}
+        <div className="lesson-help"><button disabled={checking} className="text-button help-button" aria-label={mobile ? 'Помощь с заданием' : undefined} onClick={() => setModal('help')}>{mobile ? 'Подробнее' : blocksMode ? 'Как работать с блоками' : 'Как выполнить задание'}</button>{!guided && <button className="text-button hint-button" aria-label={session.hintsUsed ? 'Ещё подсказка' : 'Нужна подсказка?'} onClick={showHint} disabled={checking || session.hintsUsed >= 3}>{mobile ? session.hintsUsed ? 'Ещё подсказка' : '? Подсказка' : session.hintsUsed ? 'Ещё подсказка' : 'Нужна подсказка?'}</button>}{tutorFlags.tutor && tutorFlags.explanations && !guided && <button className="text-button" onClick={() => void requestTutor('concept')} disabled={checking || tutorLoading}>Объясни проще</button>}{tutorFlags.tutor && tutorFlags.examples && !guided && <button className="text-button" onClick={() => void requestTutor('example')} disabled={checking || tutorLoading}>Похожий пример</button>}</div>
+        {!guided && session.hintsUsed > 0 && <div className="hint-area"><p className="hint-text" role="status"><span>Подсказка {Math.min(session.hintsUsed, 3)}/3</span>{tutorAnswer?.action === 'hint' && tutorAnswer.level === Math.min(session.hintsUsed, 3) ? tutorAnswer.result.response.message : lesson.progressiveHints?.[Math.min(session.hintsUsed - 1, lesson.progressiveHints.length - 1)] || (session.hintsUsed === 1 ? firstHint : lesson.hint)}</p>{session.hintsUsed >= 3 && <button className="text-button" onClick={solution}>Показать готовый вариант{!tutorial ? ' · 1 ★' : ''}</button>}</div>}
+        {tutorFlags.tutor && tutorLoading && <p className="ai-tutor-status" role="status">Подбираем объяснение…</p>}
+        {tutorFlags.tutor && tutorAnswer && tutorAnswer.action !== 'hint' && tutorAnswer.action !== 'error_explanation' && <div className="ai-tutor-answer" role="status"><strong>{tutorAnswer.action === 'example' ? 'Похожий пример' : 'Объяснение'}</strong><p>{tutorAnswer.result.response.message}</p>{tutorAnswer.result.response.example?.code && <code>{tutorAnswer.result.response.example.code}</code>}{tutorAnswer.result.response.example?.explanation && <p>{tutorAnswer.result.response.example.explanation}</p>}</div>}
       </section>
       <section className={`learning-work ${lesson.id === 1 ? 'first-command' : ''}`} aria-label="Собери решение">
         {guided && <div className="coach" role="status"><span>Шаг {guide ? steps.indexOf(guide) + 1 : steps.length + 1} из {steps.length + 1}</span><p className="desktop-only">{assistance}</p><p className="mobile-only">{mobileGuide(guide)}</p></div>}
@@ -226,7 +272,7 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
         </section>}
       </section>
     </article>
-    {outcome && <section ref={feedback} className={`feedback-panel ${outcome.passed ? 'feedback-success' : 'feedback-error'}`} role="status" aria-live="polite"><div className="feedback-summary"><span className="feedback-mark" aria-hidden="true">{outcome.passed ? '✓' : '!'}</span><div><h2>{outcome.result.systemError ? 'Не удалось проверить' : outcome.passed ? 'Получилось!' : 'Почти получилось'}</h2><p className="feedback-message">{outcome.message}</p></div>{outcome.passed && !tutorial && <Stars value={outcome.stars || 1} />}</div>{outcome.passed && tutorial && <p className="intro-complete">Знакомство завершено · без оценки</p>}{(outcome.code || outcome.result.output.length > 0) && (mobile ? <button className="text-button feedback-result-button" onClick={() => setModal('result')}>{outcome.passed ? 'Посмотреть результат' : 'Подробности проверки'}</button> : <details className="feedback-details"><summary>{outcome.passed ? 'Посмотреть результат' : 'Подробности проверки'}</summary>{resultDetails}</details>)}</section>}
+    {outcome && <section ref={feedback} className={`feedback-panel ${outcome.passed ? 'feedback-success' : 'feedback-error'}`} role="status" aria-live="polite"><div className="feedback-summary"><span className="feedback-mark" aria-hidden="true">{outcome.passed ? '✓' : '!'}</span><div><h2>{outcome.result.systemError ? 'Не удалось проверить' : outcome.passed ? 'Получилось!' : 'Почти получилось'}</h2><p className="feedback-message">{outcome.message}</p></div>{outcome.passed && !tutorial && <Stars value={outcome.stars || 1} />}</div>{!outcome.passed && !outcome.result.systemError && tutorFlags.tutor && tutorFlags.explanations && <button className="text-button ai-error-button" onClick={() => void requestTutor('error_explanation')} disabled={tutorLoading}>{lesson.supportLevel === 'free_code' && session.attempts >= 2 ? 'Что не так с моим кодом?' : 'Почему ошибка?'}</button>}{tutorAnswer?.action === 'error_explanation' && <p className="ai-feedback-answer">{tutorAnswer.result.response.message}</p>}{outcome.passed && tutorial && <p className="intro-complete">Знакомство завершено · без оценки</p>}{(outcome.code || outcome.result.output.length > 0) && (mobile ? <button className="text-button feedback-result-button" onClick={() => setModal('result')}>{outcome.passed ? 'Посмотреть результат' : 'Подробности проверки'}</button> : <details className="feedback-details"><summary>{outcome.passed ? 'Посмотреть результат' : 'Подробности проверки'}</summary>{resultDetails}</details>)}</section>}
     <footer ref={actionRef} className={`primary-action ${outcome ? outcome.passed ? 'action-success' : 'action-retry' : ''}`}><span>{outcome ? outcome.passed ? tutorial ? 'Знакомство завершено' : `${outcome.stars || 1} из 3 звёзд` : 'Исправь решение и проверь ещё раз' : tutorial ? 'Можно пробовать сколько угодно' : `Проверок: ${session.attempts} · подсказок: ${session.hintsUsed}`}</span><button className={guided && !guide ? 'coach-target' : ''} disabled={checking || (guided && !!guide)} onClick={primaryAction}>{primaryLabel}</button></footer>
     {modal === 'blocks' && <Modal title={guide?.target === 'variable' ? 'Создать переменную' : guide?.target === 'add' ? `Выбери «${blockOptions.find(b => b.type === guide.block)?.label}»` : 'Добавить блок'} onClose={() => setModal(null)}><Picker allowed={allowed} fresh={guided ? newBlocks(lesson) : []} canCreateVariable={lesson.allowed?.includes('variables_set') || guide?.target === 'variable'} variableOnly={guide?.target === 'variable'} onVariable={() => setModal('variable')} onAdd={type => { editor.current?.addBlock(type); track('block_added', lesson.id, { type, first: info.blocks.length === 0 }); setModal(null) }} /><p className="sheet-note">Доступны только элементы, которые нужны на этом шаге.</p></Modal>}
     {modal === 'variable' && <Modal title="Подпишем коробку" onClose={() => setModal(null)}><p>Название поможет программе найти сохранённое значение.</p><VariableForm onCreate={name => { action('create_variable'); editor.current?.createVariable(name); setModal(null) }} /></Modal>}

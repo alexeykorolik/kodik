@@ -57,3 +57,6 @@ html{scroll-padding-bottom:105px}.live-mirror{scroll-margin-bottom:110px}.first-
 @media(max-width:760px){.is-guided .first-command .blockly-host{height:175px!important}}
 @media(min-width:761px) and (max-height:900px){.is-guided .first-command .blockly-host{height:190px!important}}
 @media(prefers-reduced-motion:reduce){.feedback-panel,.python-focus>.blocklyPath,.code-expanded .code-reveal{animation:none}.progress-track i,button{transition:none}}
+
+.ai-tutor-status{margin:6px 0;color:var(--muted);font-size:13px}.ai-tutor-answer{max-width:720px;margin:8px 0;padding:10px 12px;border-left:3px solid var(--green);border-radius:0 8px 8px 0;background:var(--success-soft);font-size:14px}.ai-tutor-answer p{margin:4px 0}.ai-tutor-answer code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;margin:5px 0}.ai-error-button{margin:6px 0 0 44px}.ai-feedback-answer{margin:4px 0 0 44px;font-size:14px;line-height:1.45}
+@media(max-width:760px){.ai-error-button,.ai-feedback-answer{margin-left:38px}}
