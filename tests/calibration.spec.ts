@@ -17,6 +17,7 @@ for(const [id,answer] of [[68,'2'],[80,'int(input())'],[91,'40']] as const) test
  const event=events.findLast((event: {name:string})=>event.name==='lesson_completed')
  expect(event.curriculumVersion).toBe(curriculumVersion)
  expect(event.appVersion).toMatch(/^[a-f0-9]{40}$/)
+ if(process.env.KODIK_EXPECTED_APP_VERSION) expect(event.appVersion).toBe(process.env.KODIK_EXPECTED_APP_VERSION)
  expect(event.data.supportLevel).toBe('guided_code')
  expect(event.data.runStartedAt).toBeGreaterThan(0)
  expect(event.data.independent).toBe(true)
