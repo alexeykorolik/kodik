@@ -1,0 +1,211 @@
+/* Shared visual language for the course, path and lesson. Blockly's own blocks stay untouched. */
+:root {
+  --canvas: #f8f7f2;
+  --surface: #fffefa;
+  --surface-alt: #edf0e8;
+  --ink: #17352e;
+  --muted: #68766f;
+  --green: #17463a;
+  --green-soft: #e7ede4;
+  --orange: #c77c5d;
+  --line: #e2e5dd;
+  --success-soft: #e8f1e9;
+  --error-soft: #fbefea;
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  color: var(--ink);
+  background: var(--canvas);
+}
+body { background: var(--canvas); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.app-shell { background: var(--canvas); }
+.lesson-header { border-color: var(--line); }
+.brand { color: var(--green); font-weight: 800; letter-spacing: -.055em; }
+.brand > span { display: none; }
+.back-button { border-color: var(--line); background: var(--surface-alt); border-radius: 50%; }
+.progress-track { background: #e0e3dc; }
+.progress-track i { background: var(--green); }
+.primary-button, .sheet-primary { background: var(--green); color: #fff; border-radius: 18px; }
+.eyebrow, .section-label { color: var(--orange); font-size: 13px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.text-button { color: var(--green); }
+
+.home-overview { max-width: 760px; margin: 34px auto 80px; }
+.home-greeting h1 { max-width: 700px; margin: 9px 0 10px; font-size: clamp(32px, 6vw, 52px); line-height: 1.12; }
+.home-greeting > p:last-child { color: var(--muted); font-size: 18px; margin: 0 0 25px; }
+.home-progress-card { display: flex; align-items: center; gap: 24px; padding: 24px; background: var(--surface-alt); border: 1px solid var(--line); border-radius: 25px; }
+.progress-ring { flex: 0 0 90px; width: 90px; height: 90px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--green) var(--progress), #d9ddd5 0); position: relative; }
+.progress-ring::before { content: ''; position: absolute; inset: 9px; border-radius: inherit; background: var(--surface-alt); }
+.progress-ring strong { position: relative; font-size: 18px; font-variant-numeric: tabular-nums; }
+.home-progress-card h2 { margin: 0 0 5px; font-size: 22px; }
+.home-progress-card p { color: var(--muted); margin: 0; line-height: 1.4; }
+.home-resume-card, .course100-tile { width: 100%; display: flex; align-items: center; gap: 16px; margin-top: 16px; padding: 16px; text-align: left; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 22px; }
+.home-resume-card > span:nth-child(2), .course100-tile > span:nth-child(2) { flex: 1; min-width: 0; }
+.home-resume-card strong, .course100-tile strong { display: block; font-size: 18px; line-height: 1.3; }
+.home-resume-card small, .course100-tile small { display: block; margin-top: 4px; color: var(--muted); font-size: 14px; line-height: 1.35; }
+.resume-icon { flex: 0 0 58px; display: grid; place-items: center; height: 58px; border-radius: 17px; background: var(--green-soft); color: var(--green); font-size: 34px; font-weight: 300; }
+.card-chevron, .course100-tile > span:last-child { font-size: 29px; font-weight: 300; color: var(--green); }
+.home-practice-note { padding: 0 6px; color: var(--muted); font-size: 14px; }
+.home-main-action { width: 100%; margin-top: 18px; padding: 17px 22px; font-size: 18px; }
+.home-path-preview { margin-top: 38px; }
+.section-heading { display: flex; justify-content: space-between; align-items: end; gap: 12px; }
+.section-heading .section-label { margin: 0 0 5px; }
+.section-heading h2 { margin: 0; font-size: 26px; }
+.section-heading .text-button { flex: 0 0 auto; text-decoration: none; font-weight: 650; }
+.home-path-preview > p { margin: 8px 0 18px; color: var(--muted); }
+.home-path-preview ol { list-style: none; padding: 0; margin: 0; }
+.home-path-preview li { display: flex; gap: 13px; align-items: stretch; position: relative; min-height: 82px; }
+.home-path-preview li:not(:last-child)::before { content: ''; position: absolute; left: 21px; top: 40px; bottom: -4px; border-left: 2px solid #c3d2c4; }
+.preview-marker { flex: 0 0 44px; z-index: 1; display: grid; place-items: center; align-self: center; height: 44px; border: 2px solid #a9b4ad; background: var(--canvas); color: var(--muted); border-radius: 50%; font-weight: 700; }
+.home-path-preview .complete .preview-marker { background: #4b925f; border-color: #4b925f; color: white; }
+.home-path-preview .current .preview-marker { background: var(--green); border-color: #7aa385; color: #fff; box-shadow: 0 0 0 4px var(--canvas), 0 0 0 6px #7aa385; }
+.home-path-preview li > button { flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 5px 0 8px; padding: 13px 17px; text-align: left; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
+.home-path-preview li.current > button { background: var(--surface-alt); }
+.home-path-preview li > button strong, .home-path-preview li > button small { display: block; }
+.home-path-preview li > button strong { font-size: 16px; line-height: 1.25; }
+.home-path-preview li > button small { margin-top: 4px; color: var(--muted); font-size: 13px; }
+.home-path-preview li > button > span:last-child { color: var(--green); font-size: 25px; }
+.course100-tile { background: var(--surface-alt); margin-top: 24px; }
+.course100-tile > span:first-child { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--surface); color: var(--orange); font-size: 24px; }
+.bottom-navigation { display: none; }
+
+.course-path { margin-top: 38px; padding-bottom: 70px; }
+.course-path h1 { color: var(--ink); margin-bottom: 7px; }
+.path-intro { margin: 0 0 24px; }
+.path-progress-card { padding: 22px; border: 1px solid var(--line); border-radius: 23px; background: var(--surface-alt); scroll-margin-top: 24px; }
+.path-progress-card > div:first-child { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 15px; }
+.path-progress-card span { color: var(--muted); }
+.path-progress-card strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.path-progress-card .progress-track { height: 9px; }
+.path-progress-card small { display: block; margin-top: 8px; color: var(--muted); }
+.path-continue { width: 100%; margin-top: 14px; }
+.rating-rules { margin: 18px 0 26px; }
+.chapter { margin-top: 27px; }
+.chapter-heading { border-top: 1px solid var(--line); padding-top: 23px; }
+.chapter-heading p { color: var(--orange); font-weight: 700; }
+.chapter-heading h2 { color: var(--ink); }
+.chapter-description { line-height: 1.45; }
+.course-path ol { margin: 16px 0 26px; }
+.course-path li { padding-bottom: 5px; }
+.course-path li:not(:last-child):before { border-color: #c9d9cb; }
+.course-path li > button { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; min-height: 82px; margin-bottom: 7px; }
+.course-path .current > button { background: var(--surface-alt); border-color: #cdd9cf; }
+.path-number { background: var(--canvas); border-color: #aab8ad; }
+.complete .path-number { background: #4e945e; }
+.course-path small { color: var(--muted); }
+.course-path em { color: var(--green); }
+.course-path li button:disabled { opacity: .68; }
+.gate-message, .chapter-threshold { background: var(--surface-alt); border-color: #9eb6a0; border-radius: 8px; }
+.finish-screen { background: var(--surface-alt); padding: 38px; border-radius: 25px; }
+.finish-mark { background: var(--green); }
+
+.screen-lesson .task-intro h1 { color: var(--green); }
+.task-copy { color: #172c27; }
+.lesson-help .hint-button { color: var(--green); font-weight: 600; }
+.workspace-section { background: var(--surface); border-color: var(--line); }
+.live-mirror { background: var(--surface); border-color: var(--line); }
+.python-inline-preview { display: none; }
+.text-exercise { background: var(--surface); border-color: var(--line); }
+.minimal-code-editor { background: var(--surface); border-color: #c8d3c9; }
+.minimal-code-editor .editor-line-numbers { color: #8e9a94; background: var(--surface); border-right: 1px solid var(--line); }
+.python-code { background: #f3f5ef; color: var(--ink); border: 1px solid var(--line); }
+.python-code .line-number { color: #98a49c; }
+.python-code .syntax-keyword { color: #2c6a59; }
+.python-code .syntax-string { color: #b6542d; }
+.python-code .syntax-number { color: #8b6334; }
+.python-code .code-highlight { background: #dcebdd; outline-color: #9fc3a5; }
+.interactive-code .code-line[role=button]:hover, .interactive-code .code-line[role=button]:focus-visible { background: #e1ede2; outline-color: #a3c1a6; }
+.editor-active-line { position: absolute; left: 36px; right: 0; height: 25.6px; background: #edf3eb; pointer-events: none; }
+.minimal-code-editor textarea { position: relative; z-index: 1; caret-color: var(--green); }
+.minimal-code-editor.is-typing { border-color: var(--green); box-shadow: 0 0 0 3px #dce9dd; }
+.minimal-code-editor:focus-within { outline: 0; }
+.feedback-success { background: var(--success-soft); border-color: #bfd5c4; }
+.feedback-error { background: var(--error-soft); border-color: #e5cfc5; }
+.feedback-error .feedback-mark { background: #bf765d; }
+.native-dialog { background: var(--surface); border-color: var(--line); }
+.native-dialog::backdrop { background: rgba(23, 42, 35, .4); }
+.sheet-heading { background: var(--surface); }
+.block-options button { background: var(--surface); border-color: var(--line); }
+
+@media (max-width: 767px) {
+  .app-shell:not(.screen-lesson) { padding: 17px 20px 100px; }
+  .screen-home .lesson-header, .screen-path .lesson-header, .screen-finish .lesson-header { border: 0; padding: 0; min-height: 52px; }
+  .screen-home .brand, .screen-path .brand, .screen-finish .brand { font-size: 34px; }
+  .screen-home .nav-link, .screen-path .nav-link, .screen-finish .nav-link { font-size: 14px; }
+  .home-overview { margin: 26px auto 0; }
+  .home-greeting h1 { font-size: clamp(31px, 8.4vw, 42px); line-height: 1.12; }
+  .home-greeting > p:last-child { font-size: 16px; line-height: 1.45; margin-bottom: 23px; }
+  .home-progress-card { gap: 17px; padding: 19px; border-radius: 22px; }
+  .progress-ring { flex-basis: 76px; width: 76px; height: 76px; }
+  .progress-ring strong { font-size: 16px; }
+  .home-progress-card h2 { font-size: 19px; }
+  .home-progress-card p { font-size: 14px; }
+  .section-heading h2 { font-size: 22px; }
+  .home-path-preview { margin-top: 32px; }
+  .bottom-navigation { position: fixed; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); left: 0; right: 0; bottom: 0; padding: 8px 8px max(9px, env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); }
+  .bottom-navigation button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 0; min-height: 54px; padding: 2px; border: 0; border-radius: 15px; background: transparent; color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .bottom-navigation button.active { color: var(--green); font-weight: 700; }
+  .bottom-navigation button span { font-size: 25px; line-height: 1.2; }
+  .bottom-navigation button.active span { padding: 0 12px; border-radius: 15px; background: var(--green-soft); }
+  .site-footer { padding-bottom: 12px; }
+  .course-path { margin-top: 28px; }
+  .course-path h1 { font-size: 36px; }
+  .path-intro { font-size: 16px; }
+  .path-progress-card { padding: 18px; }
+  .path-progress-card > div:first-child { display: block; }
+  .path-progress-card strong { display: block; margin-top: 3px; font-size: 20px; }
+  .chapter-heading h2 { font-size: 21px; }
+  .course-path li > button { padding: 13px 12px; gap: 12px; }
+  .course-path strong { font-size: 16px; }
+  .course-path .path-arrow { display: block; }
+  .screen-lesson { background: var(--canvas); padding: 12px 18px calc(var(--lesson-action-height, 80px) + var(--lesson-keyboard-bottom, 0px) + 22px); }
+  .screen-lesson .lesson-header { gap: 12px; min-height: 55px; }
+  .screen-lesson .back-button { background: var(--surface-alt); width: 44px; height: 44px; }
+  .lesson-position strong, .lesson-position strong .mobile-only { color: var(--green); font-size: 16px; }
+  .screen-lesson .lesson-progress .progress-track { height: 7px; }
+  .screen-lesson .lesson-flow { margin-top: 24px; }
+  .task-intro h1, .novice-flow .task-intro h1 { margin: 0 0 10px; font-size: 22px; font-weight: 700; line-height: 1.25; color: var(--green); }
+  .task-intro h1::before { content: '▤'; display: inline-grid; place-items: center; width: 34px; height: 34px; margin-right: 10px; border-radius: 50%; background: var(--orange); color: white; font-size: 18px; vertical-align: middle; }
+  .task-copy, .novice-flow .task-copy { font-size: clamp(22px, 6vw, 27px); line-height: 1.34; font-weight: 500; letter-spacing: -.025em; }
+  .lesson-help { flex-wrap: wrap; gap: 3px 19px; margin-top: 13px; }
+  .lesson-help .text-button { font-size: 14px; }
+  .lesson-help .hint-button::before { content: '✧'; margin-right: 7px; font-size: 21px; color: var(--orange); vertical-align: -2px; }
+  .hint-area { margin: 2px 0 11px; }
+  .hint-text { padding: 9px 12px; background: var(--green-soft); border-radius: 10px; color: var(--ink); }
+  .learning-work { margin-top: 14px; }
+  .coach { margin-bottom: 14px; padding: 12px 14px; background: var(--green-soft); border-radius: 13px; }
+  .coach p { font-size: 14px; }
+  .screen-lesson .workspace-section { border-radius: 20px; }
+  .screen-lesson .blockly-host, .screen-lesson .first-command .blockly-host, .screen-lesson .is-guided .first-command .blockly-host { border-radius: 20px 20px 0 0; }
+  .workspace-actions { padding: 12px; }
+  .workspace-actions .add-block-button { width: 100%; min-height: 56px; border: 0; border-radius: 16px; background: var(--green-soft); color: var(--green); font-size: 17px; }
+  .workspace-actions .add-block-button span { font-size: 27px; font-weight: 300; vertical-align: -2px; }
+  .live-mirror { margin-top: 14px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+  .live-mirror > div:first-child { padding: 0; }
+  .live-mirror h2 { font-size: 17px; font-weight: 650; }
+  .live-mirror .compact-code-toggle { color: var(--green); font-size: 14px; }
+  .python-inline-preview { display: block; margin: 4px 0 0; padding: 10px 0 1px; border-top: 1px solid var(--line); color: var(--green); font: 15px/1.45 Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .python-inline-preview code { white-space: nowrap; }
+  .text-exercise, .text-exercise:has(.minimal-code-editor) { margin-top: 2px; padding: 15px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
+  .text-exercise .python-code { border-radius: 14px; }
+  .code-choices label { border-color: var(--line); background: var(--surface); border-radius: 14px; }
+  .code-choices label.chosen { background: var(--green-soft); }
+  .minimal-code-editor { border-radius: 14px; }
+  .text-exercise .minimal-code-editor textarea { min-height: 185px; }
+  .feedback-panel { margin-top: 17px; padding: 15px; border: 1px solid; border-radius: 18px; }
+  .feedback-summary h2 { font-size: 18px; }
+  .feedback-message { font-size: 14px; }
+  .primary-action { min-height: 82px; padding: 11px 18px max(11px, env(safe-area-inset-bottom)); border-color: var(--line); background: var(--canvas); }
+  .primary-action > button { min-height: 58px; border-radius: 18px; background: var(--green); font-size: 18px; }
+  .primary-action.action-retry > button { background: var(--green); }
+  .native-dialog { background: var(--surface); border-radius: 26px 26px 0 0; }
+  .native-dialog::before { content: ''; display: block; width: 38px; height: 4px; margin: 10px auto 0; border-radius: 9px; background: #bac4bb; }
+  .sheet-heading { padding-top: 10px; }
+  .block-options button { border-radius: 17px; }
+}
+@media (max-width: 380px) {
+  .app-shell:not(.screen-lesson) { padding-left: 15px; padding-right: 15px; }
+  .screen-lesson { padding-left: 14px; padding-right: 14px; }
+  .home-progress-card { gap: 12px; padding: 15px; }
+  .progress-ring { flex-basis: 67px; width: 67px; height: 67px; }
+  .home-progress-card h2 { font-size: 17px; }
+  .home-progress-card p { font-size: 13px; }
+}
