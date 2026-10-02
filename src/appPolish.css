@@ -54,9 +54,9 @@ body, button, input, select, summary { font-family: Nunito, 'Segoe UI', sans-ser
 .account-note h3 { font-size: 15px; margin: 0 0 5px; }
 .account-note p { color: var(--muted); font-size: 13px; line-height: 1.4; margin: 0; }
 .account-soon { background: transparent; border: 1px solid var(--line); }
-.account-soon h3 span { display: inline-block; font-size: 10px; padding: 2px 7px; margin-left: 4px; border-radius: 6px; background: #f4e4d8; color: #995735; vertical-align: 1px; }
+.account-soon h3 span { display: inline-block; font-size: 12px; padding: 2px 7px; margin-left: 4px; border-radius: 6px; background: #f4e4d8; color: #995735; vertical-align: 1px; }
 .bottom-navigation { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; z-index: 20; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 8px; }
-.bottom-navigation button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 54px; border: 0; background: transparent; color: var(--muted); font-size: 12px; }
+.bottom-navigation button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 54px; border: 0; background: transparent; color: var(--muted); font-size: 13px; }
 .bottom-navigation button > span { display: grid; place-items: center; width: 48px; height: 30px; border-radius: 14px; }
 .bottom-navigation button.active { color: var(--green); font-weight: 800; }
 .bottom-navigation button.active > span { background: var(--green-soft); }
@@ -69,7 +69,7 @@ body, button, input, select, summary { font-family: Nunito, 'Segoe UI', sans-ser
   .app-shell:not(.screen-lesson) .nav-link { font-size: 13px; }
   .app-shell:not(.screen-lesson) .header-progress { display: none; }
   .bottom-navigation { left: 0; right: 0; padding: 7px 5px max(8px, env(safe-area-inset-bottom)); }
-  .bottom-navigation button { min-width: 0; font-size: 11px; }
+  .bottom-navigation button { min-width: 0; font-size: 13px; }
   .bottom-navigation button.active span { padding: 0; }
   .home-overview { display: flex; flex-direction: column; flex: 1; width: 100%; height: auto; min-height: 0; margin: 10px 0 0; }
   .home-greeting { flex: 0 0 auto; }
@@ -194,11 +194,12 @@ body, button, input, select, summary { font-family: Nunito, 'Segoe UI', sans-ser
 .minimal-code-editor .editor-highlight { position: absolute; pointer-events: none; inset: 0 0 46px; margin: 0; padding: 16px 12px 16px 42px; font: 16px/1.6 Consolas, monospace; white-space: pre; overflow: hidden; color: var(--ink); transform: translate(var(--editor-scroll-x, 0px), var(--editor-scroll, 0px)); }
 .minimal-code-editor textarea { color: transparent !important; caret-color: var(--ink); background: transparent; }
 .minimal-code-editor textarea::placeholder { color: var(--muted); }
+.text-exercise textarea:focus-visible { outline-color: var(--green); }
 .minimal-code-editor textarea::selection { color: transparent; background: #acc8ad66; }
 .editor-highlight .syntax-keyword { color: #2c6a59; font-weight: bold; }
 .editor-highlight .syntax-string { color: #b6542d; }
 .editor-highlight .syntax-number { color: #8b6334; }
-.editor-highlight .syntax-comment { color: #85928a; }
+.editor-highlight .syntax-comment { color: var(--muted); }
 .code-accessory { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 46px; display: flex; gap: 7px; padding: 4px 7px; background: var(--surface-alt); border-top: 1px solid var(--line); }
 .code-accessory button { flex: 1; min-height: 36px; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; color: var(--ink); font: 16px/1 Consolas, monospace; }
 @media (forced-colors: active) { .minimal-code-editor textarea { color: CanvasText !important; } .editor-highlight { display: none; } }

@@ -23,7 +23,7 @@ for (const height of [568, 667]) test(`главная и карта помеща
   await reachable('.home-main-action')
   await page.mouse.wheel(0, 600)
   expect(await page.evaluate(() => scrollY)).toBe(0)
-  await page.getByRole('button', { name: 'Карта курса ↗', exact: true }).click()
+  await page.getByRole('button', { name: 'Курс', exact: true }).click()
   await reachable('.path-page-controls button:last-child')
   await reachable('.path-fixed-continue')
   await page.mouse.wheel(0, 600)

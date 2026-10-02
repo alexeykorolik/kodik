@@ -2,7 +2,8 @@ import { cleanEventData, type EventData, type EventName } from './eventSchema'
 import { appVersion, curriculumVersion } from './release'
 export type LearningEvent = { id: string; sessionId: string; name: EventName; lesson: number; at: number; curriculumVersion?: string; appVersion?: string; data?: EventData }
 const key = 'kodik-events-v1', pendingKey = 'kodik-events-pending-v1'
-const enabled = typeof import.meta.env !== 'undefined' && import.meta.env.VITE_ANALYTICS_ENABLED === 'true'
+export const analyticsEnabled = typeof import.meta.env !== 'undefined' && import.meta.env.VITE_ANALYTICS_ENABLED === 'true'
+const enabled = analyticsEnabled
 let sending = false, timer: ReturnType<typeof setTimeout> | undefined
 function stableId(storage: Storage, key: string) { let id = storage.getItem(key); if (!id) { id = crypto.randomUUID(); storage.setItem(key, id) } return id }
 function read(key: string): LearningEvent[] { try { const value = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(value) ? value : [] } catch { return [] } }

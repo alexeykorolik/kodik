@@ -8,6 +8,7 @@ import { getPracticeLesson, practiceLessonId, practiceLessons, practicePool } fr
 import { materializeSupport } from './supportVariants'
 import { supportLevels, type SupportCheckpoint } from './adaptiveSupport'
 import type { FirstAttempt, LearningError } from './learningHistory'
+import { cloudProgressRow, readCloudProgressRow } from './cloudProgress'
 
 export type PracticeRecommendation = { id: string; lessonId: number; returnLessonId?: number; message: string; reason: 'corrective'|'review'; supportLevel?: SupportLevel }
 export type Progress = LearningProgress & { completed: number[]; currentLesson?: number; started?: boolean; drafts?: Record<string, object>; recommendedPractice?: PracticeRecommendation; activePractice?: PracticeRecommendation; completedPracticeIds?: string[]; supportOverrides?: Record<string,SupportLevel>; scaffoldSkills?: Record<string,SkillId>; skillSupport?: Partial<Record<SkillId, SupportLevel>>; supportCheckpoint?: SupportCheckpoint; errorHistory?: LearningError[]; firstAttemptResults?: Record<string, FirstAttempt>; profile?: { displayName: string } }
@@ -15,6 +16,7 @@ const storageKey = 'kodik-progress-v1'
 const url = typeof import.meta.env === 'undefined' ? undefined : import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = typeof import.meta.env === 'undefined' ? undefined : import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 const supabase = url && key ? createClient(url, key) : null
+export const cloudProgressEnabled = !!supabase
 let memory: Progress = { completed: [] }
 let storageUnavailable = false
 let cloudQueue = Promise.resolve()
@@ -126,15 +128,14 @@ export async function loadCloudProgress(): Promise<Progress | null> {
     if (!id) return null
     const { data, error } = await supabase.from('learner_progress').select('completed_lesson_ids,current_lesson,started,learning_state').eq('user_id', id).maybeSingle()
     if (error) throw error
-    return data ? cleanProgress({ ...data.learning_state, completed: data.completed_lesson_ids.map(Number), currentLesson: data.current_lesson, started: data.started }) : null
+    return data ? cleanProgress(readCloudProgressRow(data)) : null
   } catch { status('Прогресс сохранён на устройстве. Облако пока недоступно.'); return null }
 }
 async function syncToSupabase(progress: Progress) {
   if (!supabase) return
   const id = await userId()
   if (!id) return
-  const { drafts: _drafts, ...learning_state } = progress
-  const { error } = await supabase.from('learner_progress').upsert({ user_id: id, completed_lesson_ids: progress.completed.map(String), current_lesson: progress.currentLesson, started: progress.started, learning_state, updated_at: new Date().toISOString() })
+  const { error } = await supabase.from('learner_progress').upsert(cloudProgressRow(id,progress))
   if (error) throw error
   status('Прогресс сохранён на устройстве и в облаке.')
 }
