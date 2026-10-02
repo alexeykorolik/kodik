@@ -1,4 +1,21 @@
-# Точка продолжения — новый аудит перед пилотом завершён
+# Точка продолжения — Android APK подготовлен
+
+## Актуально: Android, 2 октября 2026
+
+Проект `D:/projects/pleducator`. Запрос attachments/5f8d1a53-2273-4733-acae-1a012452a826/Вставленный текст.txt: завернуть текущий Kodik в Capacitor Android. Пользователь отдельно ответил: «Сейчас телефона нет — подготовь APK для проверки позже». Физический телефон отложен по этому ответу. Не начинать заново курс/дизайн/mastery/AI engine. Подробности и инструкция: `docs/ANDROID_APP.md`.
+
+- Код Android и GitHub main: `ab98a4fe8bd50563ac73b31598efaf1f629e519d`; последующий коммит содержит отчёты. Bundled frontend, ID `app.kodik.mobile`, HTTPS API через Vercel, native CapacitorHttp с серверными cookies/квотами, ограниченный Origin, native Back/insets/splash/иконка. Android Studio не установлена/не запускалась; Gradle project реально собран.
+- Устанавливаемый APK: `artifacts/android/Kodik-debug.apk`, 4 500 728 байт, SHA256 `11636421973219230e0bdc0a6365b050cabeea6000826e385a8f5630d91f5abf`, debug подпись проверена. Unsigned release: `artifacts/android/Kodik-release-unsigned.apk`, 3 475 753 байта; его нельзя установить без подписания. APK frontend appVersion именно `ab98a4f…`, curriculumVersion `2026-10-01.2`. Отчёты не требуют пересборки APK.
+- Android-инструменты находятся в ignored `artifacts/android-toolchain`, публичные пути `paths.json`. JDK21, SDK36, Build Tools35/36, Gradle8.14.3, эмулятор API36. `npm run android:debug` / `android:release` используют эти инструменты. Никаких server keys в APK; `.env.local` не загружается Android build.
+- Полный smoke (100 задач, 78×3 формата и новая Android integration), web build, 10 локальных UI, 3 viewport и браузерная Back simulation прошли. Production 9 отдельных UI прошли; последняя калибровка повторена с точным SHA `ab98a4f…`. Vercel `https://kodiknew-ns31xg6va-zhoper.vercel.app` Ready, alias `https://kodiknew.vercel.app`; API tutor/events допускают ровно Android Origin `https://localhost`.
+- APK установлен в Android API36/Pixel7 эмулятор. Native WebView + Android tap/Back: 5 экранов, Blockly add/connect/check/own keyboard/fullscreen, Python IME+accessory/caret, Lesson→Course→Home→launcher прошли. Реальный Groq ответ через native HTTP принят validator; events200/accepted/queue empty. Home/background2s→force stop→restart сохраняет progress JSON полностью. Airplane cold launch+fallback и отправка очереди после сети прошли. Отчёт `artifacts/android/native-qa.json`, снимки рядом. Это QA, не learner cohort.
+- Немедленный force kill сразу после последней записи без background lifecycle в одной пробе потерял последнее изменение. Не обещать crash durability localStorage. Обычное закрытие и последующий force stop проверены. Drag/drop/long press/gesture bars/landscape/физический телефон и Android Studio остаются для проверки позже; не объявлять их выполненными.
+- При автоматизации WebView выбирать видимый target (`innerWidth>0`): в процессе также есть неактивный target с тем же URL и нулевым размером. Ошибки первых подключений были ошибками QA target, а не основанием переписывать CSS. Игнорируемые QA helper/logs лежат в `artifacts/`.
+- APK и SDK не коммитятся. Для передачи исходников использовать только `git archive HEAD` в ignored `artifacts/`, без `.env.local`/.vercel/.git/node_modules/SDK. Пользователь ранее разрешил push GitHub/Vercel; голосовой сеанс завершён, capture_screen_context запрещён; подагенты не запрошены.
+
+Следующий шаг: установить готовый debug APK на физический Android и пройти checklist `docs/ANDROID_APP.md`. Не повторять сборку/установку SDK/курс с нуля. Новых незавершённых программных изменений по текущему запросу нет.
+
+## Историческая итерация — новый аудит перед пилотом
 
 ## Актуально: 2 октября 2026
 

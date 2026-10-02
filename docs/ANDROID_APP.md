@@ -4,7 +4,7 @@ Android-оболочка существующего React/Vite приложен�
 
 ## Разработка
 
-Нужны Node.js 22+, JDK 21, Android SDK Platform 36, Build Tools 36.0.0 и platform-tools. Для IDE — Android Studio 2025.2.1 или новее. [Требования Capacitor](https://capacitorjs.com/docs/getting-started/environment-setup), [Android SDK](https://developer.android.com/studio).
+Нужны Node.js 22+, JDK 21, Android SDK Platform 36 и platform-tools. На этом ноутбуке установлены Build Tools 35.0.0 (выбранные AGP для сборки) и 36.0.0. Для IDE — Android Studio 2025.2.1 или новее. [Требования Capacitor](https://capacitorjs.com/docs/getting-started/environment-setup), [Android SDK](https://developer.android.com/studio).
 
 ```powershell
 npm install
@@ -85,4 +85,35 @@ Frontend и локальный шрифт находятся в `assets/public` 
 8. Частичное решение/имя/звёзды/навык: закрыть, force stop, снова открыть и проверить local progress/draft.
 9. Отключить сеть до запуска: Home и локальные упражнения открываются; после возврата сети очередь отправляется.
 
-Автоматические проверки и результаты сборки записываются ниже после их завершения; браузерные размеры 360×800, 393×873, 412×915 не заменяют настоящий Android WebView.
+Браузерные размеры 360×800, 393×873, 412×915 и Android-эмулятор не заменяют проверку на физическом телефоне.
+
+## Результаты сборки и проверок — 2 октября 2026
+
+Исходники APK: `ab98a4fe8bd50563ac73b31598efaf1f629e519d`, curriculumVersion `2026-10-01.2`. Последующие коммиты отчётов не меняют содержимое этих APK.
+
+| Артефакт | Размер | SHA-256 |
+| --- | --- | --- |
+| `artifacts/android/Kodik-debug.apk` | 4 500 728 байт | `11636421973219230e0bdc0a6365b050cabeea6000826e385a8f5630d91f5abf` |
+| `artifacts/android/Kodik-release-unsigned.apk` | 3 475 753 байта | `919324879bbbd230f695e1a494a300fc5bf557cdad2a59351c390ff0d1c0b1b49` |
+
+- Gradle `:app:assembleDebug` и `:app:assembleRelease` завершились успешно. Debug-подпись проверена `apksigner`; release оставлен неподписанным.
+- Метаданные APK: `app.kodik.mobile`, versionCode 1, minSdk 24, targetSdk 36, стартовая `MainActivity`.
+- Проверено содержимое debug APK: frontend и локальный Nunito внутри, нет `server.url`, cleartext исключений, `.env`, keystore и серверных API-файлов. В frontend нет server-key имён или значений, похожих на Groq/OpenAI/service-role credentials. Отчёт: `artifacts/android/apk-audit.json`.
+- Полный `npm run test:smoke` успешен: 100 заданий, 78×3 формата, runtime, checker, adaptation, privacy/events/AI/cloud и Android integration. Web build успешен.
+- 10 локальных UI-сценариев компоновки и курса, 3 Android viewport-сценария и 1 браузерная симуляция Android Back успешны. Это не результаты native touch.
+- Production: девять отдельных UI-сценариев успешны; после обновления deployment три проверки калибровки повторены с точным appVersion `ab98a4f…`. Deployment `https://kodiknew-ns31xg6va-zhoper.vercel.app` — Ready, alias `https://kodiknew.vercel.app`.
+- Настоящие production OPTIONS для tutor/events с Origin `https://localhost`: 200, разрешён ровно этот Origin.
+
+### Android-эмулятор
+
+Debug APK установлен и проверен в Android API 36 Google APIs x86_64 / Pixel 7, с настоящим Capacitor bridge. Это Android WebView, а не браузерная подмена платформы. Нажатия выполнялись средствами Android по координатам элементов; снимки получены из Android.
+
+- Home/Course/Progress/Account/Lesson открываются; локальное имя сохраняется. Portrait WebView 412×839, системные панели находятся вне рабочей области.
+- Добавлены и соединены print + текст, введено «Привет!» собственной клавиатурой, первое задание принято checker. Android Back закрывает клавиатуру Kodik, окно выбора блоков и полный workspace; проверен путь Lesson → Course → Home → launcher.
+- В Python открыта системная IME: viewport уменьшается до 412×527. Редактор, панель символов и CTA видимы. Скобки, кавычки, двоеточие, Tab вставляются в текущую позицию; каретка остаётся внутри парных символов.
+- AI concept из APK: native HTTPS POST → Vercel → Groq, 200, ответ принят клиентским validator, событие `ai_hint_generated`. Native events API вернул 200 и принятые ID, очередь очистилась. Origin `https://localhost`; payload API содержит только предусмотренные поля.
+- После Home/background (2 секунды), затем force stop и повторного старта, локальный progress JSON сохранился целиком: имя, Blockly draft, Python draft, история ошибки, оценка, mastery и support session. Немедленное убийство процесса без фонового lifecycle в отдельной пробе потеряло последнее изменение; такую crash durability эта оболочка не гарантирует.
+- Холодный запуск в airplane mode открывает Home и сохранённое упражнение; AI показывает подготовленную помощь.
+- После восстановления сети очередь событий получила подтверждение сервера и очистилась. Полный успешный отчёт: `artifacts/android/native-qa.json`.
+
+Артефакты проверки находятся локально в `artifacts/android/`: `native-home.png`, `native-blockly-result.png`, `native-python-ime.png`, `native-offline.png`; результаты не считаются участниками пилота. Drag/drop, long press, выделение большого текста, произвольные модели телефонов, gesture navigation и landscape остаются в списке проверки на физическом устройстве. Android Studio на этом ноутбуке не запускалась.
