@@ -1926,23 +1926,48 @@ function dailyLimit(name, fallback) {
   return Number.isInteger(n) && n > 0 ? Math.min(n, 1e4) : fallback;
 }
 
+// server/apiOrigin.ts
+var androidOrigin = "https://localhost";
+function trustedApiOrigin(req) {
+  const origin = req.headers.origin;
+  if (origin === void 0) return true;
+  if (typeof origin !== "string") return false;
+  if (origin === androidOrigin) return true;
+  try {
+    const url = new URL(origin);
+    return ["https:", "http:"].includes(url.protocol) && url.host === req.headers.host && url.origin === origin;
+  } catch {
+    return false;
+  }
+}
+function apiCors(req, res) {
+  if (!trustedApiOrigin(req)) {
+    res.status(403).json({ error: "forbidden" });
+    return false;
+  }
+  if (req.headers.origin === androidOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", androidOrigin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Vary", "Origin");
+  }
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.status(200).json({});
+    return false;
+  }
+  return true;
+}
+
 // server/aiTutor.ts
 var actions = ["hint", "error_explanation", "concept", "example"];
 var maxBody = 4096;
 async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  if (!apiCors(req, res)) return;
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "method_not_allowed" });
-  }
-  const origin = req.headers.origin;
-  const host = req.headers.host;
-  if (typeof origin === "string") {
-    try {
-      if (new URL(origin).host !== host) return res.status(403).json({ error: "forbidden" });
-    } catch {
-      return res.status(403).json({ error: "forbidden" });
-    }
   }
   const provider = configuredTutorProvider();
   if (process.env.AI_TUTOR_ENABLED !== "true" || !provider) return res.status(503).json({ error: "ai_unavailable" });

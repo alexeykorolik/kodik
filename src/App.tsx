@@ -15,11 +15,16 @@ import { BottomNavigation, HomeScreen } from './MobileOverview'
 import { ProgressScreen } from './ProgressScreen'
 import { AccountScreen } from './AccountScreen'
 import { Icon } from './Icon'
+import { useAndroidBack } from './useAndroidBack'
 type Screen = 'home'|'path'|'lesson'|'finish'|'progress'|'account'
 export default function App() {
   const mobile = useMobileLayout()
   const [progress, setProgress] = useState(readLocalProgress)
   const [screen, setScreen] = useState<Screen>('home')
+  useAndroidBack(() => {
+    if (screen === 'home') return false
+    setScreen(screen === 'lesson' ? 'path' : 'home'); return true
+  })
   const [lessonId, setLessonId] = useState(() => readLocalProgress().currentLesson || 1)
   const [runKey, setRunKey] = useState(0)
   const [offline, setOffline] = useState(!navigator.onLine)

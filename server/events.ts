@@ -2,12 +2,13 @@ import { eventNames, cleanEventData } from '../src/eventSchema'
 import { eventRelease } from '../src/release'
 import { lessons } from '../src/course'
 import { practiceLessons } from '../src/practicePool'
-import { bucket, claim, database, digest, identity, sameOrigin, type Request, type Response } from './storage'
+import { bucket, claim, database, digest, identity, type Request, type Response } from './storage'
+import { apiCors } from './apiOrigin'
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export default async function handler(req: Request, res: Response) {
   res.setHeader('Cache-Control', 'no-store')
+  if (!apiCors(req,res)) return
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'method_not_allowed' }) }
-  if (!sameOrigin(req)) return res.status(403).json({ error: 'forbidden' })
   let body
   try { const serialized = typeof req.body === 'string' ? req.body : JSON.stringify(req.body); if (!serialized || serialized.length > 30000) throw Error(); body = JSON.parse(serialized) } catch { return res.status(400).json({ error: 'invalid_request' }) }
   if (!Array.isArray(body.events) || body.events.length < 1 || body.events.length > 40 || !uuid.test(body.learnerId || '')) return res.status(400).json({ error: 'invalid_request' })

@@ -6,19 +6,15 @@ import { validateTutorResponse } from '../src/ai/aiResponseValidator'
 import type { TutorAction, TutorRequest } from '../src/ai/aiTypes'
 import { configuredTutorProvider, ProviderError } from './aiProvider'
 import { bucket, claim, dailyLimit, identity, type Request, type Response } from './storage'
+import { apiCors } from './apiOrigin'
 
 const actions: TutorAction[] = ['hint','error_explanation','concept','example']
 const maxBody = 4096
 
 export default async function handler(req: Request, res: Response) {
   res.setHeader('Cache-Control', 'no-store')
+  if (!apiCors(req,res)) return
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'method_not_allowed' }) }
-  const origin = req.headers.origin
-  const host = req.headers.host
-  if (typeof origin === 'string') {
-    try { if (new URL(origin).host !== host) return res.status(403).json({ error: 'forbidden' }) }
-    catch { return res.status(403).json({ error: 'forbidden' }) }
-  }
   const provider = configuredTutorProvider()
   if (process.env.AI_TUTOR_ENABLED !== 'true' || !provider) return res.status(503).json({ error: 'ai_unavailable' })
   let body: TutorRequest

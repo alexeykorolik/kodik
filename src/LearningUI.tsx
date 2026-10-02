@@ -1,6 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Icon } from './Icon'
+import { useAndroidBack } from './useAndroidBack'
 export function Modal({ title, onClose, children, success }: { title: string; onClose: () => void; children: ReactNode; success?: boolean }) {
+  useAndroidBack(()=>{ onClose(); return true },100)
   const dialog = useRef<HTMLDialogElement>(null)
   useEffect(() => { const previous = document.activeElement as HTMLElement | null; const d = dialog.current!; d.showModal(); const overflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { d.close(); document.body.style.overflow = overflow; previous?.focus() } }, [])
   return <dialog ref={dialog} className={`sheet native-dialog ${success ? 'is-success' : ''}`} onCancel={e => { e.preventDefault(); onClose() }} aria-labelledby="dialog-title"><header className="sheet-heading">{success && <div className="result-mark"><Icon name="check" /></div>}<h2 id="dialog-title">{title}</h2><button className="sheet-close" onClick={onClose} aria-label="Закрыть"><Icon name="close" /></button></header><div className="sheet-body">{children}</div></dialog>

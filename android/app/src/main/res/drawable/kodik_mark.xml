@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Existing Kodik 'к.' mark from the web header, drawn as a vector. -->
+    <path android:fillColor="#17463a" android:pathData="M29,28 L40,28 L40,48 L55,28 L68,28 L49,52 L69,78 L55,78 L40,57 L40,78 L29,78 Z" />
+    <path android:fillColor="#c77c5d" android:pathData="M72,67 L82,67 L82,78 L72,78 Z" />
+</vector>

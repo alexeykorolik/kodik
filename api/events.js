@@ -1725,14 +1725,6 @@ function identity(req, res) {
   const address = typeof forwarded === "string" ? forwarded.split(",")[0].trim() : req.socket?.remoteAddress || "unknown";
   return { learner: digest(id), address: digest(address) };
 }
-function sameOrigin(req) {
-  if (typeof req.headers.origin !== "string") return true;
-  try {
-    return new URL(req.headers.origin).host === req.headers.host;
-  } catch {
-    return false;
-  }
-}
 async function database(path, body, prefer) {
   const url = process.env.SUPABASE_URL, key = secret();
   if (!url || !key) throw Error("storage_unavailable");
@@ -1752,15 +1744,48 @@ async function claim(buckets) {
   return await database("rpc/claim_learning_budget", { p_buckets: buckets }) === true;
 }
 
+// server/apiOrigin.ts
+var androidOrigin = "https://localhost";
+function trustedApiOrigin(req) {
+  const origin = req.headers.origin;
+  if (origin === void 0) return true;
+  if (typeof origin !== "string") return false;
+  if (origin === androidOrigin) return true;
+  try {
+    const url = new URL(origin);
+    return ["https:", "http:"].includes(url.protocol) && url.host === req.headers.host && url.origin === origin;
+  } catch {
+    return false;
+  }
+}
+function apiCors(req, res) {
+  if (!trustedApiOrigin(req)) {
+    res.status(403).json({ error: "forbidden" });
+    return false;
+  }
+  if (req.headers.origin === androidOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", androidOrigin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Vary", "Origin");
+  }
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.status(200).json({});
+    return false;
+  }
+  return true;
+}
+
 // server/events.ts
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  if (!apiCors(req, res)) return;
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "method_not_allowed" });
   }
-  if (!sameOrigin(req)) return res.status(403).json({ error: "forbidden" });
   let body;
   try {
     const serialized = typeof req.body === "string" ? req.body : JSON.stringify(req.body);

@@ -5,6 +5,7 @@ import './styles.css'
 import './mobileLesson.css'
 import './designSystem.css'
 import './appPolish.css'
+import { startNativeShell } from './nativeShell'
 
 class AppBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
@@ -14,3 +15,4 @@ class AppBoundary extends Component<{ children: ReactNode }, { failed: boolean }
   }
 }
 createRoot(document.getElementById('root')!).render(<StrictMode><AppBoundary><App /></AppBoundary></StrictMode>)
+requestAnimationFrame(()=>{ void startNativeShell().catch(()=>{}) })

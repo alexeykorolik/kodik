@@ -1,5 +1,6 @@
 import { cleanEventData, type EventData, type EventName } from './eventSchema'
 import { appVersion, curriculumVersion } from './release'
+import { postApi } from './api'
 export type LearningEvent = { id: string; sessionId: string; name: EventName; lesson: number; at: number; curriculumVersion?: string; appVersion?: string; data?: EventData }
 const key = 'kodik-events-v1', pendingKey = 'kodik-events-pending-v1'
 export const analyticsEnabled = typeof import.meta.env !== 'undefined' && import.meta.env.VITE_ANALYTICS_ENABLED === 'true'
@@ -13,8 +14,8 @@ export async function flushEvents() {
   if (!events.length) return
   sending = true
   try {
-    const response = await fetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ learnerId: stableId(localStorage, 'kodik-learner-id-v1'), events }), keepalive: true, signal: AbortSignal.timeout(7000) })
-    if (response.ok) { const result = await response.json(); const ids = new Set(result.accepted); localStorage.setItem(pendingKey, JSON.stringify(read(pendingKey).filter(event => !ids.has(event.id)))) }
+    const response = await postApi('/events', { learnerId: stableId(localStorage, 'kodik-learner-id-v1'), events }, AbortSignal.timeout(7000), 7000)
+    if (response.ok) { const ids = new Set(response.data.accepted); localStorage.setItem(pendingKey, JSON.stringify(read(pendingKey).filter(event => !ids.has(event.id)))) }
   } catch { /* Keep queued events offline. Learning does not depend on analytics. */ }
   finally { sending = false; if (read(pendingKey).length && !timer) timer = setTimeout(() => { timer = undefined; void flushEvents() }, 15000) }
 }

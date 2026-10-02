@@ -1,5 +1,6 @@
 import { Icon } from './Icon'
 import { useEffect, useState } from 'react'
+import { useAndroidBack } from './useAndroidBack'
 
 const layouts = {
   ru: ['й ц у к е н г ш щ з х', 'ф ы в а п р о л д ж э', 'я ч с м и т ь б ю ё'],
@@ -8,6 +9,7 @@ const layouts = {
 }
 
 export function KodikKeyboard({ value, numeric, error, onChange, onDone, onCancel }: { value: string; numeric: boolean; error?: string; onChange: (value: string) => void; onDone: () => void; onCancel: () => void }) {
+  useAndroidBack(()=>{ onCancel(); return true },200)
   const [layout, setLayout] = useState<'ru' | 'en' | 'numbers'>(numeric ? 'numbers' : 'ru')
   const [shift, setShift] = useState(false)
   const rows = numeric ? ['1 2 3', '4 5 6', '7 8 9', '- 0 .'] : layouts[layout]

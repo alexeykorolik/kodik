@@ -7,6 +7,7 @@ import { type Lesson, type Program, workspaceToProgram } from './learningEngine'
 import { readDraft, saveDraft } from './progress'
 import { KodikKeyboard } from './KodikKeyboard'
 import type { WorkspaceInfo } from './tutorial'
+import { useAndroidBack } from './useAndroidBack'
 
 Blockly.setLocale(Object.fromEntries(Object.entries(ruModule).filter(([key]) => key !== 'default')) as Record<string, string>)
 type EditableField = Blockly.FieldTextInput | Blockly.FieldNumber
@@ -36,6 +37,11 @@ export type EditorHandle = { showSolution: () => void; clear: () => void; addBlo
 type Props = { lesson: Lesson; onChange: (program: Program) => void; onInfo?: (info: WorkspaceInfo) => void; onAction?: (kind: string) => void; onReady?: () => void; focusType?: string; hideTools?: boolean }
 
 export const BlocklyEditor = forwardRef<EditorHandle, Props>(function BlocklyEditor({ lesson, onChange, onInfo, onAction, onReady, focusType, hideTools }, ref) {
+  useAndroidBack(()=>{
+    if (Blockly.DropDownDiv.isVisible()) { Blockly.DropDownDiv.hideWithoutAnimation(); return true }
+    if (Blockly.WidgetDiv.isVisible()) { Blockly.WidgetDiv.hide(); return true }
+    return false
+  },150)
   const host = useRef<HTMLDivElement>(null)
   const workspace = useRef<Blockly.WorkspaceSvg | null>(null)
   const onChangeRef = useRef(onChange)

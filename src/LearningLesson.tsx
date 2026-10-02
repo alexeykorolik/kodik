@@ -31,6 +31,7 @@ import { HttpAIProvider } from './ai/aiProvider'
 import { buildTutorContext } from './ai/aiContext'
 import { tutorFlags } from './ai/aiFlags'
 import type { TutorAction, TutorResult } from './ai/aiTypes'
+import { useAndroidBack } from './useAndroidBack'
 const BlocklyEditor = lazy(() => import('./BlocklyEditor').then(m => ({ default: m.BlocklyEditor })))
 const aiTutor = new AITutor(new HttpAIProvider(), tutorFlags.tutor)
 type Result = { passed: boolean; message: string; result: RunResult; stars?: number; code: string }
@@ -63,6 +64,7 @@ export function LearningLesson({ lesson, lessonPosition, lessonTotal, progress, 
   } : null)
   const [checking, setChecking] = useState(false)
   const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
+  useAndroidBack(()=>{ if (!workspaceExpanded) return false; setWorkspaceExpanded(false); return true },50)
   const [tutorAnswer, setTutorAnswer] = useState<{ action: TutorAction; level: number; result: TutorResult } | null>(null)
   const [tutorLoading, setTutorLoading] = useState(false)
   const tutorSerial = useRef(0)
