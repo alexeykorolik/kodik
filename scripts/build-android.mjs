@@ -12,7 +12,7 @@ const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || paths.sd
 if (!java || !sdk) throw new Error('Set JAVA_HOME (JDK 21) and ANDROID_HOME (SDK 36). See docs/ANDROID_APP.md')
 writeFileSync(join(root,'android/local.properties'),`sdk.dir=${sdk.replaceAll('\\','/') }\n`)
 const command = process.platform === 'win32' ? 'gradlew.bat' : './gradlew'
-const result = spawnSync(command, [mode === 'debug' ? 'assembleDebug' : 'assembleRelease','--console=plain','--no-daemon'], {
+const result = spawnSync(command, [mode === 'debug' ? ':app:assembleDebug' : ':app:assembleRelease','--console=plain','--no-daemon'], {
   cwd:join(root,'android'), env:{...process.env,JAVA_HOME:java,ANDROID_HOME:sdk}, stdio:'inherit', shell:process.platform === 'win32',
 })
 if (result.status !== 0) process.exit(result.status || 1)

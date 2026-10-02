@@ -44,7 +44,7 @@ adb shell am start -n app.kodik.mobile/.MainActivity
 npm run android:release
 # Для будущего Play Store, после подготовки подписания:
 # cd android
-# .\gradlew.bat bundleRelease
+# .\gradlew.bat :app:bundleRelease
 ```
 
 Без production signing credentials получается `artifacts/android/Kodik-release-unsigned.apk`. Это неподписанный результат сборки, устанавливать его нельзя. Для распространения release понадобятся собственный upload keystore, безопасное внешнее хранение паролей, Gradle signingConfig и подписанный APK/AAB. Ключи, `.jks`/`.keystore`, `local.properties`, кеши и результаты сборки игнорируются Git. Никаких production ключей эта итерация не создаёт.
