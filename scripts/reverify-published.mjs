@@ -29,7 +29,7 @@ for (const v of versions) {
   const snapshot = JSON.parse(v.snapshot);
   if (!v.verification_id) { report.without_proof++; continue; }
   const author = db.prepare("SELECT id,org_id,role FROM users WHERE id=?").get(v.author_id);
-  try { quality.assertPublishedVersion(v.id, author); report.current++; continue; } catch { /* needs a replay in this environment */ }
+  try { quality.assertPublishedVersion(v.id, author); report.current++; report.released = (report.released || 0) + db.prepare("UPDATE submission_jobs SET status='queued',updated_at=? WHERE status='held' AND version_id=?").run(new Date().toISOString(), v.id).changes; continue; } catch { /* needs a replay in this environment */ }
   if (dryRun) { report.failed.push({ version: v.id, reason: "needs re-verification (dry run)" }); continue; }
   try {
     const result = await quality.handle(`/api/tasks/${v.task_id}/verify`, "POST", { verification_id: v.verification_id, revision: v.revision }, author);
@@ -37,6 +37,8 @@ for (const v of versions) {
     // Versions are immutable: the replay itself (same revision + fingerprint, current runtime) is
     // what assertPublishedVersion accepts for new issuance.
     tx(() => {
+      // Work accepted while this version was unconfirmed is checked now by the confirmed environment.
+      report.released = (report.released || 0) + db.prepare("UPDATE submission_jobs SET status='queued',updated_at=? WHERE status='held' AND version_id=?").run(new Date().toISOString(), v.id).changes;
       db.prepare("INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)").run(randomUUID(), v.org_id, author.id, "task.version_reverified", v.id, JSON.stringify({ previous_verification: v.verification_id, verification_id: result.id, previous_runtime: v.runtime_hash, runtime: runtimeFor(snapshot) }), new Date().toISOString());
     });
     report.reverified++;

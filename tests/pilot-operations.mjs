@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {harness} from './helpers/b2b-harness.mjs';
+import {starterLessons} from '../server/b2b/starter-course.mjs';
 import {verifyBackup} from '../scripts/verify-backup.mjs';
 import {join} from 'node:path';
 test('paid pilot: owner, CRM, server license limits, group grants, bulk class, help, reviews and restoration',async t=>{
@@ -89,14 +90,14 @@ test('starter course: all six published lessons through assignments, drafts, all
     assert.equal(preview.snapshot.lessons.length,6);
     const run=await h.request('/programs',{scope:'course',source_id:course.id,group_id:group.id,preview_hash:preview.preview_hash,request_key:'starter-course-acceptance'},admin);
     const child={};await h.request('/auth/login',{login:'starter-acceptance-child',password:h.password},child);
-    const program=(await h.request('/state',undefined,admin)).programs.find(p=>p.id===run.id);
+    const program=(await h.request('/state',undefined,admin)).programs.find(p=>p.id===run.id);let firstWrong=0;
     for(const [i,l] of program.lessons.entries()){
       if(i)await h.request(`/lesson-runs/${l.id}/state`,{state:'open',revision:l.revision},admin);
       let detail=await h.request(`/lesson-runs/${l.id}`,undefined,child);
       assert.ok(detail.assignments.every(a=>a.task.modes.supported.length===3));
       for(const step of detail.lesson.steps){
         const a=detail.assignments.find(a=>a.step_id===step.id);
-        if(!a){await h.request(`/lesson-runs/${l.id}/steps/${step.id}`,step.type==='question'?{answer:0}:{acknowledged:true},child);continue}
+        if(!a){if(step.type==='question'&&starterLessons[i].correct!==0){const first=await h.request(`/lesson-runs/${l.id}/steps/${step.id}`,{answer:0},child);assert.equal(first.status,'incorrect','the first option is not the stable answer');firstWrong++}await h.request(`/lesson-runs/${l.id}/steps/${step.id}`,step.type==='question'?{answer:starterLessons[i].correct}:{acknowledged:true},child);continue}
         const task=h.db.prepare('SELECT * FROM tasks WHERE id=?').get(a.task.id),mode=['blocks','mixed','python'][(i+(step.type==='final'?1:0))%3];
         const payload=mode==='python'?{mode,code:task.reference_solution}:{mode,workspace:JSON.parse(task.block_solution)};
         await h.request(`/tasks/${task.id}/draft`,{...payload,revision:0,assignment_id:a.id},child,200,'PUT');
@@ -105,6 +106,7 @@ test('starter course: all six published lessons through assignments, drafts, all
       }
       detail=await h.request(`/lesson-runs/${l.id}`,undefined,child);assert.equal(detail.progress.filter(p=>p.status==='completed').length,6);
     }
+    assert.ok(firstWrong>=4,`choosing the first option fails in most lessons (${firstWrong})`);assert.ok(new Set(starterLessons.map(u=>u.correct)).size>=3);
     const state=await h.request('/state',undefined,child);assert.equal(state.attempts.length,12);assert.deepEqual([...new Set(state.attempts.map(a=>a.mode))].sort(),['blocks','mixed','python']);
     for(const secret of ['reference_solution','block_solution','correct_index','teacher_notes'])assert.ok(!JSON.stringify(state).includes(secret));
   }finally{await h.close()}

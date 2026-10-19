@@ -55,7 +55,7 @@ test("one task, three modes: publication proof, policy, drafts, queue, isolation
       state = await h.request("/state", undefined, admin); row = state.tasks.find((x) => x.id === blockTask.id);
       const history = await h.request(`/tasks/${blockTask.id}/verifications`, undefined, admin);
       assert.equal(history.items[0].block_result.status, "approved");
-      assert.match(history.items[0].runtime_hash, /^py:[a-f0-9]{32}\+bl:/);
+      assert.match(history.items[0].runtime_hash, /^py:[a-f0-9]{32}:node\d+\+bl:blocks-py\/1:[a-f0-9]{32}:blockly[\d.]+:xmldom[\d.]+$/);
       // Changing the palette invalidates the approval.
       await h.request(`/tasks/${blockTask.id}`, { ...base, learning_config: { ...config, palette: [...PALETTE, "text"] }, block_solution: doubled("MULTIPLY", "секретобразца"), revision: row.revision }, admin, 200, "PUT");
       state = await h.request("/state", undefined, admin); row = state.tasks.find((x) => x.id === blockTask.id);

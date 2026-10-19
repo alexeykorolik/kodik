@@ -1,5 +1,7 @@
 import {test,expect,type Page} from '@playwright/test';
 import {DatabaseSync} from 'node:sqlite';
+// @ts-expect-error untyped server module with the reviewed course data
+import {starterLessons} from '../server/b2b/starter-course.mjs';
 const password='Pilot-browser-pass-321!';
 async function call(page:Page,path:string,body?:unknown,method='POST'){const r=await page.request.fetch('/api'+path,{method:body===undefined?'GET':method,headers:{Origin:'http://127.0.0.1:4186'},data:body});const value=await r.json();expect(r.status(),JSON.stringify(value)).toBe(200);return value}
 test('owner connects school and license; admin imports class; child completes all six starter lessons in the UI',async({page,browser})=>{
@@ -28,7 +30,7 @@ test('owner connects school and license; admin imports class; child completes al
       const materials=state.tasks.filter((t:any)=>t.lesson_id===lesson.lesson_id).sort((a:any,b:any)=>a.position-b.position);
       for(let taskIndex=0;taskIndex<2;taskIndex++){
         await child.getByRole('radiogroup',{name:'Способ решения'}).getByRole('radio',{name:'Python',exact:true}).click();await child.locator('#python-answer').fill(materials[taskIndex].reference_solution);await child.getByRole('button',{name:'Проверить решение',exact:true}).click();await expect(child.getByText('Отлично! Все тесты пройдены.',{exact:true})).toBeVisible();await child.getByRole('button',{name:'Следующее задание →',exact:true}).click();
-        if(taskIndex===0){await expect(child.getByRole('heading',{name:'Проверь понимание',exact:true})).toBeVisible();await child.locator('.question-choice input').first().check();await child.getByRole('button',{name:'Ответить',exact:true}).click()}
+        if(taskIndex===0){await expect(child.getByRole('heading',{name:'Проверь понимание',exact:true})).toBeVisible();await child.locator('.question-choice input').nth(starterLessons[index].correct).check();await child.getByRole('button',{name:'Ответить',exact:true}).click()}
       }
       await expect(child.getByRole('heading',{name:'Что получилось',exact:true})).toBeVisible();await child.getByRole('button',{name:'Продолжить',exact:true}).click();await expect(child.getByRole('heading',{name:'Урок завершён!',exact:true})).toBeVisible();await child.reload();await expect(child.getByText('Завершено 6 из 6 шагов',{exact:true})).toBeVisible();
     }

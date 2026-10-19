@@ -1,16 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { grade } from "./grader.mjs";
 const now = () => new Date().toISOString();
+/**
+ * `compatible(job)` → {ok, runtime}: may this pinned version be checked in the current environment?
+ * Incompatible work is held (no new learning result) until the compatibility procedure confirms it.
+ */
 export function createSubmissionService(
   db,
-  { concurrency = 4, capacity = 240 } = {},
+  { concurrency = 4, capacity = 240, compatible = () => ({ ok: true, runtime: null }) } = {},
 ) {
   let closing = false,
     lastTenant = "";
   const active = new Set(),
     activeIds = new Set();
   db.prepare(
-    "UPDATE submission_jobs SET status='queued',updated_at=? WHERE status='running'",
+    "UPDATE submission_jobs SET status='queued',updated_at=? WHERE status IN ('running','held')",
   ).run(now());
   const visible = (j) => ({
     id: j.id,
@@ -18,6 +22,7 @@ export function createSubmissionService(
     assignment_id:j.assignment_id,
     version_id:j.version_id,
     mode: j.mode,
+    runtime: j.runtime,
     status: j.status,
     result: j.result ? JSON.parse(j.result) : null,
     attempt_id: j.attempt_id,
@@ -134,16 +139,23 @@ export function createSubmissionService(
       );
       return;
     }
+    const env = compatible(job);
+    if (!env.ok) {
+      db.prepare("UPDATE submission_jobs SET status='held',result=?,updated_at=? WHERE id=?").run(
+        JSON.stringify({ status: "held", reason: "runtime_unconfirmed", message: "Решение принято и сохранено. Kodik обновил проверяющую среду, совместимость этого задания ещё подтверждается — результат появится после подтверждения. Это не ошибка вашей программы.", cases: [] }),
+        now(), job.id);
+      return;
+    }
     db.prepare(
-      "UPDATE submission_jobs SET status='running',updated_at=? WHERE id=?",
-    ).run(now(), job.id);
+      "UPDATE submission_jobs SET status='running',runtime=?,updated_at=? WHERE id=?",
+    ).run(env.runtime, now(), job.id);
     const task = JSON.parse(job.snapshot),
       result = await grade(task, job.code, { tenant: job.org_id });
     const at = now();
     db.exec("BEGIN IMMEDIATE");
     try {
       db.prepare(
-        "INSERT OR IGNORE INTO attempts(id,org_id,user_id,task_id,code,status,result,snapshot,created_at,assignment_id,version_id,context_origin,mode,source,translator,policy) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT OR IGNORE INTO attempts(id,org_id,user_id,task_id,code,status,result,snapshot,created_at,assignment_id,version_id,context_origin,mode,source,translator,policy,runtime) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       ).run(
         job.id,
         job.org_id,
@@ -161,6 +173,7 @@ export function createSubmissionService(
         job.source ?? null,
         job.translator ?? null,
         job.policy ?? null,
+        env.runtime,
       );
       db.prepare(
         "UPDATE submission_jobs SET status='completed',result=?,attempt_id=?,updated_at=? WHERE id=?",
@@ -214,6 +227,19 @@ export function createSubmissionService(
   queueMicrotask(pump);
   return {
     enqueue,
+    /**
+     * Recover an ALREADY ACCEPTED operation by its key, even if new submissions are no longer allowed
+     * (expired licence, closed mode, unconfirmed environment). Requires the same learner, task,
+     * assignment, mode and solution; never accepts a changed solution or runs anything new.
+     */
+    replayAccepted(user,taskId,b){
+      if(typeof b.request_key!=='string')return null;
+      const old=db.prepare('SELECT * FROM submission_jobs WHERE org_id=? AND user_id=? AND request_key=?').get(user.org_id,user.id,b.request_key);
+      if(!old)return null;
+      const mode=b.mode??'python',same=mode==='python'?old.code===b.code:old.source===JSON.stringify(b.workspace);
+      if(old.task_id!==taskId||(b.assignment_id!=null&&old.assignment_id!==b.assignment_id)||old.mode!==mode||!same)return {error:'Ключ уже использован для другого решения.',status:409,details:{code:'request_key_reused'}};
+      return {...visible(old),replayed:true};
+    },
     replay(user,task,b){
       if(typeof b.request_key!=='string')return null;
       const old=db.prepare('SELECT * FROM submission_jobs WHERE org_id=? AND user_id=? AND request_key=?').get(user.org_id,user.id,b.request_key);

@@ -209,6 +209,20 @@ const migrations = [
   }},
   {version:14,name:'existing_school_company_links',up(db){
     if(db.prepare("PRAGMA table_info(organizations)").all().some(c=>c.name==='name'))db.exec("INSERT INTO companies(id,org_id,name,source,stage,created_at) SELECT lower(hex(randomblob(16))),o.id,o.name,'Существующая школа','active',o.created_at FROM organizations o WHERE NOT EXISTS(SELECT 1 FROM companies c WHERE c.org_id=o.id) AND NOT EXISTS(SELECT 1 FROM users u WHERE u.org_id=o.id AND u.platform_owner=1);");
+  }},
+  // Checks of already issued work wait ('held') when the checking environment is not confirmed for
+  // their pinned version; every new result records the environment that actually produced it.
+  {version:15,name:'runtime_held_checks',up(db){
+    const table=db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='submission_jobs'").get().sql;
+    const indexes=db.prepare("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='submission_jobs' AND sql IS NOT NULL").all().map(r=>r.sql);
+    const constrained=/CHECK\s*\(\s*status IN/.test(table);
+    const widened=!constrained?table:table.replace("CHECK(status IN ('queued','running','completed','cancelled'))","CHECK(status IN ('queued','running','completed','cancelled','held'))").replace(/^CREATE TABLE "?submission_jobs"?/,'CREATE TABLE submission_jobs_new');
+    if(constrained&&(widened===table||!widened.includes("'held'")))throw new Error('Unexpected submission_jobs schema; migration 15 refused.');
+    const columns=db.prepare("PRAGMA table_info(submission_jobs)").all().map(c=>c.name).join(',');
+    if(constrained)db.exec(`${widened};INSERT INTO submission_jobs_new(${columns}) SELECT ${columns} FROM submission_jobs;DROP TABLE submission_jobs;ALTER TABLE submission_jobs_new RENAME TO submission_jobs;`);
+    if(constrained)for(const sql of indexes)db.exec(sql);
+    db.exec(`ALTER TABLE submission_jobs ADD COLUMN runtime TEXT;
+      ALTER TABLE attempts ADD COLUMN runtime TEXT;`);
   }}
 ];
 export const schemaVersion = migrations.at(-1).version;

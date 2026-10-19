@@ -11,7 +11,9 @@ const digest=s=>createHash('sha256').update(s).digest('hex');
 function runtimeIdentity(){try{return JSON.parse(readFileSync(new URL('../../.runner/runtime.json',import.meta.url),'utf8'))}catch{return null}}
 const configOf=t=>adaptive.parseLearningConfig(t.learning_config||'{}');
 const usesBlocks=t=>configOf(t).modes.length>0;
-export function runtimeFor(t){const id=runtimeIdentity();if(!id)return 'unavailable';return usesBlocks(t)?`${id.python}+${id.blocks}`:id.python}
+// The learning interpreter is JavaScript, so the Node major version the server actually runs is part of it.
+const nodeMajor=`node${process.versions.node.split('.')[0]}`;
+export function runtimeFor(t){const id=runtimeIdentity();if(!id)return 'unavailable';const py=`${id.python}:${nodeMajor}`;return usesBlocks(t)?`${py}+${id.blocks}`:py}
 const fingerprint=t=>{
   const fields=[t.check_mode,t.tests,t.starter,t.reference_solution,t.wrong_solutions,t.manual_criteria];
   if(t.learning_rules&&t.learning_rules!=='[]')fields.push(t.learning_rules);
@@ -30,15 +32,30 @@ export function createTaskQuality({db,own,teacher,fail,tx,validateTask,limit}){
    * or when the compatibility procedure (scripts/reverify-published.mjs) recorded an approved replay of
    * exactly that snapshot for the current environment. Versions themselves are immutable.
    */
-  function assertPublishedVersion(id,u){
-    const version=own('task_versions',id,u),snapshot=JSON.parse(version.snapshot),runtime=runtimeFor(snapshot);
-    const proof=version.verification_id&&get('SELECT * FROM task_verifications WHERE id=? AND org_id=?',version.verification_id,u.org_id);
+  /** Proof that this exact published snapshot is valid in the current environment, or null. */
+  function currentProof(version,orgId){
+    const snapshot=JSON.parse(version.snapshot),runtime=runtimeFor(snapshot);
+    const proof=version.verification_id&&get('SELECT * FROM task_verifications WHERE id=? AND org_id=?',version.verification_id,orgId);
     if(proof&&proof.status==='approved'&&proof.runtime_hash===runtime)return proof;
     // Only the explicit compatibility procedure may vouch for an old version in a new environment;
     // an ordinary re-check of the working draft never replaces the evidence of a published snapshot.
-    const replay=proof&&get("SELECT v.* FROM task_verifications v JOIN audit_log l ON l.org_id=v.org_id AND l.action='task.version_reverified' AND l.target_id=? AND json_extract(l.details,'$.verification_id')=v.id WHERE v.org_id=? AND v.task_id=? AND v.revision=? AND v.fingerprint=? AND v.runtime_hash=? AND v.status='approved' ORDER BY v.created_at DESC LIMIT 1",version.id,u.org_id,version.task_id,version.revision,fingerprint(snapshot),runtime);
-    if(replay)return replay;
+    return (proof&&get("SELECT v.* FROM task_verifications v JOIN audit_log l ON l.org_id=v.org_id AND l.action='task.version_reverified' AND l.target_id=? AND json_extract(l.details,'$.verification_id')=v.id WHERE v.org_id=? AND v.task_id=? AND v.revision=? AND v.fingerprint=? AND v.runtime_hash=? AND v.status='approved' ORDER BY v.created_at DESC LIMIT 1",version.id,orgId,version.task_id,version.revision,fingerprint(snapshot),runtime))||null;
+  }
+  function assertPublishedVersion(id,u){
+    const proof=currentProof(own('task_versions',id,u),u.org_id);if(proof)return proof;
     fail(409,'Сохраните новую ревизию практики, подтвердите её проверку и опубликуйте перед новой выдачей. Назначенные работы остаются доступны.');
+  }
+  /**
+   * May NEW checks of already issued work run for this pinned version? Yes when its proof is valid in the
+   * current environment. Versions published before quality proofs existed never had any proof; they keep
+   * running as before (documented legacy exception) and their new results record the environment.
+   */
+  function versionCompatible(versionId,orgId){
+    const version=get('SELECT * FROM task_versions WHERE id=? AND org_id=?',versionId,orgId);
+    if(!version)return {ok:false,runtime:'unknown'};
+    const runtime=runtimeFor(JSON.parse(version.snapshot));
+    if(!version.verification_id)return {ok:true,runtime,legacy:true};
+    return {ok:!!currentProof(version,orgId),runtime};
   }
   /** The block solution must pass through exactly the learner path. */
   async function blockProof(task,u){
@@ -119,5 +136,5 @@ export function createTaskQuality({db,own,teacher,fail,tx,validateTask,limit}){
     }
     return undefined;
   }
-  return {handle,approval,assertApproved,assertPublishedVersion};
+  return {handle,approval,assertApproved,assertPublishedVersion,versionCompatible};
 }

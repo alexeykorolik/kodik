@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 import {grade,execute} from '../server/b2b/grader.mjs';
 import {harness} from './helpers/b2b-harness.mjs';
@@ -61,6 +62,8 @@ test('published learning rules remain pinned, private tests stay private and cop
     // A historical published snapshot keeps its original checker evidence.
     // Rechecking the working draft must not pretend to replace that evidence.
     h.db.prepare('UPDATE task_verifications SET runtime_hash=? WHERE id=?').run('historical-runtime',proof.id);
+    // Issued work is not graded in an unconfirmed environment until the reverify procedure confirms it.
+    const held=await h.request(`/tasks/${task.id}/submissions`,{assignment_id:assignment.id,code:plain,request_key:crypto.randomUUID()},student,409);assert.equal(held.code,'runtime_unconfirmed');
     assert.equal((await h.request(`/tasks/${task.id}/verify`,{revision:1},admin)).status,'approved');
     const stale=await h.request(`/tasks/${task.id}/publish`,{published:true,revision:1},admin,409);assert.match(stale.error,/новую ревизию/);
     await h.request(`/tasks/${task.id}`,{...await current(),starter:'# Проверено новым исполнителем\n'},admin,200,'PUT');
@@ -73,6 +76,7 @@ test('published learning rules remain pinned, private tests stay private and cop
     for(const rules of [['kind:fake'],['kind:for','kind:for'],'kind:for'])await h.request(`/tasks/${task.id}`,{...await current(),learning_rules:rules},admin,400,'PUT');
     await h.request(`/tasks/${task.id}`,{...await current(),learning_rules:[]},admin,200,'PUT');assert.equal((await current()).verification,null);
     await h.request(`/tasks/${task.id}/publish`,{published:true},admin,409);
+    assert.equal(JSON.parse(execFileSync(process.execPath,['scripts/reverify-published.mjs','--db',h.dbPath],{encoding:'utf8'})).reverified,1);
     assert.equal((await submit(plain)).status,'failed','assigned version retains its learning rules after draft edits');
     await h.restart();assert.equal((await submit(plain)).status,'failed');
     const replay=await h.request(`/tasks/${task.id}/verify`,{revision:1,verification_id:proof.id},admin);assert.equal(replay.status,'approved');assert.equal(replay.publication_eligible,false);

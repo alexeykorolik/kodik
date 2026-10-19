@@ -55,7 +55,10 @@ const python = digest([
 ]);
 const translatorSource = readFileSync("src/adaptive/blockProgram.ts", "utf8");
 const translatorVersion = /TRANSLATOR_VERSION = '([^']+)'/.exec(translatorSource)?.[1] ?? "unknown";
-const blocks = `${translatorVersion}:${digest(["src/adaptive/blockProgram.ts", "src/adaptive/blocklyBlocks.ts", "src/blocks.ts"])}`;
+// Everything that decides how a block program is checked: translator, block definitions, the
+// sandboxed real-Blockly load check and the exact library versions it bundles.
+const pkgVersion = (name) => JSON.parse(readFileSync(`node_modules/${name}/package.json`, "utf8")).version;
+const blocks = `${translatorVersion}:${digest(["src/adaptive/blockProgram.ts", "src/adaptive/blocklyBlocks.ts", "src/blocks.ts", "server/b2b/blockly-check-entry.ts"])}:blockly${pkgVersion("blockly")}:xmldom${pkgVersion("@xmldom/xmldom")}`;
 writeFileSync(
   ".runner/runtime.json",
   JSON.stringify({ python: `py:${python}`, blocks: `bl:${blocks}`, built_at: new Date().toISOString() }, null, 2),

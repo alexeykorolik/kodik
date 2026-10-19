@@ -22,7 +22,7 @@ test('publication requires private, revision-bound executable evidence and rejec
       const proof=await h.request(`/tasks/${task.id}/verify`,{revision},admin);assert.equal(proof.status,'approved');assert.ok(proof.wrong.every(r=>r.status!=='passed'));
       const published=await h.request(`/tasks/${task.id}/publish`,{published:true,revision},admin);
       assert.equal(h.db.prepare('SELECT verification_id FROM task_versions WHERE id=?').get(published.version_id).verification_id,proof.id);
-      const history=await h.request(`/tasks/${task.id}/verifications`,undefined,admin);assert.equal(history.items.length,3);assert.ok(history.items.every(v=>/^py:[a-f0-9]{32}(\+bl:[^:]+:[a-f0-9]{32})?$/.test(v.runtime_hash)));
+      const history=await h.request(`/tasks/${task.id}/verifications`,undefined,admin);assert.equal(history.items.length,3);assert.ok(history.items.every(v=>/^py:[a-f0-9]{32}:node\d+(\+bl:.+)?$/.test(v.runtime_hash)));
     });
     await t.test('student responses and teacher-only endpoints cannot disclose private programs',async()=>{
       const student={},user=await h.request('/users',{name:'Learner',login:'quality-student',password:h.password,role:'student'},admin),group=await h.request('/groups',{title:'Class'},admin);

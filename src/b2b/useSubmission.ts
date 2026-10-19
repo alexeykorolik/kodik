@@ -24,6 +24,7 @@ export function useSubmission(
     queued: "Решение в очереди проверки",
     running: "Проверяем решение…",
     reconnecting: "Решение сохранено. Восстанавливаем связь…",
+    held: "Решение принято — результат появится позже",
   };
   const remember = () => {
     if (pending.current)
@@ -49,6 +50,13 @@ export function useSubmission(
       while (mounted.current) {
         setJob(result);
         setPhase(result.status);
+        // Accepted but waiting for the environment to be confirmed: no result yet, not the learner's error.
+        // Keep the pending operation; the periodic resume picks the result up later.
+        if (result.status === "held") {
+          setPhase("held");
+          setError(result.result?.message || "Решение принято. Результат появится после проверки совместимости.");
+          return;
+        }
         if (["completed", "cancelled"].includes(result.status)) {
           if (result.result) await complete.current(result.result);
           pending.current = null;
@@ -115,7 +123,8 @@ export function useSubmission(
     submit,
     cancel,
     phase,
-    busy: phase !== "idle",
+    // A held check must not lock the editor: the learner keeps working on the draft.
+    busy: phase !== "idle" && phase !== "held",
     label: phaseNames[phase] || "Получаем результат…",
     error,
     canCancel: job?.status === "queued",

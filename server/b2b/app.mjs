@@ -16,7 +16,7 @@ import { execute, grade, executionQueue, translateBlocks } from "./grader.mjs";
 import { createModes, adaptive } from "./modes.mjs";
 import { createSubmissionService } from "./submissions.mjs";
 import {createCurriculum} from './curriculum.mjs';
-import {createTaskQuality} from './task-quality.mjs';
+import {createTaskQuality,runtimeFor} from './task-quality.mjs';
 import {createPilot} from './pilot.mjs';
 import {createLearningEvidence} from './learning-evidence.mjs';
 import {createStarterCourse} from './starter-course.mjs';
@@ -74,7 +74,8 @@ export function createApp({
 } = {}) {
   const db = openDatabase(dbPath),
     limits = new Map();
-  const submissions = createSubmissionService(db);
+  // Compatibility of pinned versions with the current checking environment (taskQuality is defined below).
+  const submissions = createSubmissionService(db, { compatible: (job) => job.version_id ? taskQuality.versionCompatible(job.version_id, job.org_id) : { ok: true, runtime: runtimeFor(JSON.parse(job.snapshot)) } });
   let shuttingDown = false;
   const all = (sql, ...args) => db.prepare(sql).all(...args);
   const get = (sql, ...args) => db.prepare(sql).get(...args);
@@ -246,6 +247,12 @@ export function createApp({
     if (!modes.supportedForSnapshot(task).includes(mode)) fail(409, "Это задание нельзя решать в этом режиме.", { code: "mode_not_supported" });
     return null;
   }
+  /** New checks of issued work only in an environment confirmed for the pinned version (drafts stay allowed). */
+  function assertEnvironment(task, user) {
+    if (user.role !== "student" || !task.version_id) return;
+    if (!taskQuality.versionCompatible(task.version_id, user.org_id).ok)
+      fail(409, "Проверка этого задания временно недоступна: Kodik обновил проверяющую среду, и совместимость задания ещё не подтверждена. Черновик сохраняется — продолжайте работу и проверьте решение позже.", { code: "runtime_unconfirmed" });
+  }
   async function acceptSubmission(user, task, b) {
     if (user.role !== "student") fail(403, "Отправка доступна ученику.");
     const replay=submissions.replay(user,task,b);
@@ -253,6 +260,7 @@ export function createApp({
     availableTask(task.id,user,task.assignment_id,true);
     const mode = b.mode ?? "python";
     const eff = modeRules("submit", mode, task, user);
+    assertEnvironment(task, user);
     limit(`execute:${user.id}`, 50, 60000);
     const program = await programOf(user, task, b);
     const result = submissions.enqueue(user, task, { ...program, policy: eff ? JSON.stringify(eff) : null }, b.request_key);
@@ -432,6 +440,9 @@ export function createApp({
     }
     if(user.platform_owner && path==='/api/state' && method==='GET')return {user:publicUser(user),organization:{id:user.org_id,name:'Управление Kodik'},courses:[],modules:[],lessons:[],tasks:[],users:[],groups:[],members:[],assignments:[],attempts:[],drafts:[],programs:[]};
     if(user.platform_owner&&!path.startsWith('/api/owner/'))fail(403,'Откройте кабинет владельца.');
+    // Recovering an accepted submission is reading one's own past action: it does not need a valid
+    // licence, but it never accepts a different solution or creates new work (see submissions.replayAccepted).
+    {const accepted=/^\/api\/tasks\/([^/]+)\/(?:submissions|submit)$/.exec(path);if(accepted&&method==='POST'&&user.role==='student'){const replayed=submissions.replayAccepted(user,accepted[1],b);if(replayed){if(replayed.error)fail(replayed.status,replayed.error,replayed.details);return replayed}}}
     if(!['GET','HEAD'].includes(method)&&!path.endsWith('/draft'))pilot.checkLicense(user);
     if(path==='/api/starter-course/install'&&method==='POST')return await createStarterCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user);
     const pilotResult=await pilot.handle(path,method,b,user,req,res);
@@ -1167,6 +1178,7 @@ export function createApp({
       }
       if (action === "run") {
         modeRules("run", mode, task, user);
+        assertEnvironment(task, user);
         const inputs = inputsOf(b.inputs);
         limit(`execute:${user.id}`, 50, 60000);
         const program = await programOf(user, task, b);
