@@ -71,7 +71,20 @@ export function createApp({
   dbPath = process.env.KODIK_DB || resolve(root, "data/kodik.sqlite"),
   secure = process.env.NODE_ENV === "production",
   registrationBudget = 10,
+  trustedProxies = [],
+  loginNetworkBudget = 300,
 } = {}) {
+  const plain = (ip) => String(ip || "").replace(/^::ffff:/, "");
+  const trusted = new Set(trustedProxies.map(plain));
+  /** Client address for limits: X-Forwarded-For is used only when the connection comes from a configured
+   * proxy, and only the entries that proxy appended (the right-most address that is not a trusted proxy). */
+  const clientIp = (req) => {
+    const remote = plain(req.socket.remoteAddress);
+    if (!trusted.has(remote)) return remote;
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",").map((s) => plain(s.trim())).filter(Boolean);
+    for (let i = forwarded.length - 1; i >= 0; i--) if (!trusted.has(forwarded[i])) return forwarded[i];
+    return remote;
+  };
   const db = openDatabase(dbPath),
     limits = new Map();
   // Compatibility of pinned versions with the current checking environment (taskQuality is defined below).
@@ -329,7 +342,7 @@ export function createApp({
   }
   async function route(req, res, path, b) {
     const method = req.method,
-      ip = req.socket.remoteAddress;
+      ip = clientIp(req);
     if (path === "/api/health" && method === "GET") {
       if (shuttingDown || !existsSync(resolve(root, ".runner/runner.cjs")))
         fail(503, "Исполнитель ещё не готов.");
@@ -386,7 +399,7 @@ export function createApp({
       // One school may legitimately share a public IP. Account+IP still limits
       // guessing a password; a broad IP budget protects the hashing service.
       limit(`login:${ip}:${login}`, 15, 900000);
-      limit(`login-network:${ip}`, 300, 900000);
+      limit(`login-network:${ip}`, loginNetworkBudget, 900000);
       const user = get("SELECT * FROM users WHERE login=?", login);
       const dummy = "00000000000000000000000000000000:" + "00".repeat(64);
       const ok = await verify(password, user?.password || dummy);

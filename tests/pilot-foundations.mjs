@@ -255,5 +255,7 @@ test('production startup refuses missing origin, insecure origin and ephemeral r
   assert.throws(()=>readServerConfig({NODE_ENV:'production'}),/KODIK_ORIGIN/);
   assert.throws(()=>readServerConfig({NODE_ENV:'production',KODIK_ORIGIN:'http://school.example',KODIK_DB:'/data/store.sqlite'}),/HTTPS/);
   assert.throws(()=>readServerConfig({NODE_ENV:'production',KODIK_ORIGIN:'https://school.example',KODIK_DB:'data/store.sqlite'}),/absolute/);
-  const config=readServerConfig({NODE_ENV:'production',KODIK_ORIGIN:'https://school.example',KODIK_DB:join(process.cwd(),'data','store.sqlite')});assert.equal(config.host,'127.0.0.1');
+  assert.throws(()=>readServerConfig({NODE_ENV:'production',KODIK_ORIGIN:'https://school.example',KODIK_DB:join(process.cwd(),'data','store.sqlite')}),/KODIK_TRUSTED_PROXIES/);
+  assert.throws(()=>readServerConfig({NODE_ENV:'production',KODIK_ORIGIN:'https://school.example',KODIK_DB:join(process.cwd(),'data','store.sqlite'),KODIK_TRUSTED_PROXIES:'proxy.local'}),/IP/);
+  const config=readServerConfig({NODE_ENV:'production',KODIK_ORIGIN:'https://school.example',KODIK_DB:join(process.cwd(),'data','store.sqlite'),KODIK_TRUSTED_PROXIES:'127.0.0.1'});assert.equal(config.host,'127.0.0.1');assert.deepEqual(config.trustedProxies,['127.0.0.1']);
 });

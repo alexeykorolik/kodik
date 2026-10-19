@@ -1,7 +1,7 @@
 import { createApp } from "./app.mjs";
 import { readServerConfig } from "./config.mjs";
-const { port, host } = readServerConfig();
-const { server } = createApp();
+const { port, host, trustedProxies } = readServerConfig();
+const { server } = createApp({ trustedProxies });
 server.listen(port, host, () =>
   console.log(`Kodik B2B: http://127.0.0.1:${server.address().port}`),
 );
