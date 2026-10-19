@@ -86,19 +86,37 @@ test('learning conclusions and recommendations use eligible, fresh, on-topic evi
       // Historical results from before the publication fix: kept and readable, explained, not counted.
       historical('hist-python','python','# мой вариант\nprint(43)   # готово',{starter:'print(43)',instruction:'Новая формулировка A'});
       historical('hist-blocks','blocks','print(43)\n',{learning_config:JSON.stringify({version:1,modes:['blocks'],palette:['text_print','math_number'],starter_blocks:printWs(43,300,200,'moved'),skills:['output']}),instruction:'Новая формулировка B'});
+      // Audit P2: spacing alone is not a change (print( 43 ), print (43), other indentation).
+      historical('hist-spaces','python','print( 43 )',{starter:'print(43)',instruction:'Новая формулировка C'});
+      historical('hist-space-call','python','print (43)\n',{starter:'print(43)',instruction:'Новая формулировка D'});
       const evidence=await h.request(`/students/${user.id}/evidence`,undefined,admin);
-      for(const id of ['hist-python','hist-blocks']){const item=evidence.items.find(i=>i.attempt_id===id);assert.ok(item,`${id} stays visible`);assert.equal(item.eligible,false);assert.match(item.reason,/заготовка без содержательных изменений/)}
+      for(const id of ['hist-python','hist-blocks','hist-spaces','hist-space-call']){const item=evidence.items.find(i=>i.attempt_id===id);assert.ok(item,`${id} stays visible`);assert.equal(item.eligible,false);assert.match(item.reason,/заготовка без содержательных изменений/)}
       assert.equal(evidence.items.filter(i=>i.eligible).length,before,'they add no basis');
       const reviewed=await h.request('/attempts/hist-python',undefined,admin);assert.equal(reviewed.status,'passed','the passed check itself is not rewritten');
     });
 
     await t.test('expired offer cannot be accepted',async()=>{
-      h.db.prepare("UPDATE attempts SET status='failed' WHERE id IN ('hist-python','hist-blocks')").run();
+      h.db.prepare("UPDATE attempts SET status='failed' WHERE id IN ('hist-python','hist-blocks','hist-spaces','hist-space-call')").run();
       const another=await task('Ещё одна задача на вывод',8),na=await assign(another);void na;
       const next=(await proposed())[0];assert.ok(next,'a fresh unfinished on-topic assignment gets a proposal');await h.request(`/recommendations/${next.id}/approve`,{},admin);
       h.db.prepare("UPDATE recommendations SET expires_at='2000-01-01' WHERE id=?").run(next.id);
       await h.request(`/assignments/${next.assignment_id}/mode`,{mode:next.target_mode},child,409);
       assert.equal(h.db.prepare('SELECT status FROM recommendations WHERE id=?').get(next.id).status,'expired');
+    });
+
+    await t.test('approval re-checks today’s grounds: new failures withdraw the proposal; manual transfer stays possible',async()=>{
+      const late=await task('Задача, в которой начались ошибки',9),la=await assign(late);
+      const stale=(await proposed()).find(r=>r.assignment_id===la.id);assert.ok(stale,'a proposal is made while the grounds hold');
+      const wrong={mode:'blocks',workspace:printWs(1)};
+      assert.equal(await submit(late,la,'blocks',wrong),'failed');assert.equal(await submit(late,la,'blocks',wrong),'failed');
+      assert.deepEqual(failing(await check(la)),['no_current_difficulty']);
+      const refused=await h.request(`/recommendations/${stale.id}/approve`,{},admin,409);
+      assert.equal(refused.code,'recommendation_stale');assert.match(refused.error,/неуспешны/);assert.match(refused.error,/вручную/);
+      assert.equal(h.db.prepare('SELECT status FROM recommendations WHERE id=?').get(stale.id).status,'expired');
+      assert.equal(h.db.prepare("SELECT COUNT(*) n FROM recommendation_events WHERE recommendation_id=? AND kind='stale'").get(stale.id).n,1);
+      const learner=(await h.request('/state',undefined,child)).tasks.find(x=>x.assignment_id===la.id);assert.equal(learner.modes.offered??null,null,'nothing is offered to the learner');
+      await h.request(`/assignments/${la.id}/students/${user.id}/mode`,{offer:'mixed',reason:'Решение преподавателя'},admin,200,'PUT');
+      assert.equal((await h.request('/state',undefined,child)).tasks.find(x=>x.assignment_id===la.id).modes.offered,'mixed');
     });
   }finally{await h.close()}
 });

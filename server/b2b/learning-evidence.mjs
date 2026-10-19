@@ -89,6 +89,16 @@ export function createLearningEvidence({db,own,teacher,fail,tx,modes,adaptive,gr
       teacher(u);expire();const r=own('recommendations',m[1],u),a=own('assignments',r.assignment_id,u);
       if(r.status===(m[2]==='approve'?'offered':'dismissed'))return {ok:true};if(r.status!=='proposed')fail(409,'Рекомендация уже обработана или истекла.');
       const effective=modes.effectiveFor(a,r.user_id).eff;if(a.archived||effective.switching==='locked'||!effective.allowed.includes(r.target_mode)||effective.current===r.target_mode)fail(409,'Настройки задания изменились. Рекомендация больше не подходит.');
+      // The teacher confirms today's grounds, not the ones from when the proposal was made. If they no
+      // longer hold, the proposal is withdrawn; a deliberate manual transfer stays a separate action.
+      if(m[2]==='approve'){
+        const fresh=evaluate(a,r.user_id,u);
+        if(!fresh.ok||fresh.target!==r.target_mode){
+          const failed=fresh.checks.filter(c=>!c.ok);
+          tx(()=>{run("UPDATE recommendations SET status='expired',teacher_id=? WHERE id=?",u.id,r.id);run('INSERT INTO recommendation_events VALUES(?,?,?,?,?)',randomUUID(),r.id,u.id,'stale',now())});
+          fail(409,`Основания изменились, предложение снято: ${failed.map(c=>c.detail).join(' ')||'следующий режим уже другой.'} Если переход всё же нужен, разрешите его вручную в разделе ученика («Разрешить переход»).`,{code:'recommendation_stale',checks:fresh.checks});
+        }
+      }
       tx(()=>{if(m[2]==='approve')modes.offerRecommendation(a,r.user_id,u,r.target_mode,r.id,JSON.parse(r.basis).reason);run('UPDATE recommendations SET status=?,teacher_id=? WHERE id=?',m[2]==='approve'?'offered':'dismissed',u.id,r.id);run('INSERT INTO recommendation_events VALUES(?,?,?,?,?)',randomUUID(),r.id,u.id,m[2],now())});return {ok:true};
     }
     return undefined;

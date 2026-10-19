@@ -10,10 +10,11 @@ export function HelpButton({assignmentId,lessonRunId,stepId}:{assignmentId?:stri
   return <details className="help-button"><summary>Нужна помощь</summary><label>Что не получается?<input maxLength={1000} value={message} onChange={e=>setMessage(e.target.value)}/></label><button disabled={busy} onClick={async()=>{setBusy(true);try{await api('/help',{assignment_id:assignmentId,lesson_run_id:lessonRunId,step_id:stepId,message});setStatus('Учитель увидит твой запрос. Продолжай, если можешь.')}catch(e){setStatus((e as Error).message)}finally{setBusy(false)}}}>Позвать преподавателя</button>{status&&<p role="status">{status}</p>}</details>;
 }
 const clock=(iso:string)=>new Date(iso).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-/** Polled data shared by teacher screens: keeps the last good data on errors, ignores late answers. */
-function useLive(load:()=>Promise<void>,deps:unknown[],every=5000){
+/** Polled data shared by teacher screens: keeps the last good data on errors. An answer is applied only
+ * if no newer request (or a change of what is shown) started meanwhile, so a late answer never replaces it. */
+function useLive<T>(load:()=>Promise<T>,apply:(value:T)=>void,deps:unknown[],every=5000){
   const [shownAt,setShownAt]=useState(''),[failed,setFailed]=useState(false),[loading,setLoading]=useState(true),sequence=useRef(0);
-  const reload=async()=>{const current=++sequence.current;try{await load();if(current!==sequence.current)return;setShownAt(new Date().toISOString());setFailed(false)}catch{if(current===sequence.current)setFailed(true)}finally{if(current===sequence.current)setLoading(false)}};
+  const reload=async()=>{const current=++sequence.current;try{const value=await load();if(current!==sequence.current)return;apply(value);setShownAt(new Date().toISOString());setFailed(false)}catch{if(current===sequence.current)setFailed(true)}finally{if(current===sequence.current)setLoading(false)}};
   useEffect(()=>{setLoading(true);void reload();const t=setInterval(()=>void reload(),every);return()=>{sequence.current++;clearInterval(t)}},deps);
   return {shownAt,failed,loading,reload};
 }
@@ -29,14 +30,14 @@ function useAction(after:()=>Promise<void>){
 }
 export function ClassroomPanel(){
   const [items,setItems]=useState<Row[]>([]);
-  const live=useLive(async()=>setItems((await api('/help')).items),[]),action=useAction(live.reload);
+  const live=useLive(()=>api('/help'),r=>setItems(r.items),[]),action=useAction(live.reload);
   return <><Header title="Помощь на занятии" text="Запросы учеников с привязкой к уроку и практике."/><LiveNote live={live} what="Запросы"/>{action.view}{items.length?items.map(h=><article className="panel" key={h.id}><h2>{h.name} · {h.status==='open'?'Ждёт помощи':'Помощь оказана'}</h2><p>{h.message}</p><small>{new Date(h.created_at).toLocaleString('ru')}</small>{h.lesson_run_id&&<p><a href={`#lesson-run/${h.lesson_run_id}`}>Открыть занятие</a></p>}{h.status==='open'?<form onSubmit={e=>{e.preventDefault();const answer=new FormData(e.currentTarget).get('answer');void action.run(()=>api(`/help/${h.id}`,{answer},'PUT'),`Помощь ученику ${h.name} отмечена.`)}}><label>Короткий ответ или итог помощи<input name="answer" maxLength={2000}/></label><button disabled={action.busy}>{action.busy?'Сохраняем…':'Помощь оказана'}</button></form>:<p>{h.answer||'Преподаватель подошёл к ученику.'}</p>}</article>):<p>{live.loading&&!live.shownAt?'':'Запросов пока нет.'}</p>}</>;
 }
 export function ModeManagement({state}:{state:State}){
   const [id,setId]=useState(state.assignments[0]?.id||''),[data,setData]=useState<Row|null>(null),[error,setError]=useState(''),[recs,setRecs]=useState<Row[]>([]),[proof,setProof]=useState<Row|null>(null),[why,setWhy]=useState<Row|null>(null);
-  const live=useLive(async()=>{const [modes,r]=await Promise.all([id?api(`/assignments/${id}/modes`):Promise.resolve(null),api('/recommendations')]);setData(modes);setRecs(r.items)},[id]),action=useAction(live.reload);
+  const live=useLive(async()=>{const [modes,r]=await Promise.all([id?api(`/assignments/${id}/modes`):Promise.resolve(null),api('/recommendations')]);return {modes:modes&&{...modes,assignment_id:id},recs:r.items}},v=>{setData(v.modes);setRecs(v.recs)},[id]),action=useAction(live.reload);
   const act=(path:string,body:Row,method='PUT',success='Изменения сохранены.')=>action.run(()=>api(path,body,method),success);
-  return <><Header title="Способы решения" text="Разрешайте переходы ученику или всей группе. Открытая работа сохраняется."/><label>Назначение<select value={id} onChange={e=>{setId(e.target.value);setData(null);setProof(null);setWhy(null)}}>{state.assignments.map(a=><option key={a.id} value={a.id}>{state.groups.find(g=>g.id===a.group_id)?.title} · {a.title} · версия {a.version_revision}</option>)}</select></label><LiveNote live={live}/>{action.view}{error&&<p className="error" role="alert">{error}</p>}{data&&<>
+  return <><Header title="Способы решения" text="Разрешайте переходы ученику или всей группе. Открытая работа сохраняется."/><label>Назначение<select value={id} onChange={e=>{setId(e.target.value);setData(null);setProof(null);setWhy(null)}}>{state.assignments.map(a=><option key={a.id} value={a.id}>{state.groups.find(g=>g.id===a.group_id)?.title} · {a.title} · версия {a.version_revision}</option>)}</select></label><LiveNote live={live}/>{action.view}{error&&<p className="error" role="alert">{error}</p>}{data&&data.assignment_id===id&&<>
   <section className="panel"><h2>Правила группы</h2><PolicyForm key={JSON.stringify(data.policy)} policy={data.policy} supported={data.supported} submit={p=>act(`/assignments/${id}/mode-policy`,p,'PUT','Правила группы сохранены.')}/></section>
   {data.learners.map((s:Row)=><article className="panel" key={s.id}><h2>{s.name} · {label(s.modes.current)}</h2><p>Разрешено: {s.modes.allowed.map(label).join(', ')}. {switching[s.modes.switching]}.</p><p>Последние результаты: {s.last.map((a:Row)=>`${label(a.mode)}: ${statusNames[a.status]||'Не оценено'}`).join('; ')||'Попыток пока нет'}</p>
   <form className="actions" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget),mode=f.get('mode'),action=f.get('action');void act(`/assignments/${id}/students/${s.id}/mode`,action==='offer'?{offer:mode,reason:f.get('reason')}:action==='lock'?{override:{allowed:[mode],start:mode,switching:'locked'},reason:f.get('reason')}:{clear_override:true,reason:f.get('reason')},'PUT',`Изменения для ученика ${s.name} сохранены.`)}}>

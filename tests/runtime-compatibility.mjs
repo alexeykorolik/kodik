@@ -53,6 +53,15 @@ test("environment compatibility covers new issuance and already issued work; his
     await h.restart();
     assert.equal((await wait(h, kid, "accepted-before-update")).status, "held", "still held after another restart");
 
+    // A dry run only reports: the held work stays held and nothing is recorded (audit P2).
+    const snapshot = () => JSON.stringify([h.db.prepare("SELECT id,status,updated_at FROM submission_jobs ORDER BY id").all(), h.db.prepare("SELECT COUNT(*) n FROM audit_log").get(), h.db.prepare("SELECT COUNT(*) n FROM task_verifications").get(), h.db.prepare("SELECT id,verification_id FROM task_versions ORDER BY id").all()]);
+    const before = snapshot();
+    const dry = JSON.parse(execFileSync(process.execPath, ["scripts/reverify-published.mjs", "--db", h.dbPath, "--dry-run"], { encoding: "utf8" }));
+    assert.equal(dry.dry_run, true); assert.equal(dry.reverified, 0); assert.equal(dry.released, undefined);
+    assert.equal(dry.failed.length, 1); assert.equal(dry.failed[0].held, 1);
+    assert.equal(snapshot(), before, "dry run changed the database");
+    await new Promise((r) => setTimeout(r, 700));
+    assert.equal((await wait(h, kid, "accepted-before-update")).status, "held", "dry run must not resume held work");
     // Explicit compatibility procedure restores checking without touching history.
     const out = reverify(h);
     assert.equal(out.reverified, 1); assert.equal(out.released, 1);
