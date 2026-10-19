@@ -32,6 +32,9 @@ export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordT
     return s;
   }
   function replay(u,key,kind,payload){if(typeof key!=='string'||!/^[\w-]{10,100}$/.test(key))fail(400,'Обновите страницу и повторите действие.');const old=get('SELECT * FROM pilot_operations WHERE org_id=? AND request_key=?',u.org_id,key);if(old){if(old.actor_id!==u.id||old.kind!==kind||old.payload!==JSON.stringify(payload))fail(409,'Этот запрос уже использован с другими данными.');return {...JSON.parse(old.response),replayed:true}}}
+  // Optional idempotency for edits whose retry after a lost response must not look like a conflict.
+  const optionalReplay=(u,key,kind,payload)=>key===undefined?undefined:replay(u,key,kind,payload);
+  const rememberOptional=(u,key,kind,payload,response)=>{if(key!==undefined)remember(u,key,kind,payload,response)};
   const remember=(u,key,kind,payload,response)=>run('INSERT INTO pilot_operations VALUES(?,?,?,?,?,?,?)',u.org_id,key,u.id,kind,JSON.stringify(payload),JSON.stringify(response),now());
   function reportRows(u,params){
     teacher(u);const group=params.get('group_id');if(group)own('groups_',group,u);
@@ -49,17 +52,20 @@ export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordT
       if(!u.platform_owner)fail(403,'Доступно владельцу платформы.');
       if(path==='/api/owner/companies'&&method==='GET')return {items:all('SELECT c.* FROM companies c WHERE c.org_id IS NULL OR NOT EXISTS(SELECT 1 FROM users u WHERE u.org_id=c.org_id AND u.platform_owner=1) ORDER BY c.created_at DESC').map(c=>({...c,license:c.org_id?license(c.org_id):null})),stages};
       if(path==='/api/owner/companies'&&method==='POST'){
-        const id=randomUUID(),name=field(b.name,'Компания');run('INSERT INTO companies(id,name,created_at) VALUES(?,?,?)',id,name,now());audit(u,'company.created',id);return {id};
+        const payload={name:b.name},old=optionalReplay(u,b.request_key,'company.create',payload);if(old)return old;
+        const id=randomUUID(),name=field(b.name,'Компания');tx(()=>{run('INSERT INTO companies(id,name,created_at) VALUES(?,?,?)',id,name,now());rememberOptional(u,b.request_key,'company.create',payload,{id});audit(u,'company.created',id)});return {id};
       }
       if((m=/^\/api\/owner\/companies\/([^/]+)$/.exec(path))&&method==='PUT'){
-        const c=get('SELECT * FROM companies WHERE id=?',m[1]);if(!c)fail(404,'Компания не найдена.');if(c.revision!==b.revision)fail(409,'Карточку уже изменили. Обновите данные.');
+        const c=get('SELECT * FROM companies WHERE id=?',m[1]);if(!c)fail(404,'Компания не найдена.');
+        const {request_key:cardKey,...cardPayload}=b,cardOld=optionalReplay(u,cardKey,'company.update:'+c.id,cardPayload);if(cardOld)return cardOld;
+        if(c.revision!==b.revision)fail(409,'Карточку уже изменил кто-то другой. Ваши изменения не сохранены — показаны актуальные данные, внесите правку заново.',{code:'revision_conflict',revision:c.revision});
         if(!stages.includes(b.stage))fail(400,'Выберите этап.');const values=[field(b.name,'Компания'),field(b.contact_name,'Контактное лицо',200,true),field(b.contact,'Деловой контакт',500,true),field(b.source,'Источник',500,true),field(b.responsible,'Ответственный',200,true),b.stage,field(b.notes,'Заметки',8000,true),field(b.next_action,'Следующее действие',500,true),date(b.next_at)];
-        tx(()=>{run('UPDATE companies SET name=?,contact_name=?,contact=?,source=?,responsible=?,stage=?,notes=?,next_action=?,next_at=?,revision=revision+1 WHERE id=?',...values,c.id);audit(u,'company.updated',c.id,{before:c,after:values})});return {ok:true};
+        tx(()=>{run('UPDATE companies SET name=?,contact_name=?,contact=?,source=?,responsible=?,stage=?,notes=?,next_action=?,next_at=?,revision=revision+1 WHERE id=?',...values,c.id);rememberOptional(u,cardKey,'company.update:'+c.id,cardPayload,{ok:true,revision:c.revision+1});audit(u,'company.updated',c.id,{before:c,after:values})});return {ok:true,revision:c.revision+1};
       }
       if((m=/^\/api\/owner\/companies\/([^/]+)\/connect$/.exec(path))&&method==='POST'){
-        const c=get('SELECT * FROM companies WHERE id=?',m[1]);if(!c)fail(404,'Компания не найдена.');const payload={company_id:c.id,name:b.name,login:b.login};const old=replay(u,b.request_key,'connect',payload);if(old)return old;
-        if(c.org_id)fail(409,'Школа уже подключена.');const name=field(b.name,'Администратор'),login=field(b.login,'Логин',120).toLowerCase(),password=await passwordHash(passwordText(b.password));
-        const replayed=replay(u,b.request_key,'connect',payload);if(replayed)return replayed;
+        const c=get('SELECT * FROM companies WHERE id=?',m[1]);if(!c)fail(404,'Компания не найдена.');const payload={company_id:c.id,name:b.name,login:b.login};const old=replay(u,b.request_key,'connect',payload);if(old)return {...old,recovery_already_issued:true};
+        if(c.org_id)fail(409,'Школа уже подключена. Повторного подключения не было — показаны актуальные данные.',{code:'already_connected'});const name=field(b.name,'Администратор'),login=field(b.login,'Логин',120).toLowerCase(),password=await passwordHash(passwordText(b.password));
+        const replayed=replay(u,b.request_key,'connect',payload);if(replayed)return {...replayed,recovery_already_issued:true};
         if(get('SELECT org_id FROM companies WHERE id=?',c.id)?.org_id)fail(409,'Школа уже подключена.');
         if(get('SELECT 1 FROM users WHERE login=?',login))fail(409,'Логин занят.');const org=randomUUID(),id=randomUUID(),recovery=randomBytes(24).toString('hex');const response={org_id:org,admin_id:id};
         tx(()=>{run('INSERT INTO organizations VALUES(?,?,?)',org,c.name,now());run("INSERT INTO users(id,org_id,name,login,password,role,recovery,created_at) VALUES(?,?,?,?,?,'admin',?,?)",id,org,name,login,password,createHash('sha256').update(recovery).digest('hex'),now());run('UPDATE companies SET org_id=?,revision=revision+1 WHERE id=?',org,c.id);run("INSERT INTO licenses VALUES(?,?,1,0,NULL,'suspended',?,?)",randomUUID(),org,u.id,now());remember(u,b.request_key,'connect',payload,response);audit(u,'school.connected',org,{company_id:c.id},org)});return {...response,recovery};
@@ -68,9 +74,10 @@ export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordT
         const org=get('SELECT * FROM organizations WHERE id=?',m[1]);if(!org)fail(404,'Школа не найдена.');
         if(method==='GET')return {current:license(org.id),items:all('SELECT * FROM licenses WHERE org_id=? ORDER BY revision DESC',org.id)};
         if(method==='POST'){
-          const current=license(org.id);if(b.revision!==current.revision)fail(409,'Лицензия уже изменена. Обновите данные.');if(!Number.isInteger(b.student_limit)||b.student_limit<0||b.student_limit>10000||!['active','suspended'].includes(b.status))fail(400,'Укажите лимит учеников и состояние.');
+          const {request_key:licenseKey,...licensePayload}=b,licenseOld=optionalReplay(u,licenseKey,'license:'+org.id,licensePayload);if(licenseOld)return {...licenseOld,current:license(org.id)};
+          const current=license(org.id);if(b.revision!==current.revision)fail(409,'Лицензию уже изменили в другой вкладке или другой сотрудник. Ваши изменения не сохранены — показаны актуальные условия.',{code:'revision_conflict',revision:current.revision});if(!Number.isInteger(b.student_limit)||b.student_limit<0||b.student_limit>10000||!['active','suspended'].includes(b.status))fail(400,'Укажите лимит учеников и состояние.');
           const expires=date(b.expires_at);if(b.status==='active'&&!expires)fail(400,'Укажите срок лицензии.');
-          tx(()=>{run('INSERT INTO licenses VALUES(?,?,?,?,?,?,?,?)',randomUUID(),org.id,current.revision+1,b.student_limit,expires,b.status,u.id,now());audit(u,'license.changed',org.id,{before:current,after:b},org.id)});return {current:license(org.id)};
+          tx(()=>{run('INSERT INTO licenses VALUES(?,?,?,?,?,?,?,?)',randomUUID(),org.id,current.revision+1,b.student_limit,expires,b.status,u.id,now());rememberOptional(u,licenseKey,'license:'+org.id,licensePayload,{revision:current.revision+1});audit(u,'license.changed',org.id,{before:current,after:licensePayload},org.id)});return {current:license(org.id)};
         }
       }
       if((m=/^\/api\/owner\/companies\/([^/]+)\/history$/.exec(path))&&method==='GET'){const c=get('SELECT * FROM companies WHERE id=?',m[1]);if(!c)fail(404,'Компания не найдена.');return {items:all("SELECT actor_id,action,details,created_at FROM audit_log WHERE target_id=? OR (org_id=? AND action IN ('license.changed','school.connected')) ORDER BY created_at DESC LIMIT 100",c.id,c.org_id)}}
@@ -80,7 +87,10 @@ export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordT
     if((m=/^\/api\/groups\/([^/]+)\/teachers$/.exec(path))&&method==='PUT'){
       admin(u);own('groups_',m[1],u);if(!Array.isArray(b.items)||b.items.length>20||b.items.some(i=>!i||typeof i!=='object'||typeof i.user_id!=='string')||new Set(b.items.map(i=>i.user_id)).size!==b.items.length||b.items.filter(i=>i.kind==='primary').length>1)fail(400,'Назначьте одного основного преподавателя и до 19 совместных.');
       for(const item of b.items){const t=own('users',item.user_id,u);if(t.role!=='teacher'||!['primary','co'].includes(item.kind))fail(400,'Выберите преподавателя и его полномочия.')}
-      tx(()=>{run('DELETE FROM group_teachers WHERE group_id=?',m[1]);for(const i of b.items)run('INSERT INTO group_teachers VALUES(?,?,?)',m[1],i.user_id,i.kind);audit(u,'group.teachers_changed',m[1],b)});return {ok:true};
+      const norm=list=>JSON.stringify([...list].map(i=>`${i.user_id}:${i.kind}`).sort()),current=all('SELECT user_id,kind FROM group_teachers WHERE group_id=?',m[1]);
+      if(norm(current)===norm(b.items))return {ok:true,unchanged:true,items:current};
+      if(b.expected!==undefined&&(!Array.isArray(b.expected)||norm(b.expected)!==norm(current)))fail(409,'Состав преподавателей уже изменил другой администратор. Ваши изменения не сохранены — показан актуальный состав.',{code:'revision_conflict',items:current});
+      tx(()=>{run('DELETE FROM group_teachers WHERE group_id=?',m[1]);for(const i of b.items)run('INSERT INTO group_teachers VALUES(?,?,?)',m[1],i.user_id,i.kind);audit(u,'group.teachers_changed',m[1],{before:current,after:b.items})});return {ok:true,items:b.items};
     }
     if((m=/^\/api\/groups\/([^/]+)\/archive$/.exec(path))&&method==='POST'){admin(u);own('groups_',m[1],u);if(typeof b.archived!=='boolean')fail(400,'Укажите состояние.');tx(()=>{run('UPDATE groups_ SET archived=? WHERE id=?',Number(b.archived),m[1]);audit(u,'group.archived',m[1],b)});return {ok:true}}
     if((m=/^\/api\/groups\/([^/]+)\/import(?:\/(preview))?$/.exec(path))&&method==='POST'){
@@ -95,7 +105,7 @@ export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordT
       const response={count:credentials.length,credentials:credentials.map(({hash,error,row,...c})=>c)};
       // Passwords are returned once; retries identify the completed operation without storing secrets.
       const replayed=replay(u,b.request_key,'class_import',payload);if(replayed)return replayed;
-      tx(()=>{seats(u,credentials.length);for(const c of credentials){if(get('SELECT 1 FROM users WHERE login=?',c.login))fail(409,'Один из логинов уже занят. Повторите предпросмотр.');run("INSERT INTO users(id,org_id,name,login,password,role,created_at,created_by) VALUES(?,?,?,?,?,'student',?,?)",c.id,u.org_id,c.name,c.login,c.hash,now(),u.id);run('INSERT INTO group_members VALUES(?,?)',g.id,c.id)}remember(u,b.request_key,'class_import',payload,{count:response.count,credentials:[],credentials_already_issued:true});audit(u,'class.imported',g.id,{count:response.count})});return response;
+      tx(()=>{seats(u,credentials.length);for(const c of credentials){if(get('SELECT 1 FROM users WHERE login=?',c.login))fail(409,'Один из логинов уже занят. Повторите предпросмотр.');run("INSERT INTO users(id,org_id,name,login,password,role,created_at,created_by) VALUES(?,?,?,?,?,'student',?,?)",c.id,u.org_id,c.name,c.login,c.hash,now(),u.id);run('INSERT INTO group_members VALUES(?,?)',g.id,c.id)}remember(u,b.request_key,'class_import',payload,{count:response.count,credentials:[],credentials_already_issued:true,students:credentials.map(c=>({id:c.id,name:c.name,login:c.login}))});audit(u,'class.imported',g.id,{count:response.count})});return response;
     }
     if(path==='/api/help'&&method==='POST'){
       if(u.role!=='student')fail(403,'Помощь запрашивает ученик.');let assignment=null,lesson=null,step=null;

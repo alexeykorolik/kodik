@@ -205,9 +205,10 @@ function placeName(type: string, name: string) {
   return PLACES[name] ?? name;
 }
 
-/** Text or number field edited as a draft; committed with Enter or when focus leaves. */
+/** Text or number field: every keystroke goes to Blockly; a value Blockly refuses stays visible with
+ * a notice until Enter, Escape or leaving the field, which show the value that was actually kept. */
 function FieldInput({ value, commit }: { value: string; commit: (value: string) => string }) {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
-  return <input value={draft} onChange={e => setDraft(e.target.value)} onBlur={() => { if (draft !== value) setDraft(commit(draft)); }} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); if (draft !== value) setDraft(commit(draft)); } if (e.key === "Escape") setDraft(value); }} />;
+  return <input value={draft} onChange={e => { setDraft(e.target.value); commit(e.target.value); }} onBlur={() => setDraft(value)} onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); setDraft(value); } }} />;
 }

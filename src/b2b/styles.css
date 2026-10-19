@@ -2363,3 +2363,5 @@ body {
 .starter-problem p { color: #17352e; }
 .recommendation-check ul { list-style: none; padding: 0; margin: 6px 0; }
 .recommendation-check li.ok { color: #24694c; } .recommendation-check li.bad { color: #8a5300; }
+
+.success-note{color:var(--green);font-weight:600;margin:.4rem 0}
