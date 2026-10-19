@@ -5,6 +5,9 @@ import { Badge, Glyph } from "./App";
 import { useStudentDraft } from "./useStudentDraft";
 import { useSubmission } from "./useSubmission";
 import { learningRules } from './learningRules';
+import { BlockEditor } from "./BlockEditor";
+import { useSolvingModes, type SolvingModes } from "./useSolvingModes";
+import { MODE_LABEL, type Mode } from "../adaptive/modePolicy";
 function useWorkspaceController({
   task,
   state,
@@ -37,6 +40,7 @@ function useWorkspaceController({
     [tab, setTab] = useState("task"),
     [pane, setPane] = useState(35),
     [fontSize, setFontSize] = useState(16);
+  const modes = useSolvingModes(task, state, refresh);
   const submission = useSubmission(
     state.user as { id: string; org_id: string },
     task.id,
@@ -52,20 +56,24 @@ function useWorkspaceController({
     setError("");
     setResult(null);
     try {
-      const stored = await persist(code, revision.current);
+      const blocks = modes.requestBody();
+      const stored = blocks ? await modes.blocks.persist() : await persist(code, revision.current);
       if (!stored)
         throw new Error(
           "Сначала синхронизируйте черновик или разрешите конфликт вкладок.",
         );
       if (submit) {
-        await submission.submit(code);
+        await submission.submit(blocks ?? { mode: "python", code });
         return;
       }
       const response = await api(`/tasks/${task.id}/run`, {
-        code,
+        ...(blocks ?? { mode: "python", code }),
         inputs: inputs === "" ? [] : inputs.split("\n"),
         assignment_id:task.assignment_id,
       });
+      // The mirror must match what actually ran; a mismatch means an outdated page.
+      if (blocks && response.python !== undefined && modes.mirror.ok && response.python !== modes.mirror.python)
+        setError("Код на экране отличается от проверенного сервером. Обновите страницу — работа сохранена.");
       setResult(response);
     } catch (e) {
       setError((e as Error).message);
@@ -73,12 +81,12 @@ function useWorkspaceController({
       setBusy(false);
     }
   }
-  return {task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode:false,checkLabel:'Проверить решение',nextLabel:'Следующее задание →',referenceAction:undefined as undefined|(()=>void)};
+  return {modes:modes as SolvingModes|undefined,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode:false,checkLabel:'Проверить решение',nextLabel:'Следующее задание →',referenceAction:undefined as undefined|(()=>void)};
 }
 export type WorkspaceModel=Omit<ReturnType<typeof useWorkspaceController>,'studentDraft'>&{studentDraft:Pick<ReturnType<typeof useStudentDraft>,'change'|'error'|'conflict'|'resolve'>};
 export function Workspace(props:Parameters<typeof useWorkspaceController>[0]){return <WorkspaceView model={useWorkspaceController(props)}/>;}
 export function WorkspaceView({model}:{model:WorkspaceModel}){
-  const {task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode,checkLabel,nextLabel,referenceAction}=model;
+  const {modes,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode,checkLabel,nextLabel,referenceAction}=model;
   const [inputsExpanded,setInputsExpanded]=useState(false),consoleRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{if(result){setInputsExpanded(false);if(consoleRef.current)consoleRef.current.scrollTop=0}},[result]);
   return (
@@ -288,10 +296,11 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
             }
           }}
         >
+          {modes?.enabled && <ModeBar modes={modes} />}
           <div className="editor-toolbar">
             <span>
               <Glyph name="code" />
-              main.py
+              {modes && modes.mode !== "python" ? MODE_LABEL[modes.mode] : "main.py"}
             </span>
             <span>
               <button
@@ -310,6 +319,18 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               Python <span className="live-dot" />
             </span>
           </div>
+          {modes && modes.mode !== "python" ? (
+            <div className={`block-area ${modes.mode}`}>
+              <BlockEditor
+                value={modes.blocks.workspace}
+                palette={modes.palette}
+                readOnly={readOnly || busy || submission.busy}
+                onChange={(w) => modes.blocks.change(w)}
+                onSelect={(_, statement) => modes.setSelected(statement)}
+              />
+              {modes.mode === "mixed" && <PythonMirror modes={modes} />}
+            </div>
+          ) : (
           <fieldset disabled={readOnly || busy || submission.busy}>
             <MinimalCodeEditor
               value={code}
@@ -319,11 +340,21 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               rows={16}
             />
           </fieldset>
+          )}
+          {modes?.blocks.error && modes.mode !== "python" && <p className="error" role="alert">{modes.blocks.error}</p>}
+          {modes?.blocks.conflict && modes.mode !== "python" && (
+            <section className="conflict-panel">
+              <h2>В другой вкладке сохранены другие блоки</h2>
+              <p>Оба варианта сохранены в истории.</p>
+              <button onClick={() => void modes.blocks.resolve("server")}>Открыть блоки из другой вкладки</button>
+              <button onClick={() => void modes.blocks.resolve("mine")}>Оставить мои блоки</button>
+            </section>
+          )}
           <div className="editor-bottom">
             <small
               className={saved === "Не удалось сохранить" ? "error" : "muted"}
             >
-              {saved}
+              {modes && modes.mode !== "python" ? modes.blocks.saved : saved}
             </small>
             <div className="actions">
               <button
@@ -442,5 +473,52 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
         </section>
       )}
     </>
+  );
+}
+
+/** Mode switcher: only allowed modes; says who opens the others and that work is kept. */
+function ModeBar({ modes }: { modes: SolvingModes }) {
+  const others = (["blocks", "mixed", "python"] as Mode[]).filter((m) => modes.modes?.supported.includes(m) && !modes.available.includes(m));
+  return (
+    <div className="mode-bar">
+      <div className="mode-switch" role="radiogroup" aria-label="Способ решения">
+        {modes.available.map((m) => (
+          <button key={m} role="radio" aria-checked={modes.mode === m} className={`mode-${m}`} disabled={modes.mode !== m && !modes.canSwitch(m)} onClick={() => void modes.switchTo(m)}>
+            {MODE_LABEL[m]}
+          </button>
+        ))}
+      </div>
+      <small className="muted">
+        {modes.modes?.switching === "free" ? "Переключайся сам: работа в каждом режиме сохраняется." : modes.modes?.switching === "teacher" ? "Другие режимы открывает учитель." : "Режим выбрал учитель."}
+        {others.length > 0 && ` Пока закрыто: ${others.map((m) => MODE_LABEL[m]).join(", ")}.`}
+      </small>
+      {modes.offered && (
+        <div className="mode-offer" role="status">
+          <span>Учитель предлагает перейти в режим «{MODE_LABEL[modes.offered]}».</span>
+          <button className="primary small" onClick={() => void modes.switchTo(modes.offered!)}>Перейти</button>
+          <button className="small" onClick={() => void modes.switchTo(modes.offered!, true)}>Позже</button>
+        </div>
+      )}
+      {modes.notice && <p className="mode-notice" role="status">{modes.notice}</p>}
+    </div>
+  );
+}
+
+/** Read-only Python built from the learner's own blocks, with the selected block's lines highlighted. */
+function PythonMirror({ modes }: { modes: SolvingModes }) {
+  const range = modes.selected ? modes.mirror.lines[modes.selected] : undefined;
+  const lines = modes.mirror.python.trimEnd().split("\n");
+  return (
+    <section className="python-mirror" aria-label="Python из твоих блоков" aria-live="polite">
+      <h3>Python из твоих блоков</h3>
+      {modes.mirror.ok ? (
+        <pre className="mirror-code">{lines.map((line, i) => (
+          <div key={i} className={range && i + 1 >= range[0] && i + 1 <= range[1] ? "highlight" : ""}><span className="ln">{i + 1}</span>{line}</div>
+        ))}</pre>
+      ) : (
+        <ul className="mirror-errors">{modes.mirror.errors.slice(0, 4).map((e, i) => <li key={i}>{e.message}</li>)}</ul>
+      )}
+      <small className="muted">Этот код собран из твоих блоков. Выбери блок — подсветится его строка.</small>
+    </section>
   );
 }

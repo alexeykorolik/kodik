@@ -10,7 +10,7 @@ import '../../src/adaptive/blocklyBlocks'
 import { translateWorkspace, validateWorkspaceShape } from '../../src/adaptive/blockProgram'
 
 // Blockly keeps shadow blocks as XML internally; a small XML DOM replaces jsdom here.
-Blockly.utils.xml.injectDependencies({ document: new DOMImplementation().createDocument(null, null, null), DOMParser, XMLSerializer } as never)
+Blockly.utils.xml.injectDependencies({ document: new DOMImplementation().createDocument(null, "xml", null), DOMParser, XMLSerializer } as never)
 // Events are not needed for a load/save check and would serialize to XML (no DOM here).
 Blockly.Events.disable()
 

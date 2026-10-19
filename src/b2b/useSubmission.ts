@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type Row } from "./api";
-type Pending = { request_key: string; code: string; jobId?: string };
+/** What is being submitted: Python code or a block workspace (the server translates blocks itself). */
+export type SubmissionPayload = { mode?: "python" | "blocks" | "mixed"; code?: string; workspace?: unknown; client_translator?: string };
+type Pending = SubmissionPayload & { request_key: string; jobId?: string };
 export function useSubmission(
   owner: { id: string; org_id: string },
   taskId: string,
@@ -37,7 +39,8 @@ export function useSubmission(
       let result = current.jobId
         ? await api(`/submissions/${current.jobId}`)
         : await api(`/tasks/${taskId}/submissions`, {
-            code: current.code,
+            mode: current.mode ?? "python",
+            ...(current.mode && current.mode !== "python" ? { workspace: current.workspace, client_translator: current.client_translator } : { code: current.code }),
             request_key: current.request_key,
             assignment_id:assignmentId,
           });
@@ -87,9 +90,11 @@ export function useSubmission(
       window.removeEventListener("online", online);
     };
   }, [key]);
-  async function submit(code: string) {
+  async function submit(payload: SubmissionPayload) {
+    // A pending submission keeps its key and exact content until it completes, so a lost
+    // response or a reload never creates a second result.
     if (!pending.current) {
-      pending.current = { request_key: crypto.randomUUID(), code };
+      pending.current = { request_key: crypto.randomUUID(), ...payload };
       remember();
     }
     await resume();
