@@ -394,7 +394,7 @@ export function Builder({
                                   : e.target.value.split("\n"),
                               )
                             }
-                            placeholder="Каждый input — новая строка"
+                            placeholder="Каждый ввод — с новой строки"
                           />
                         </label>
                         <label>

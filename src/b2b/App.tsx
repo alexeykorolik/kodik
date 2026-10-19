@@ -229,7 +229,7 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
       <section className="auth-story">
         <a className="brand" href="/" aria-label="Kodik">
           <span className="brand-mark">k.</span>kodik
-          <span className="brand-suffix">schools</span>
+          <span className="brand-suffix">школы</span>
         </a>
         <div className="auth-copy">
           <div className="eyebrow">ПРОСТРАНСТВО ДЛЯ ОБУЧЕНИЯ</div>
@@ -248,10 +248,10 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
           <div className="code-art">
             <span className="code-dots">● ● ●</span>
             <code>
-              <span>def</span> start_learning():
-              <br />　 curiosity = <i>True</i>
-              <br />　 <span>while</span> curiosity:
-              <br />　 　 create_something()
+              <span>def</span> начать_учиться():
+              <br />　 любопытство = <i>True</i>
+              <br />　 <span>while</span> любопытство:
+              <br />　 　 создать_что_нибудь()
             </code>
             <div className="art-tag">↗ Новые навыки каждый день</div>
           </div>
@@ -1410,8 +1410,8 @@ export default function B2BApp() {
           </div>
           <div className="banner-art" aria-hidden="true">
             <span>↗</span>
-            <code>{"{ learn }"}</code>
-            <small>python · practice · progress</small>
+            <code>{"{ учимся }"}</code>
+            <small>код · практика · рост</small>
           </div>
         </section>
         <div className="stats">
@@ -1554,7 +1554,7 @@ export default function B2BApp() {
       <aside className="sidebar">
         <a className="brand" href="#overview">
           <span className="brand-mark">k.</span>kodik
-          <span className="brand-suffix">schools</span>
+          <span className="brand-suffix">школы</span>
         </a>
         <div className="school-switch">
           <span className="school-avatar">

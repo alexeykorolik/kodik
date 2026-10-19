@@ -60,7 +60,7 @@ for(const width of [1366,1920]) test(`learner: keyboard blocks, restore, mirror 
 
   // Python mode: a separate draft. The block program is not copied into it.
   await modeSwitch.getByRole("radio", { name: "Python", exact: true }).click();
-  const editor = page.locator(".coding-panel textarea").first();
+  const editor = page.locator("#python-answer");
   await expect(editor).not.toHaveValue(/int\(input\(\)\)/);
   await editor.fill("n = int(input())\nprint(n * 2)\n");
   await page.getByRole("button", { name: /Проверить решение/ }).click();

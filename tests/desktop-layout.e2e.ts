@@ -84,7 +84,7 @@ for (const screen of SCREENS) test(`desktop ${screen.name}: lesson screens fit, 
     // Learner workspace: the check button is reachable at this size.
     await call(context.request, "/auth/login", { login: student, password });
     await page.goto(`/#assignment/${assignmentId}`);
-    await expect(page.locator(".coding-panel textarea").first()).toBeVisible();
+    await expect(page.locator("#python-answer")).toBeVisible();
     await fits(page, `${screen.name} learner`);
     await reachable(page, page.getByRole("button", { name: /Проверить решение/ }), `${screen.name} learner check`);
     await page.getByText("Нужна помощь").click();

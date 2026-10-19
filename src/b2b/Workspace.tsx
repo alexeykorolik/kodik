@@ -309,14 +309,14 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 aria-label="Уменьшить шрифт кода"
                 onClick={() => setFontSize((s) => Math.max(14, s - 1))}
               >
-                A−
+                А−
               </button>
-              <span>{fontSize}px</span>
+              <span aria-label={`Размер шрифта ${fontSize}`}>{fontSize} пт</span>
               <button
                 aria-label="Увеличить шрифт кода"
                 onClick={() => setFontSize((s) => Math.min(24, s + 1))}
               >
-                A+
+                А+
               </button>
               Python <span className="live-dot" />
             </span>
@@ -394,7 +394,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                   value={inputs}
                   onChange={(e) => setInputs(e.target.value)}
                   rows={2}
-                  placeholder="Каждая строка — отдельный input"
+                  placeholder="Каждая строка — отдельный ввод"
                 />
               </label>
             </details>
