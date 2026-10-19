@@ -73,6 +73,19 @@ test("environment compatibility covers new issuance and already issued work; his
     assert.equal(h.db.prepare("SELECT verification_id FROM task_versions WHERE id=?").get(published.version_id).verification_id, proofId, "published snapshot unchanged");
     await h.request(`/tasks/${task.id}/run`, { assignment_id: assignment.id, mode: "python", code: CODE, inputs: ["2"] }, kid);
     assert.equal(reverify(h).reverified, 0, "idempotent");
+
+    // The version is already confirmed, but work is still held (e.g. held before another process
+    // confirmed it). A dry run only reports that a normal run would resume it; nothing changes.
+    const template = h.db.prepare("SELECT * FROM submission_jobs WHERE id='accepted-before-update'").get();
+    h.db.prepare("INSERT INTO submission_jobs(id,org_id,user_id,task_id,request_key,code,snapshot,status,created_at,updated_at,assignment_id,version_id,mode,source,translator,policy) VALUES(?,?,?,?,?,?,?,'held',?,?,?,?,?,?,?,?)").run("held-while-current", template.org_id, template.user_id, template.task_id, "held-while-current-key", template.code, template.snapshot, new Date().toISOString(), new Date().toISOString(), template.assignment_id, template.version_id, template.mode, template.source, template.translator, template.policy);
+    const beforeDry = snapshot();
+    const report = JSON.parse(execFileSync(process.execPath, ["scripts/reverify-published.mjs", "--db", h.dbPath, "--dry-run"], { encoding: "utf8" }));
+    assert.equal(report.dry_run, true); assert.equal(report.would_release, 1); assert.equal(report.released, undefined); assert.equal(report.reverified, 0);
+    assert.equal(snapshot(), beforeDry, "dry run changed the database");
+    assert.equal(h.db.prepare("SELECT status FROM submission_jobs WHERE id='held-while-current'").get().status, "held");
+    const real = reverify(h);
+    assert.equal(real.released, 1);
+    assert.equal((await wait(h, kid, "held-while-current", ["completed"])).result.status, "passed");
   } finally { await h.close(); }
 });
 
