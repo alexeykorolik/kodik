@@ -11,6 +11,7 @@ const children = (node: Statement | Expr): (Statement | Expr)[] => {
     case 'function': return node.body
     case 'list': return node.items
     case 'binary': return [node.left, node.right]
+    case 'compare': return node.operands
     case 'call': return node.args
     case 'index': return [node.target, node.index]
     default: return []
@@ -22,7 +23,7 @@ export function structureError(program: Statement[], run: PythonRun, rules: stri
   for (const rule of rules) {
     const [type, value] = rule.split(':'); let valid = false
     if (type === 'kind') valid = relevant.some(node => node.kind === value)
-    if (type === 'op') valid = relevant.some(node => node.kind === 'binary' && node.operator === value)
+    if (type === 'op') valid = relevant.some(node => node.kind === 'binary' && node.operator === value || node.kind==='compare'&&node.operators.includes(value))
     if (type === 'call') valid = relevant.some(node => node.kind === 'call' && node.name === value)
     if (type === 'assign') valid = relevant.filter(node => node.kind === 'assign').length >= Number(value)
     if (type === 'print' || type === 'input') valid = relevant.filter(node => node.kind === 'call' && node.name === type).length >= Number(value)

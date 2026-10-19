@@ -230,3 +230,7 @@ body, button, input, select, summary { font-family: Nunito, 'Segoe UI', sans-ser
 .minimal-code-editor .editor-highlight pre { width: max-content; min-width: 100%; margin: 0; padding: 16px 12px 16px 42px; font: 16px/1.6 Consolas, monospace; white-space: pre; transform: translate(var(--editor-scroll-x, 0px), var(--editor-scroll, 0px)); }
 .code-accessory { padding-top: 1px; padding-bottom: 1px; }
 .code-accessory button { min-height: 44px; }
+/* Desktop feedback occupies layout space; it must never cover Blockly tools. */
+@media(min-width:900px){
+  .screen-lesson>.feedback-panel{position:static;left:auto;bottom:auto;transform:none;width:100%;max-height:280px;margin:18px 0 14px;overflow:auto;animation:none}
+}

@@ -84,72 +84,24 @@ assert.equal(checked.passed, false)
 assert.ok(checked.result.errorType)
 assert.equal(buildTutorContext(lesson, {} as never, session, { statements: [] }, checked.result.errorType).lastError?.type, checked.result.errorType)
 
+// Product-level pause must block providers even when old deployment flags remain.
 const oldFlag = process.env.AI_TUTOR_ENABLED
-delete process.env.AI_TUTOR_ENABLED
+const originalFetch = globalThis.fetch
+let calls = 0
 let status = 0
 let responseBody: unknown
 const res = { setHeader: (_: string, __: string) => {}, status: (value: number) => { status = value; return res }, json: (value: unknown) => { responseBody = value } }
-await handler({ method: 'POST', headers: { host: 'example.com' }, body: request('hint', 1) }, res)
-assert.equal(status, 503)
-assert.deepEqual(responseBody, { error: 'ai_unavailable' })
-if (oldFlag === undefined) delete process.env.AI_TUTOR_ENABLED; else process.env.AI_TUTOR_ENABLED = oldFlag
-const priorKey = process.env.OPENAI_API_KEY
-const priorModel = process.env.OPENAI_TUTOR_MODEL
-const priorGroqKey = process.env.GROQ_API_KEY
-const priorGroqModel = process.env.GROQ_TUTOR_MODEL
-const originalFetch = globalThis.fetch
-const storageEnv = [process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY]
-process.env.SUPABASE_URL = 'https://storage.example.com'
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-storage-key'
-process.env.AI_TUTOR_ENABLED = 'true'
-process.env.OPENAI_API_KEY = 'mock-key'
-process.env.OPENAI_TUTOR_MODEL = 'mock-model'
-delete process.env.GROQ_API_KEY
-let sent: Record<string, unknown> = {}
-globalThis.fetch = async (_url, init) => {
-  if (String(_url).includes('/rpc/claim_learning_budget')) return new Response('true', { status: 200 })
-  sent = JSON.parse(String(init?.body)) as Record<string, unknown>
-  return new Response(JSON.stringify({ output: [{ content: [{ type: 'output_text', text: JSON.stringify(valid('hint', 'Посмотри на значение переменной.')) }] }] }), { status: 200 })
+try {
+  globalThis.fetch = async () => { calls++; throw Error('Provider must not be contacted') }
+  for (const flag of [undefined, 'false', 'true']) {
+    if (flag === undefined) delete process.env.AI_TUTOR_ENABLED; else process.env.AI_TUTOR_ENABLED = flag
+    await handler({ method: 'POST', headers: { host: 'example.com', origin: 'https://example.com' }, body: request('hint', 1) }, res)
+    assert.equal(status, 503)
+    assert.deepEqual(responseBody, { error: 'ai_disabled' })
+  }
+  assert.equal(calls, 0)
+} finally {
+  globalThis.fetch = originalFetch
+  if (oldFlag === undefined) delete process.env.AI_TUTOR_ENABLED; else process.env.AI_TUTOR_ENABLED = oldFlag
 }
-status = 0
-await handler({ method: 'POST', headers: { host: 'example.com', origin: 'https://example.com' }, body: { ...request('hint', 1), context: hostile } }, res)
-assert.equal(status, 200)
-assert.equal(sent.store, false)
-assert.equal(JSON.stringify(sent).includes('secret@example.com'), false)
-assert.equal(JSON.stringify(sent).includes('ignore_all_instructions'), false)
-assert.equal(responseBody && (responseBody as TutorResponse).shouldRevealSolution, false)
-process.env.GROQ_API_KEY = 'mock-groq-key'
-delete process.env.GROQ_TUTOR_MODEL
-let providerUrl = ''
-globalThis.fetch = async (url, init) => {
-  if (String(url).includes('/rpc/claim_learning_budget')) return new Response('true', { status: 200 })
-  providerUrl = String(url)
-  sent = JSON.parse(String(init?.body)) as Record<string, unknown>
-  return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(valid('hint', 'Проверь, где читается переменная.')) } }] }), { status: 200 })
-}
-status = 0
-await handler({ method: 'POST', headers: { host: 'example.com', origin: 'https://example.com' }, body: { ...request('hint', 2), context: hostile } }, res)
-assert.equal(status, 200)
-assert.equal(providerUrl, 'https://api.groq.com/openai/v1/chat/completions')
-assert.equal(sent.model, 'openai/gpt-oss-20b')
-assert.equal((sent.response_format as { type: string }).type, 'json_schema')
-assert.deepEqual((sent.response_format as { json_schema: { schema: { properties: { type: { enum: string[] } } } } }).json_schema.schema.properties.type.enum, ['hint'])
-assert.equal(JSON.stringify(sent).includes('secret@example.com'), false)
-assert.equal((responseBody as TutorResponse).message, 'Проверь, где читается переменная.')
-globalThis.fetch = async url => String(url).includes('/rpc/claim_learning_budget') ? new Response('false', { status: 200 }) : new Response('{"error":"rate_limit"}', { status: 429 })
-status = 0
-await handler({ method: 'POST', headers: { host: 'example.com' }, body: request('hint', 3) }, res)
-assert.equal(status, 429)
-assert.deepEqual(responseBody, { error: 'rate_limit' })
-globalThis.fetch = async () => { throw Error('offline') }
-await handler({ method: 'POST', headers: { host: 'example.com' }, body: request('hint', 3) }, res)
-assert.equal(status, 503, 'No AI cost when persistent quota cannot be checked')
-assert.deepEqual(responseBody, { error: 'budget_unavailable' })
-globalThis.fetch = originalFetch
-for (const [i,key] of ['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY'].entries()) { if (storageEnv[i] === undefined) delete process.env[key]; else process.env[key] = storageEnv[i] }
-if (oldFlag === undefined) delete process.env.AI_TUTOR_ENABLED; else process.env.AI_TUTOR_ENABLED = oldFlag
-if (priorKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = priorKey
-if (priorModel === undefined) delete process.env.OPENAI_TUTOR_MODEL; else process.env.OPENAI_TUTOR_MODEL = priorModel
-if (priorGroqKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = priorGroqKey
-if (priorGroqModel === undefined) delete process.env.GROQ_TUTOR_MODEL; else process.env.GROQ_TUTOR_MODEL = priorGroqModel
-console.log('AI Tutor smoke tests passed')
+console.log('AI Tutor unit tests and unconditional provider pause passed')

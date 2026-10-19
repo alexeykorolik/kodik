@@ -3,6 +3,7 @@ export default defineConfig({
   testDir: './tests', testMatch: '**/*.spec.ts', timeout: 60000, fullyParallel: false, workers: 1,
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1',
+    env: { VITE_LEGACY_TEST: 'true' },
     url: 'http://127.0.0.1:5173',
     reuseExistingServer: true,
     timeout: 120000

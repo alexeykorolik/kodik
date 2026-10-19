@@ -1,0 +1,31 @@
+name: Critical school workflows
+on:
+  push:
+  pull_request:
+jobs:
+  critical:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11.9
+      - run: npm ci
+      - run: npm run check:critical
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failures
+          path: |
+            test-results
+            work/legacy-critical
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: measured-local-load
+          path: work/pilot-load-report.json

@@ -1,10 +1,11 @@
 export type Value = string | number | boolean | Value[] | null
 export type Expr =
-  | { kind: 'literal'; value: Value }
+  | { kind: 'literal'; value: Value; float?: boolean }
   | { kind: 'name'; name: string }
   | { kind: 'list'; items: Expr[] }
   | { kind: 'unary'; operator: string; value: Expr }
   | { kind: 'binary'; operator: string; left: Expr; right: Expr }
+  | { kind: 'compare'; operands: Expr[]; operators: string[] }
   | { kind: 'call'; name: string; args: Expr[] }
   | { kind: 'index'; target: Expr; index: Expr }
 export type Statement =
@@ -22,8 +23,10 @@ export type CourseRun = { output: string[]; segments: Segment[]; error?: string;
 export type CourseCheck = CourseRun & { passed: boolean; message: string }
 
 const namePattern = /^[\p{L}_][\p{L}\p{N}_]*$/u
-const forbidden = new Set('import from as class async await lambda global nonlocal exec eval open del yield try except finally with raise break continue'.split(' '))
+const forbidden = new Set('False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield exec eval open'.split(' '))
+const builtins = new Set('print input int str len range forward right left'.split(' '))
 function validName(name: string) { return namePattern.test(name) && !forbidden.has(name) && !name.startsWith('__') }
+function variableName(name: string) { return validName(name) && !builtins.has(name) }
 function syntax(message: string): never { throw new Error(message) }
 
 function tokenize(source: string): string[] {
@@ -35,11 +38,11 @@ function tokenize(source: string): string[] {
     if (whitespace) { position += whitespace[0].length; continue }
     const string = /^(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/.exec(rest)
     if (string) { tokens.push(string[0]); position += string[0].length; continue }
-    const number = /^\d+(?:\.\d+)?/.exec(rest)
+    const number = /^(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?/.exec(rest)
     if (number) { tokens.push(number[0]); position += number[0].length; continue }
     const name = /^[\p{L}_][\p{L}\p{N}_]*/u.exec(rest)
     if (name) { tokens.push(name[0]); position += name[0].length; continue }
-    const operator = /^(==|!=|>=|<=|\*\*|[+\-*/%><(),\[\]])/.exec(rest)
+    const operator = /^(==|!=|>=|<=|\*\*|\/\/|[+\-*/%><(),\[\]])/.exec(rest)
     if (operator) { tokens.push(operator[0]); position += operator[0].length; continue }
     syntax(`Незнакомый фрагмент «${rest.slice(0, 12)}». Проверь синтаксис.`)
   }
@@ -47,7 +50,21 @@ function tokenize(source: string): string[] {
 }
 
 function decodeString(token: string): string {
-  return token.slice(1, -1).replace(/\\(n|t|\\|"|')/g, (_match, code: string) => ({ n: '\n', t: '\t', '\\': '\\', '"': '"', "'": "'" })[code]!)
+  const source=token.slice(1,-1),escapes:Record<string,string>={a:'\x07',b:'\b',f:'\f',n:'\n',r:'\r',t:'\t',v:'\v','\\':'\\','"':'"',"'":"'"};let result=''
+  for(let i=0;i<source.length;i++){
+    if(source[i]!=='\\'){result+=source[i];continue}
+    const code=source[++i]
+    if(code in escapes){result+=escapes[code];continue}
+    if(/[0-7]/.test(code)) {const digits=/^[0-7]{1,3}/.exec(source.slice(i))![0];result+=String.fromCodePoint(parseInt(digits,8));i+=digits.length-1;continue}
+    if(['x','u','U'].includes(code)){
+      const length=code==='x'?2:code==='u'?4:8,digits=source.slice(i+1,i+1+length),point=parseInt(digits,16)
+      if(digits.length!==length||!/^[0-9a-f]+$/i.test(digits)||point>0x10ffff)syntax('Проверь код символа после обратной косой черты.')
+      result+=String.fromCodePoint(point);i+=length;continue
+    }
+    if(code==='N')syntax('Имена символов через \\N пока не поддерживаются. Вставь сам символ.')
+    result+='\\'+code
+  }
+  return result
 }
 
 class ExpressionParser {
@@ -63,11 +80,16 @@ class ExpressionParser {
   }
   private expression(minPrecedence: number): Expr {
     let left = this.primary()
-    const precedence: Record<string, number> = { or: 1, and: 2, '==': 3, '!=': 3, '>': 3, '>=': 3, '<': 3, '<=': 3, '+': 4, '-': 4, '*': 5, '/': 5, '%': 5, '**': 6 }
+    const precedence: Record<string, number> = { or: 1, and: 2, '==': 3, '!=': 3, '>': 3, '>=': 3, '<': 3, '<=': 3, '+': 4, '-': 4, '*': 5, '/': 5, '//': 5, '%': 5, '**': 6 }
     while (precedence[this.peek()] && precedence[this.peek()] >= minPrecedence) {
       const operator = this.take()
       const priority = precedence[operator]
       const right = this.expression(priority + (operator === '**' ? 0 : 1))
+      if(priority===3 && precedence[this.peek()]===3){
+        const operands=[left,right],operators=[operator]
+        while(precedence[this.peek()]===3){operators.push(this.take());operands.push(this.expression(4))}
+        left={kind:'compare',operands,operators};continue
+      }
       left = { kind: 'binary', operator, left, right }
     }
     return left
@@ -76,15 +98,21 @@ class ExpressionParser {
     const token = this.take()
     if (!token) syntax('После знака не хватает значения.')
     let value: Expr
-    if (token === '-' || token === 'not') value = { kind: 'unary', operator: token, value: this.expression(6) }
+    if (token === '-' || token === '+' || token === 'not') value = { kind: 'unary', operator: token, value: this.expression(token==='not'?3:6) }
     else if (token === '(') { value = this.expression(0); this.expect(')') }
     else if (token === '[') {
       const items: Expr[] = []
       while (this.peek() !== ']') { if (!this.peek()) syntax('Не закрыт список.'); items.push(this.expression(0)); if (this.peek() !== ']') this.expect(',') }
       this.expect(']'); value = { kind: 'list', items }
     } else if (/^['"]/.test(token)) value = { kind: 'literal', value: decodeString(token) }
-    else if (/^\d/.test(token)) value = { kind: 'literal', value: Number(token) }
+    else if (/^[\d.]/.test(token)) {
+      const floating=/[.eE]/.test(token),number=Number(token.replace(/_/g,''))
+      if(!floating&&!/^(?:0(?:_?0)*|[1-9](?:_?\d)*)$/.test(token))syntax('В целом числе нельзя ставить лишний ноль в начале.')
+      if(!Number.isFinite(number)||!floating&&!Number.isSafeInteger(number))syntax('Число выходит за пределы учебного диапазона.')
+      value = { kind: 'literal', value: number, ...(floating?{float:true}:{}) }
+    }
     else if (token === 'True' || token === 'False') value = { kind: 'literal', value: token === 'True' }
+    else if (token === 'None') value = { kind: 'literal', value: null }
     else if (validName(token)) value = { kind: 'name', name: token }
     else syntax(`Неожиданный знак «${token}».`)
     while (this.peek() === '(' || this.peek() === '[') {
@@ -104,14 +132,26 @@ class ExpressionParser {
 function expression(source: string) { return new ExpressionParser(tokenize(source)).parse() }
 
 type SourceLine = { number: number; indent: number; text: string }
+function withoutComment(raw: string) {
+  let quote='',escaped=false
+  for(let i=0;i<raw.length;i++){
+    const char=raw[i]
+    if(escaped){escaped=false;continue}
+    if(quote&&char==='\\'){escaped=true;continue}
+    if(quote){if(char===quote)quote='';continue}
+    if(char==='"'||char==="'"){quote=char;continue}
+    if(char==='#')return raw.slice(0,i)
+  }
+  return raw
+}
 export function parseCourseProgram(source: string): Statement[] {
   if (source.length > 12000) syntax('Программа слишком длинная для учебного запуска.')
-  const lines: SourceLine[] = source.replace(/\t/g, '    ').split(/\r?\n/).map((raw, index) => ({ number: index + 1, indent: /^ */.exec(raw)![0].length, text: raw.trim() })).filter(line => line.text && !line.text.startsWith('#'))
+  const lines: SourceLine[] = source.replace(/\t/g, '    ').split(/\r?\n/).map((raw, index) => ({ number: index + 1, indent: /^ */.exec(raw)![0].length, text: withoutComment(raw).trim() })).filter(line => line.text)
   if (!lines.length) syntax('Напиши решение или добавь команды, затем нажми «Проверить».')
   if (lines.length > 250) syntax('Оставь не больше 250 строк.')
   if (lines.some(line => line.indent % 4 !== 0)) syntax('Для вложенной команды используй отступ в 4 пробела.')
   let cursor = 0
-  const block = (indent: number): Statement[] => {
+  const block = (indent: number,functionDepth=0): Statement[] => {
     const result: Statement[] = []
     while (cursor < lines.length) {
       const line = lines[cursor]
@@ -119,7 +159,7 @@ export function parseCourseProgram(source: string): Statement[] {
       if (line.indent > indent) syntax(`Строка ${line.number}: неожиданный отступ.`)
       if (line.text === 'else:' || line.text.startsWith('elif ')) break
       cursor++
-      const nested = () => { const body = block(indent + 4); if (!body.length) syntax(`Строка ${line.number}: после двоеточия нужна команда с отступом.`); return body }
+      const nested = (functionBody=false) => { const body = block(indent + 4,functionDepth+(functionBody?1:0)); if (!body.length) syntax(`Строка ${line.number}: после двоеточия нужна команда с отступом.`); return body }
       let match: RegExpExecArray | null
       if ((match = /^if\s+(.+):$/.exec(line.text))) {
         const branches = [{ condition: expression(match[1]), body: nested() }]
@@ -129,19 +169,21 @@ export function parseCourseProgram(source: string): Statement[] {
         result.push({ kind: 'if', branches, otherwise }); continue
       }
       if ((match = /^for\s+([\p{L}_][\p{L}\p{N}_]*)\s+in\s+(.+):$/u.exec(line.text))) {
-        if (!validName(match[1])) syntax(`Строка ${line.number}: неверное имя счётчика.`)
+        if (!variableName(match[1])) syntax(`Строка ${line.number}: неверное имя счётчика.`)
         result.push({ kind: 'for', name: match[1], iterable: expression(match[2]), body: nested() }); continue
       }
       if ((match = /^while\s+(.+):$/.exec(line.text))) { result.push({ kind: 'while', condition: expression(match[1]), body: nested() }); continue }
       if ((match = /^def\s+([\p{L}_][\p{L}\p{N}_]*)\s*\(([^()]*)\):$/u.exec(line.text))) {
+        if(functionDepth)syntax('Вложенные функции пока не поддерживаются. Опиши функции отдельно.')
         const params = match[2].trim() ? match[2].split(',').map(item => item.trim()) : []
-        if (!validName(match[1]) || params.some(name => !validName(name)) || new Set(params).size !== params.length) syntax(`Строка ${line.number}: проверь имя функции и параметры.`)
-        result.push({ kind: 'function', name: match[1], params, body: nested() }); continue
+        if (!variableName(match[1]) || params.some(name => !variableName(name)) || new Set(params).size !== params.length) syntax(`Строка ${line.number}: проверь имя функции и параметры; имена встроенных команд не переопределяй.`)
+        result.push({ kind: 'function', name: match[1], params, body: nested(true) }); continue
       }
       if ((match = /^return\s+(.+)$/.exec(line.text))) { result.push({ kind: 'return', value: expression(match[1]) }); continue }
+      if(line.text==='return'){result.push({kind:'return',value:{kind:'literal',value:null}});continue}
       if (line.text === 'pass') { result.push({ kind: 'pass' }); continue }
       if ((match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*=\s*(.+)$/u.exec(line.text))) {
-        if (!validName(match[1])) syntax(`Строка ${line.number}: неверное имя переменной.`)
+        if (!variableName(match[1])) syntax(`Строка ${line.number}: неверное имя переменной; имена встроенных команд не переопределяй.`)
         result.push({ kind: 'assign', name: match[1], index: match[2] ? expression(match[2]) : undefined, value: expression(match[3]) }); continue
       }
       if (/^(if|elif|else|while|for|def)\b/.test(line.text)) syntax(`Строка ${line.number}: после условия, цикла или def нужны двоеточие и строка с отступом.`)

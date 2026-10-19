@@ -401,9 +401,14 @@ function supportForMode(mode = "blocks") {
 var fail = (message) => {
   throw new Error(message);
 };
-var number2 = (v) => typeof v === "number" && Number.isFinite(v) ? v : fail("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u043E \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u0430\u0432\u044B\u0447\u043A\u0438 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u0432\u0432\u043E\u0434\u0430 \u0447\u0435\u0440\u0435\u0437 int.");
+var number2 = (v) => typeof v === "boolean" ? Number(v) : typeof v === "number" && Number.isFinite(v) ? v : fail("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u043E \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u0430\u0432\u044B\u0447\u043A\u0438 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u0432\u0432\u043E\u0434\u0430 \u0447\u0435\u0440\u0435\u0437 int.");
+var truth = (v) => Array.isArray(v) ? v.length > 0 : Boolean(v);
+var equal = (a, b) => {
+  if (a === b) return true;
+  if ((typeof a === "number" || typeof a === "boolean") && (typeof b === "number" || typeof b === "boolean")) return Number(a) === Number(b);
+  return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => equal(v, b[i]));
+};
 var list = (v) => Array.isArray(v) ? v : fail("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u0435\u043D \u0441\u043F\u0438\u0441\u043E\u043A.");
-var display2 = (v) => Array.isArray(v) ? `[${v.map((item) => typeof item === "string" ? JSON.stringify(item) : display2(item)).join(", ")}]` : typeof v === "boolean" ? v ? "True" : "False" : v === null ? "None" : String(v);
 var ReturnSignal = class {
   constructor(result) {
     this.result = result;
@@ -412,8 +417,66 @@ var ReturnSignal = class {
 function runPythonAst(program, inputs = []) {
   const output = [], segments = [], observed = /* @__PURE__ */ new Set(), reassigned = /* @__PURE__ */ new Set();
   let operations = 0, inputCursor = 0, x = 0, y = 0, heading = 0;
+  let pendingOutput = "";
+  const write = (text3) => {
+    pendingOutput += text3;
+    if (pendingOutput.length + output.reduce((n, line) => n + line.length, 0) > 1e5) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0432\u044B\u0432\u043E\u0434\u0430.");
+    let newline;
+    while ((newline = pendingOutput.indexOf("\n")) >= 0) {
+      if (output.length >= 500) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0441\u0442\u0440\u043E\u043A \u0432\u044B\u0432\u043E\u0434\u0430.");
+      output.push(pendingOutput.slice(0, newline));
+      pendingOutput = pendingOutput.slice(newline + 1);
+    }
+  };
+  const flushOutput = () => {
+    if (pendingOutput) {
+      output.push(pendingOutput);
+      pendingOutput = "";
+    }
+  };
   const drawingTrail = /* @__PURE__ */ new Set();
   const globals = /* @__PURE__ */ new Map(), functions = /* @__PURE__ */ new Map();
+  const floats = /* @__PURE__ */ new WeakMap();
+  const localNames = /* @__PURE__ */ new WeakMap();
+  const display2 = (v, floating = false, seen = /* @__PURE__ */ new Set(), repr = false) => {
+    tick();
+    if (Array.isArray(v)) {
+      if (seen.has(v)) return "[...]";
+      const nested = /* @__PURE__ */ new Set([...seen, v]);
+      return `[${v.map((item, i) => display2(item, floats.get(v)?.has(i), nested, true)).join(", ")}]`;
+    }
+    if (typeof v === "string" && repr) {
+      const quote = v.includes("'") && !v.includes('"') ? '"' : "'";
+      return quote + Array.from(v).map((char) => {
+        if (char === "\\" || char === quote) return "\\" + char;
+        if (char === "\n") return "\\n";
+        if (char === "\r") return "\\r";
+        if (char === "	") return "\\t";
+        if (char !== " " && /[\p{C}\p{Z}]/u.test(char)) {
+          const point = char.codePointAt(0);
+          return point <= 255 ? "\\x" + point.toString(16).padStart(2, "0") : point <= 65535 ? "\\u" + point.toString(16).padStart(4, "0") : "\\U" + point.toString(16).padStart(8, "0");
+        }
+        return char;
+      }).join("") + quote;
+    }
+    if (typeof v === "number" && floating) {
+      if (Object.is(v, -0)) return "-0.0";
+      if (v !== 0 && (Math.abs(v) < 1e-4 || Math.abs(v) >= 1e16)) return v.toExponential().replace(/e([+-])(\d)$/, "e$10$2");
+      return Number.isInteger(v) ? `${v}.0` : String(v);
+    }
+    return typeof v === "boolean" ? v ? "True" : "False" : v === null ? "None" : String(v);
+  };
+  const compare2 = (a, b, operator) => {
+    if (operator === "==") return equal(a, b);
+    if (operator === "!=") return !equal(a, b);
+    let order2;
+    if ((typeof a === "number" || typeof a === "boolean") && (typeof b === "number" || typeof b === "boolean")) order2 = Number(a) - Number(b);
+    else if (typeof a === "string" && typeof b === "string") {
+      const lhs = Array.from(a), rhs = Array.from(b), index = lhs.findIndex((char, i) => char !== rhs[i]);
+      order2 = index < 0 ? lhs.length - rhs.length : index >= rhs.length ? 1 : lhs[index].codePointAt(0) - rhs[index].codePointAt(0);
+    } else return fail("\u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0439 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0438\u043B\u0438 \u0434\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438.");
+    return operator === "<" ? order2 < 0 : operator === "<=" ? order2 <= 0 : operator === ">" ? order2 > 0 : order2 >= 0;
+  };
   const tick = () => {
     if (++operations > 1e4) fail("\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u043E\u043A\u043E\u043D\u0447\u0430\u043D\u0438\u044F \u0446\u0438\u043A\u043B\u0430.");
   };
@@ -423,70 +486,125 @@ function runPythonAst(program, inputs = []) {
   };
   const evaluate2 = (node, scope, depth, control) => {
     tick();
-    const done = (value, children2 = []) => track(value, node, children2, control);
-    if (node.kind === "literal") return done(node.value);
+    const done = (value, children2 = [], floating = false) => ({ ...track(value, node, children2, control), float: typeof value === "number" && floating });
+    if (node.kind === "literal") return done(node.value, [], node.float);
     if (node.kind === "name") {
-      const value = scope.get(node.name) || globals.get(node.name);
+      const value = scope.get(node.name) || (!localNames.get(scope)?.has(node.name) ? globals.get(node.name) : void 0);
       if (!value) return fail(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0437\u0430\u0434\u0430\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \xAB${node.name}\xBB.`);
-      return done(value.value, [value]);
+      return done(value.value, [value], value.float);
     }
     if (node.kind === "list") {
       if (node.items.length > 1e3) fail("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
-      const items = node.items.map((item) => evaluate2(item, scope, depth, control));
-      return done(items.map((item) => item.value), items);
+      const items = node.items.map((item) => evaluate2(item, scope, depth, control)), values2 = items.map((item) => item.value);
+      floats.set(values2, new Set(items.flatMap((item, i) => item.float ? [i] : [])));
+      return done(values2, items);
     }
     if (node.kind === "unary") {
       const child = evaluate2(node.value, scope, depth, control);
-      return done(node.operator === "not" ? !child.value : -number2(child.value), [child]);
+      return done(node.operator === "not" ? !truth(child.value) : node.operator === "+" ? number2(child.value) : -number2(child.value), [child], child.float);
+    }
+    if (node.kind === "compare") {
+      const children2 = [evaluate2(node.operands[0], scope, depth, control)];
+      for (let i = 0; i < node.operators.length; i++) {
+        const right = evaluate2(node.operands[i + 1], scope, depth, control);
+        children2.push(right);
+        if (!compare2(children2[i].value, right.value, node.operators[i])) return done(false, children2);
+      }
+      return done(true, children2);
     }
     if (node.kind === "index") {
-      const target = evaluate2(node.target, scope, depth, control), position = evaluate2(node.index, scope, depth, control), values2 = list(target.value), index = number2(position.value);
-      if (!Number.isInteger(index) || index < -values2.length || index >= values2.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043D\u0434\u0435\u043A\u0441: \u043F\u0435\u0440\u0432\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0438\u043C\u0435\u0435\u0442 \u0438\u043D\u0434\u0435\u043A\u0441 0.");
-      return done(values2[index < 0 ? values2.length + index : index], [target, position]);
+      const target = evaluate2(node.target, scope, depth, control), position = evaluate2(node.index, scope, depth, control), values2 = typeof target.value === "string" ? Array.from(target.value) : list(target.value), index = number2(position.value);
+      if (position.float || !Number.isInteger(index) || index < -values2.length || index >= values2.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043D\u0434\u0435\u043A\u0441: \u043F\u0435\u0440\u0432\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0438\u043C\u0435\u0435\u0442 \u0438\u043D\u0434\u0435\u043A\u0441 0.");
+      const offset = index < 0 ? values2.length + index : index;
+      return done(values2[offset], [target, position], floats.get(values2)?.has(offset));
     }
     if (node.kind === "binary") {
       const left = evaluate2(node.left, scope, depth, control);
-      if (node.operator === "and" && !left.value || node.operator === "or" && left.value) return done(left.value, [left]);
+      if (node.operator === "and" && !truth(left.value) || node.operator === "or" && truth(left.value)) return done(left.value, [left], left.float);
       const right = evaluate2(node.right, scope, depth, control), a = left.value, b = right.value, children2 = [left, right];
-      if (node.operator === "and" || node.operator === "or") return done(b, children2);
-      if (node.operator === "==") return done(JSON.stringify(a) === JSON.stringify(b), children2);
-      if (node.operator === "!=") return done(JSON.stringify(a) !== JSON.stringify(b), children2);
+      if (node.operator === "and" || node.operator === "or") return done(b, children2, right.float);
+      if (node.operator === "==") return done(equal(a, b), children2);
+      if (node.operator === "!=") return done(!equal(a, b), children2);
       if (["<", "<=", ">", ">="].includes(node.operator)) {
-        if (typeof a !== typeof b || typeof a !== "number" && typeof a !== "string") fail("\u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0439 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0438\u043B\u0438 \u0434\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438.");
-        const lhs2 = a, rhs2 = b;
-        return done(node.operator === "<" ? lhs2 < rhs2 : node.operator === "<=" ? lhs2 <= rhs2 : node.operator === ">" ? lhs2 > rhs2 : lhs2 >= rhs2, children2);
+        return done(compare2(a, b, node.operator), children2);
       }
-      if (node.operator === "+" && typeof a === "string" && typeof b === "string") return done(a + b, children2);
+      if (node.operator === "+" && typeof a === "string" && typeof b === "string") {
+        if (a.length + b.length > 12e3) fail("\u0421\u0442\u0440\u043E\u043A\u0430 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u0430\u044F.");
+        return done(a + b, children2);
+      }
+      if (node.operator === "+" && Array.isArray(a) && Array.isArray(b)) {
+        if (a.length + b.length > 1e3) fail("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
+        const result2 = [...a, ...b];
+        floats.set(result2, /* @__PURE__ */ new Set([...floats.get(a) || [], ...[...floats.get(b) || []].map((i) => i + a.length)]));
+        return done(result2, children2);
+      }
+      if (node.operator === "*" && (typeof a === "string" || Array.isArray(a) || typeof b === "string" || Array.isArray(b))) {
+        const sequence = typeof a === "string" || Array.isArray(a) ? left : right, count = sequence === left ? right : left, n = number2(count.value);
+        if (count.float || !Number.isInteger(n)) fail("\u0414\u043B\u044F \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u044F \u0441\u0442\u0440\u043E\u043A\u0438 \u0438\u043B\u0438 \u0441\u043F\u0438\u0441\u043A\u0430 \u043D\u0443\u0436\u043D\u043E \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E.");
+        const value = sequence.value, times = Math.max(0, n);
+        if (times * value.length > (typeof value === "string" ? 12e3 : 1e3)) fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
+        if (typeof value === "string") return done(value.repeat(times), children2);
+        if (!value.length) return done([], children2);
+        const result2 = [], metadata2 = /* @__PURE__ */ new Set();
+        for (let i = 0; i < times; i++) for (let j = 0; j < value.length; j++) {
+          if (floats.get(value)?.has(j)) metadata2.add(result2.length);
+          result2.push(value[j]);
+        }
+        floats.set(result2, metadata2);
+        return done(result2, children2);
+      }
       const lhs = number2(a), rhs = number2(b);
-      if (["/", "%"].includes(node.operator) && rhs === 0) fail("\u0414\u0435\u043B\u0438\u0442\u044C \u043D\u0430 \u043D\u043E\u043B\u044C \u043D\u0435\u043B\u044C\u0437\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C.");
-      const result = node.operator === "+" ? lhs + rhs : node.operator === "-" ? lhs - rhs : node.operator === "*" ? lhs * rhs : node.operator === "/" ? lhs / rhs : node.operator === "%" ? (lhs % rhs + rhs) % rhs : lhs ** rhs;
+      if (["/", "//", "%"].includes(node.operator) && rhs === 0) fail("\u0414\u0435\u043B\u0438\u0442\u044C \u043D\u0430 \u043D\u043E\u043B\u044C \u043D\u0435\u043B\u044C\u0437\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C.");
+      let remainder = 0, quotient = 0;
+      if (node.operator === "//" || node.operator === "%") {
+        remainder = lhs % rhs;
+        quotient = (lhs - remainder) / rhs;
+        if (remainder !== 0) {
+          if (remainder < 0 !== rhs < 0) {
+            remainder += rhs;
+            quotient--;
+          }
+        } else remainder = rhs < 0 ? -0 : 0;
+        if (quotient !== 0) {
+          const floor = Math.floor(quotient);
+          quotient = floor + (quotient - floor > 0.5 ? 1 : 0);
+        } else quotient = lhs / rhs < 0 || Object.is(lhs / rhs, -0) ? -0 : 0;
+      }
+      const result = node.operator === "+" ? lhs + rhs : node.operator === "-" ? lhs - rhs : node.operator === "*" ? lhs * rhs : node.operator === "/" ? lhs / rhs : node.operator === "//" ? quotient : node.operator === "%" ? remainder : lhs ** rhs;
       if (!Number.isFinite(result) || Math.abs(result) > 1e12) fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435.");
-      return done(result, children2);
+      return done(result, children2, node.operator === "/" || left.float || right.float || node.operator === "**" && rhs < 0);
     }
     const args = node.args.map((arg) => evaluate2(arg, scope, depth, control)), values = args.map((arg) => arg.value);
     if (node.name === "print") {
-      if (output.length >= 500) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0441\u0442\u0440\u043E\u043A \u0432\u044B\u0432\u043E\u0434\u0430.");
-      output.push(values.map(display2).join(" "));
+      write(args.map((arg) => display2(arg.value, arg.float)).join(" ") + "\n");
       observe(done(null, args));
       return done(null, args);
     }
     if (node.name === "input") {
       if (args.length > 1) fail("\u0412 input \u0434\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E \u043E\u0434\u043D\u043E\u0439 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0438.");
+      if (args.length) {
+        write(display2(values[0], args[0].float));
+        observe(done(null, args));
+      }
       if (inputCursor >= inputs.length) fail("\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043A\u043E\u043C\u0430\u043D\u0434 input: \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u044F \u0432\u0432\u043E\u0434 \u0443\u0436\u0435 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.");
       return done(inputs[inputCursor++], args);
     }
     if (["int", "str", "len"].includes(node.name)) {
+      if (args.length === 0 && node.name !== "len") return done(node.name === "int" ? 0 : "", args);
       if (args.length !== 1) fail(`${node.name} \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.`);
-      if (node.name === "str") return done(display2(values[0]), args);
-      if (node.name === "len") return done(list(values[0]).length, args);
-      const value = Number(values[0]);
-      if (!Number.isInteger(value)) fail("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044C \u0432\u0432\u043E\u0434 \u0432 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C int(input()).");
+      if (node.name === "str") return done(display2(values[0], args[0].float), args);
+      if (node.name === "len") return done(typeof values[0] === "string" ? Array.from(values[0]).length : list(values[0]).length, args);
+      const source = values[0];
+      if (typeof source === "string" && !/^[+-]?\d(?:_?\d)*$/.test(source.trim())) fail("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044C \u0432\u0432\u043E\u0434 \u0432 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C int(input()).");
+      if (typeof source !== "number" && typeof source !== "boolean" && typeof source !== "string") fail("\u0412 int \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0447\u0438\u0441\u043B\u043E \u0438\u043B\u0438 \u0441\u0442\u0440\u043E\u043A\u0443 \u0441 \u0446\u0435\u043B\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C.");
+      const value = Math.trunc(typeof source === "string" ? Number(source.trim().replace(/_/g, "")) : Number(source));
+      if (!Number.isFinite(value) || !Number.isSafeInteger(value)) fail("\u0427\u0438\u0441\u043B\u043E \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u044B \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430.");
       return done(value, args);
     }
     if (node.name === "range") {
       if (args.length < 1 || args.length > 3) fail("\u0423 range \u043D\u0443\u0436\u043D\u044B \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430 \u0438, \u0435\u0441\u043B\u0438 \u043D\u0443\u0436\u043D\u043E, \u0448\u0430\u0433.");
       const numbers2 = values.map(number2), start = numbers2.length === 1 ? 0 : numbers2[0], end = numbers2.length === 1 ? numbers2[0] : numbers2[1], step = numbers2[2] ?? 1;
-      if (![start, end, step].every(Number.isInteger) || step === 0) fail("\u0412 range \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0446\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u0438 \u043D\u0435\u043D\u0443\u043B\u0435\u0432\u043E\u0439 \u0448\u0430\u0433.");
+      if (args.some((arg) => arg.float) || ![start, end, step].every(Number.isInteger) || step === 0) fail("\u0412 range \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0446\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u0438 \u043D\u0435\u043D\u0443\u043B\u0435\u0432\u043E\u0439 \u0448\u0430\u0433.");
       const result = [];
       for (let current = start; step > 0 ? current < end : current > end; current += step) {
         if (result.length >= 1e3) fail("\u0414\u0438\u0430\u043F\u0430\u0437\u043E\u043D \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0433\u0440\u0430\u043D\u0438\u0446\u044B range.");
@@ -511,14 +629,28 @@ function runPythonAst(program, inputs = []) {
       return result;
     }
     const fn = functions.get(node.name);
+    if (localNames.get(scope)?.has(node.name) || scope.has(node.name) || globals.has(node.name)) fail(`\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \xAB${node.name}\xBB \u043D\u0435\u043B\u044C\u0437\u044F \u0432\u044B\u0437\u0432\u0430\u0442\u044C \u043A\u0430\u043A \u0444\u0443\u043D\u043A\u0446\u0438\u044E.`);
     if (!fn) return fail(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u043E\u043F\u0438\u0448\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u044E \xAB${node.name}\xBB \u0447\u0435\u0440\u0435\u0437 def, \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0437\u043E\u0432\u0438 \u0435\u0451.`);
     if (fn.params.length !== args.length) fail(`\u042D\u0442\u0430 \u0444\u0443\u043D\u043A\u0446\u0438\u044F \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 ${fn.params.length} \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0437\u043E\u0432 \u0438 \u0441\u0442\u0440\u043E\u043A\u0443 def.`);
     if (depth >= 40) fail("\u0424\u0443\u043D\u043A\u0446\u0438\u044F \u0432\u044B\u0437\u044B\u0432\u0430\u0435\u0442 \u0441\u0435\u0431\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0440\u0430\u0437. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0438.");
     const local = new Map(fn.params.map((name, index) => [name, args[index]])), inside = /* @__PURE__ */ new Set([...control, node, fn]);
+    const names = new Set(fn.params);
+    const collect = (body) => {
+      for (const item of body) {
+        if (item.kind === "assign" && !item.index || item.kind === "for") names.add(item.name);
+        if (item.kind === "for" || item.kind === "while") collect(item.body);
+        if (item.kind === "if") {
+          item.branches.forEach((branch) => collect(branch.body));
+          collect(item.otherwise);
+        }
+      }
+    };
+    collect(fn.body);
+    localNames.set(local, names);
     try {
       execute(fn.body, local, depth + 1, inside);
     } catch (signal) {
-      if (signal instanceof ReturnSignal) return done(signal.result.value, [signal.result, ...args]);
+      if (signal instanceof ReturnSignal) return done(signal.result.value, [signal.result, ...args], signal.result.float);
       throw signal;
     }
     return track(null, fn, args, inside);
@@ -528,26 +660,31 @@ function runPythonAst(program, inputs = []) {
       tick();
       if (item.kind === "pass") continue;
       if (item.kind === "function") {
+        scope.delete(item.name);
         functions.set(item.name, item);
         continue;
       }
       if (item.kind === "return") {
         if (!depth) fail("\u041F\u043E\u043C\u0435\u0441\u0442\u0438 return \u0432\u043D\u0443\u0442\u0440\u044C \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0441 \u043E\u0442\u0441\u0442\u0443\u043F\u043E\u043C.");
         const result = evaluate2(item.value, scope, depth, control);
-        throw new ReturnSignal(track(result.value, item, [result], control));
+        throw new ReturnSignal({ ...track(result.value, item, [result], control), float: result.float });
       }
       if (item.kind === "expression") {
         evaluate2(item.value, scope, depth, /* @__PURE__ */ new Set([...control, item]));
         continue;
       }
       if (item.kind === "assign") {
-        const result = evaluate2(item.value, scope, depth, control), assigned = track(result.value, item, [result], control);
+        const result = evaluate2(item.value, scope, depth, control), assigned = { ...track(result.value, item, [result], control), float: result.float };
         if (item.index) {
-          const owner = scope.get(item.name) || globals.get(item.name);
+          const owner = scope.get(item.name) || (!localNames.get(scope)?.has(item.name) ? globals.get(item.name) : void 0);
           if (!owner) fail("\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u043E\u0437\u0434\u0430\u0439 \u0441\u043F\u0438\u0441\u043E\u043A, \u0437\u0430\u0442\u0435\u043C \u043C\u0435\u043D\u044F\u0439 \u0435\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442.");
           const values = list(owner.value), position = evaluate2(item.index, scope, depth, control), index = number2(position.value);
-          if (!Number.isInteger(index) || index < -values.length || index >= values.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442.");
-          values[index < 0 ? values.length + index : index] = result.value;
+          if (position.float || !Number.isInteger(index) || index < -values.length || index >= values.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442.");
+          const offset = index < 0 ? values.length + index : index, metadata2 = floats.get(values) || /* @__PURE__ */ new Set();
+          values[offset] = result.value;
+          if (result.float) metadata2.add(offset);
+          else metadata2.delete(offset);
+          floats.set(values, metadata2);
           for (const node of [...assigned.trail, ...position.trail]) owner.trail.add(node);
         } else {
           if (scope.has(item.name)) reassigned.add(item);
@@ -561,7 +698,7 @@ function runPythonAst(program, inputs = []) {
         for (const branch of item.branches) {
           const condition = evaluate2(branch.condition, scope, depth, control);
           tests.push(condition);
-          if (condition.value) {
+          if (truth(condition.value)) {
             body = branch.body;
             break;
           }
@@ -571,16 +708,17 @@ function runPythonAst(program, inputs = []) {
       }
       if (item.kind === "for") {
         const source = evaluate2(item.iterable, scope, depth, control), inside = track(null, item, [source], control).trail;
-        for (const value of list(source.value)) {
+        const values = typeof source.value === "string" ? Array.from(source.value) : list(source.value);
+        for (const [index, value] of values.entries()) {
           tick();
-          scope.set(item.name, track(value, item, [source], control));
+          scope.set(item.name, { ...track(value, item, [source], control), float: floats.get(values)?.has(index) });
           execute(item.body, scope, depth, inside);
         }
         continue;
       }
       while (true) {
         const condition = evaluate2(item.condition, scope, depth, control);
-        if (!condition.value) break;
+        if (!truth(condition.value)) break;
         tick();
         execute(item.body, scope, depth, track(null, item, [condition], control).trail);
       }
@@ -588,8 +726,10 @@ function runPythonAst(program, inputs = []) {
   };
   try {
     execute(program, globals, 0, /* @__PURE__ */ new Set());
+    flushOutput();
     return { output, segments, operations, observed, reassigned };
   } catch (error) {
+    flushOutput();
     return { output, segments, operations, observed, reassigned, error: error instanceof Error ? error.message : "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u044B \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B." };
   }
 }
@@ -603,9 +743,13 @@ function runCourseProgram(source, inputs = []) {
 
 // src/pythonRuntime.ts
 var namePattern = /^[\p{L}_][\p{L}\p{N}_]*$/u;
-var forbidden = new Set("import from as class async await lambda global nonlocal exec eval open del yield try except finally with raise break continue".split(" "));
+var forbidden = new Set("False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield exec eval open".split(" "));
+var builtins = new Set("print input int str len range forward right left".split(" "));
 function validName2(name) {
   return namePattern.test(name) && !forbidden.has(name) && !name.startsWith("__");
+}
+function variableName(name) {
+  return validName2(name) && !builtins.has(name);
 }
 function syntax(message) {
   throw new Error(message);
@@ -626,7 +770,7 @@ function tokenize(source) {
       position += string[0].length;
       continue;
     }
-    const number3 = /^\d+(?:\.\d+)?/.exec(rest);
+    const number3 = /^(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?/.exec(rest);
     if (number3) {
       tokens.push(number3[0]);
       position += number3[0].length;
@@ -638,7 +782,7 @@ function tokenize(source) {
       position += name[0].length;
       continue;
     }
-    const operator = /^(==|!=|>=|<=|\*\*|[+\-*/%><(),\[\]])/.exec(rest);
+    const operator = /^(==|!=|>=|<=|\*\*|\/\/|[+\-*/%><(),\[\]])/.exec(rest);
     if (operator) {
       tokens.push(operator[0]);
       position += operator[0].length;
@@ -649,7 +793,35 @@ function tokenize(source) {
   return tokens;
 }
 function decodeString(token) {
-  return token.slice(1, -1).replace(/\\(n|t|\\|"|')/g, (_match, code) => ({ n: "\n", t: "	", "\\": "\\", '"': '"', "'": "'" })[code]);
+  const source = token.slice(1, -1), escapes = { a: "\x07", b: "\b", f: "\f", n: "\n", r: "\r", t: "	", v: "\v", "\\": "\\", '"': '"', "'": "'" };
+  let result = "";
+  for (let i = 0; i < source.length; i++) {
+    if (source[i] !== "\\") {
+      result += source[i];
+      continue;
+    }
+    const code = source[++i];
+    if (code in escapes) {
+      result += escapes[code];
+      continue;
+    }
+    if (/[0-7]/.test(code)) {
+      const digits = /^[0-7]{1,3}/.exec(source.slice(i))[0];
+      result += String.fromCodePoint(parseInt(digits, 8));
+      i += digits.length - 1;
+      continue;
+    }
+    if (["x", "u", "U"].includes(code)) {
+      const length = code === "x" ? 2 : code === "u" ? 4 : 8, digits = source.slice(i + 1, i + 1 + length), point = parseInt(digits, 16);
+      if (digits.length !== length || !/^[0-9a-f]+$/i.test(digits) || point > 1114111) syntax("\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u0434 \u0441\u0438\u043C\u0432\u043E\u043B\u0430 \u043F\u043E\u0441\u043B\u0435 \u043E\u0431\u0440\u0430\u0442\u043D\u043E\u0439 \u043A\u043E\u0441\u043E\u0439 \u0447\u0435\u0440\u0442\u044B.");
+      result += String.fromCodePoint(point);
+      i += length;
+      continue;
+    }
+    if (code === "N") syntax("\u0418\u043C\u0435\u043D\u0430 \u0441\u0438\u043C\u0432\u043E\u043B\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 \\N \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F. \u0412\u0441\u0442\u0430\u0432\u044C \u0441\u0430\u043C \u0441\u0438\u043C\u0432\u043E\u043B.");
+    result += "\\" + code;
+  }
+  return result;
 }
 var ExpressionParser = class {
   constructor(tokens) {
@@ -672,11 +844,20 @@ var ExpressionParser = class {
   }
   expression(minPrecedence) {
     let left = this.primary();
-    const precedence = { or: 1, and: 2, "==": 3, "!=": 3, ">": 3, ">=": 3, "<": 3, "<=": 3, "+": 4, "-": 4, "*": 5, "/": 5, "%": 5, "**": 6 };
+    const precedence = { or: 1, and: 2, "==": 3, "!=": 3, ">": 3, ">=": 3, "<": 3, "<=": 3, "+": 4, "-": 4, "*": 5, "/": 5, "//": 5, "%": 5, "**": 6 };
     while (precedence[this.peek()] && precedence[this.peek()] >= minPrecedence) {
       const operator = this.take();
       const priority = precedence[operator];
       const right = this.expression(priority + (operator === "**" ? 0 : 1));
+      if (priority === 3 && precedence[this.peek()] === 3) {
+        const operands = [left, right], operators = [operator];
+        while (precedence[this.peek()] === 3) {
+          operators.push(this.take());
+          operands.push(this.expression(4));
+        }
+        left = { kind: "compare", operands, operators };
+        continue;
+      }
       left = { kind: "binary", operator, left, right };
     }
     return left;
@@ -685,7 +866,7 @@ var ExpressionParser = class {
     const token = this.take();
     if (!token) syntax("\u041F\u043E\u0441\u043B\u0435 \u0437\u043D\u0430\u043A\u0430 \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F.");
     let value;
-    if (token === "-" || token === "not") value = { kind: "unary", operator: token, value: this.expression(6) };
+    if (token === "-" || token === "+" || token === "not") value = { kind: "unary", operator: token, value: this.expression(token === "not" ? 3 : 6) };
     else if (token === "(") {
       value = this.expression(0);
       this.expect(")");
@@ -699,8 +880,13 @@ var ExpressionParser = class {
       this.expect("]");
       value = { kind: "list", items };
     } else if (/^['"]/.test(token)) value = { kind: "literal", value: decodeString(token) };
-    else if (/^\d/.test(token)) value = { kind: "literal", value: Number(token) };
-    else if (token === "True" || token === "False") value = { kind: "literal", value: token === "True" };
+    else if (/^[\d.]/.test(token)) {
+      const floating = /[.eE]/.test(token), number3 = Number(token.replace(/_/g, ""));
+      if (!floating && !/^(?:0(?:_?0)*|[1-9](?:_?\d)*)$/.test(token)) syntax("\u0412 \u0446\u0435\u043B\u043E\u043C \u0447\u0438\u0441\u043B\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043B\u0438\u0448\u043D\u0438\u0439 \u043D\u043E\u043B\u044C \u0432 \u043D\u0430\u0447\u0430\u043B\u0435.");
+      if (!Number.isFinite(number3) || !floating && !Number.isSafeInteger(number3)) syntax("\u0427\u0438\u0441\u043B\u043E \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u044B \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430.");
+      value = { kind: "literal", value: number3, ...floating ? { float: true } : {} };
+    } else if (token === "True" || token === "False") value = { kind: "literal", value: token === "True" };
+    else if (token === "None") value = { kind: "literal", value: null };
     else if (validName2(token)) value = { kind: "name", name: token };
     else syntax(`\u041D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u044B\u0439 \u0437\u043D\u0430\u043A \xAB${token}\xBB.`);
     while (this.peek() === "(" || this.peek() === "[") {
@@ -728,14 +914,38 @@ var ExpressionParser = class {
 function expression(source) {
   return new ExpressionParser(tokenize(source)).parse();
 }
+function withoutComment(raw) {
+  let quote = "", escaped = false;
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quote && char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = "";
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "#") return raw.slice(0, i);
+  }
+  return raw;
+}
 function parseCourseProgram(source) {
   if (source.length > 12e3) syntax("\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u0430\u044F \u0434\u043B\u044F \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0437\u0430\u043F\u0443\u0441\u043A\u0430.");
-  const lines = source.replace(/\t/g, "    ").split(/\r?\n/).map((raw, index) => ({ number: index + 1, indent: /^ */.exec(raw)[0].length, text: raw.trim() })).filter((line) => line.text && !line.text.startsWith("#"));
+  const lines = source.replace(/\t/g, "    ").split(/\r?\n/).map((raw, index) => ({ number: index + 1, indent: /^ */.exec(raw)[0].length, text: withoutComment(raw).trim() })).filter((line) => line.text);
   if (!lines.length) syntax("\u041D\u0430\u043F\u0438\u0448\u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 \u0434\u043E\u0431\u0430\u0432\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u044B, \u0437\u0430\u0442\u0435\u043C \u043D\u0430\u0436\u043C\u0438 \xAB\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C\xBB.");
   if (lines.length > 250) syntax("\u041E\u0441\u0442\u0430\u0432\u044C \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 250 \u0441\u0442\u0440\u043E\u043A.");
   if (lines.some((line) => line.indent % 4 !== 0)) syntax("\u0414\u043B\u044F \u0432\u043B\u043E\u0436\u0435\u043D\u043D\u043E\u0439 \u043A\u043E\u043C\u0430\u043D\u0434\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043E\u0442\u0441\u0442\u0443\u043F \u0432 4 \u043F\u0440\u043E\u0431\u0435\u043B\u0430.");
   let cursor = 0;
-  const block = (indent) => {
+  const block = (indent, functionDepth = 0) => {
     const result = [];
     while (cursor < lines.length) {
       const line = lines[cursor];
@@ -743,8 +953,8 @@ function parseCourseProgram(source) {
       if (line.indent > indent) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u044B\u0439 \u043E\u0442\u0441\u0442\u0443\u043F.`);
       if (line.text === "else:" || line.text.startsWith("elif ")) break;
       cursor++;
-      const nested = () => {
-        const body = block(indent + 4);
+      const nested = (functionBody = false) => {
+        const body = block(indent + 4, functionDepth + (functionBody ? 1 : 0));
         if (!body.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u043E\u0441\u043B\u0435 \u0434\u0432\u043E\u0435\u0442\u043E\u0447\u0438\u044F \u043D\u0443\u0436\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u0441 \u043E\u0442\u0441\u0442\u0443\u043F\u043E\u043C.`);
         return body;
       };
@@ -764,7 +974,7 @@ function parseCourseProgram(source) {
         continue;
       }
       if (match = /^for\s+([\p{L}_][\p{L}\p{N}_]*)\s+in\s+(.+):$/u.exec(line.text)) {
-        if (!validName2(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u0441\u0447\u0451\u0442\u0447\u0438\u043A\u0430.`);
+        if (!variableName(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u0441\u0447\u0451\u0442\u0447\u0438\u043A\u0430.`);
         result.push({ kind: "for", name: match[1], iterable: expression(match[2]), body: nested() });
         continue;
       }
@@ -773,13 +983,18 @@ function parseCourseProgram(source) {
         continue;
       }
       if (match = /^def\s+([\p{L}_][\p{L}\p{N}_]*)\s*\(([^()]*)\):$/u.exec(line.text)) {
+        if (functionDepth) syntax("\u0412\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F. \u041E\u043F\u0438\u0448\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E.");
         const params = match[2].trim() ? match[2].split(",").map((item) => item.trim()) : [];
-        if (!validName2(match[1]) || params.some((name) => !validName2(name)) || new Set(params).size !== params.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0438 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B.`);
-        result.push({ kind: "function", name: match[1], params, body: nested() });
+        if (!variableName(match[1]) || params.some((name) => !variableName(name)) || new Set(params).size !== params.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0438 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B; \u0438\u043C\u0435\u043D\u0430 \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u0430\u043D\u0434 \u043D\u0435 \u043F\u0435\u0440\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0439.`);
+        result.push({ kind: "function", name: match[1], params, body: nested(true) });
         continue;
       }
       if (match = /^return\s+(.+)$/.exec(line.text)) {
         result.push({ kind: "return", value: expression(match[1]) });
+        continue;
+      }
+      if (line.text === "return") {
+        result.push({ kind: "return", value: { kind: "literal", value: null } });
         continue;
       }
       if (line.text === "pass") {
@@ -787,7 +1002,7 @@ function parseCourseProgram(source) {
         continue;
       }
       if (match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*=\s*(.+)$/u.exec(line.text)) {
-        if (!validName2(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439.`);
+        if (!variableName(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439; \u0438\u043C\u0435\u043D\u0430 \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u0430\u043D\u0434 \u043D\u0435 \u043F\u0435\u0440\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0439.`);
         result.push({ kind: "assign", name: match[1], index: match[2] ? expression(match[2]) : void 0, value: expression(match[3]) });
         continue;
       }
@@ -1183,6 +1398,8 @@ var children = (node) => {
       return node.items;
     case "binary":
       return [node.left, node.right];
+    case "compare":
+      return node.operands;
     case "call":
       return node.args;
     case "index":
@@ -1200,7 +1417,7 @@ function structureError(program, run, rules) {
     const [type, value] = rule.split(":");
     let valid = false;
     if (type === "kind") valid = relevant.some((node) => node.kind === value);
-    if (type === "op") valid = relevant.some((node) => node.kind === "binary" && node.operator === value);
+    if (type === "op") valid = relevant.some((node) => node.kind === "binary" && node.operator === value || node.kind === "compare" && node.operators.includes(value));
     if (type === "call") valid = relevant.some((node) => node.kind === "call" && node.name === value);
     if (type === "assign") valid = relevant.filter((node) => node.kind === "assign").length >= Number(value);
     if (type === "print" || type === "input") valid = relevant.filter((node) => node.kind === "call" && node.name === type).length >= Number(value);
@@ -1240,7 +1457,7 @@ function summarizePython(program) {
 }
 
 // src/extendedChecker.ts
-var equal = (actual, reference, drawing) => !actual.error && !reference.error && actual.output.length === reference.output.length && actual.output.every((value, i) => value === reference.output[i]) && (!drawing || actual.segments.length === reference.segments.length && actual.segments.every((part, i) => ["x1", "y1", "x2", "y2"].every((key) => Math.abs(part[key] - reference.segments[i][key]) < 0.02)));
+var equal2 = (actual, reference, drawing) => !actual.error && !reference.error && actual.output.length === reference.output.length && actual.output.every((value, i) => value === reference.output[i]) && (!drawing || actual.segments.length === reference.segments.length && actual.segments.every((part, i) => ["x1", "y1", "x2", "y2"].every((key) => Math.abs(part[key] - reference.segments[i][key]) < 0.02)));
 var clone = (value) => JSON.parse(JSON.stringify(value));
 var dataValue = (node) => {
   if (node.kind !== "assign" || node.index) return void 0;
@@ -1261,7 +1478,7 @@ function generalizes(actual, reference, inputs, drawing) {
     const expected = clone(reference), candidate = clone(actual), replacement = changed(value);
     expected[i].value = { kind: "literal", value: replacement };
     candidate[candidateIndex].value = { kind: "literal", value: replacement };
-    if (!equal(runPythonAst(candidate, inputs), runPythonAst(expected, inputs), drawing)) return false;
+    if (!equal2(runPythonAst(candidate, inputs), runPythonAst(expected, inputs), drawing)) return false;
     if (seen.size >= 3) break;
   }
   const refRun = runPythonAst(reference, inputs), actualRun = runPythonAst(actual, inputs);
@@ -1277,7 +1494,7 @@ function generalizes(actual, reference, inputs, drawing) {
       const probeArgs = stringArgs ? args.map((_, index) => ({ kind: "literal", value: `\u0413\u043E\u0441\u0442\u044C${n + index}` })) : args;
       const returns = [...refRun.observed].some((node) => node.kind === "return");
       const call2 = (name) => ({ kind: "expression", value: returns ? { kind: "call", name: "print", args: [{ kind: "call", name, args: probeArgs }] } : { kind: "call", name, args: probeArgs } });
-      if (!equal(runPythonAst([...actual, call2(candidate.name)], inputs), runPythonAst([...reference, call2(fn.name)], inputs), drawing)) return false;
+      if (!equal2(runPythonAst([...actual, call2(candidate.name)], inputs), runPythonAst([...reference, call2(fn.name)], inputs), drawing)) return false;
     }
   }
   return true;
@@ -1299,7 +1516,7 @@ function checkExtendedLesson(lesson, answer) {
   const structural = structureError(ast, primary, lesson.extended.rules);
   if (structural) return failed(structural);
   for (const inputs of lesson.extended.inputs) {
-    if (!equal(runCourseProgram(source, inputs), runCourseProgram(lesson.codeAnswer, inputs), !!lesson.extended.drawing)) return failed(lesson.extended.drawing ? "\u0420\u0438\u0441\u0443\u043D\u043E\u043A \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u043B\u0438\u043D\u044B, \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u044B \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043B\u0438\u043D\u0438\u0439." : "\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0434\u0430\u0451\u0442 \u0434\u0440\u0443\u0433\u043E\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439.");
+    if (!equal2(runCourseProgram(source, inputs), runCourseProgram(lesson.codeAnswer, inputs), !!lesson.extended.drawing)) return failed(lesson.extended.drawing ? "\u0420\u0438\u0441\u0443\u043D\u043E\u043A \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u043B\u0438\u043D\u044B, \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u044B \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043B\u0438\u043D\u0438\u0439." : "\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0434\u0430\u0451\u0442 \u0434\u0440\u0443\u0433\u043E\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439.");
   }
   if (!generalizes(ast, parseCourseProgram(lesson.codeAnswer), lesson.extended.inputs[0], !!lesson.extended.drawing)) return failed("\u0421 \u0434\u0440\u0443\u0433\u0438\u043C\u0438 \u0434\u0430\u043D\u043D\u044B\u043C\u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u0451\u0442 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0445 \u0438 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u044B \u0444\u0443\u043D\u043A\u0446\u0438\u0438, \u0447\u0442\u043E\u0431\u044B \u0432\u044B\u0447\u0438\u0441\u043B\u044F\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.");
   return { passed: true, message: lesson.success || "\u041F\u043E\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C!", result: { output: primary.output, segments: primary.segments, systemError: false }, program };
