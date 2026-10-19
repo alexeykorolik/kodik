@@ -155,7 +155,29 @@ const migrations = [
     CREATE INDEX task_verifications_revision ON task_verifications(org_id,task_id,revision,created_at);
     ALTER TABLE task_versions ADD COLUMN verification_id TEXT REFERENCES task_verifications(id);
   `)}},
-  {version:10,name:'task_learning_rules',up(db){db.exec("ALTER TABLE tasks ADD COLUMN learning_rules TEXT NOT NULL DEFAULT '[]';")}}
+  {version:10,name:'task_learning_rules',up(db){db.exec("ALTER TABLE tasks ADD COLUMN learning_rules TEXT NOT NULL DEFAULT '[]';")}},
+  // One task, several solving modes (docs/adaptive/MODE_MODEL.md). Existing tasks stay Python-only:
+  // learning_config '{}' means "Python only"; existing assignments get an explicit locked Python policy.
+  {version:11,name:'solving_modes',up(db){db.exec(`
+    ALTER TABLE tasks ADD COLUMN learning_config TEXT NOT NULL DEFAULT '{}';
+    ALTER TABLE tasks ADD COLUMN block_solution TEXT NOT NULL DEFAULT '';
+    ALTER TABLE task_verifications ADD COLUMN block_result TEXT NOT NULL DEFAULT '{}';
+    ALTER TABLE assignments ADD COLUMN mode_policy TEXT NOT NULL DEFAULT '{"allowed":["python"],"start":"python","switching":"locked"}';
+    ALTER TABLE attempts ADD COLUMN mode TEXT NOT NULL DEFAULT 'python' CHECK(mode IN ('python','blocks','mixed'));
+    ALTER TABLE attempts ADD COLUMN source TEXT;
+    ALTER TABLE attempts ADD COLUMN translator TEXT;
+    ALTER TABLE attempts ADD COLUMN policy TEXT;
+    ALTER TABLE submission_jobs ADD COLUMN mode TEXT NOT NULL DEFAULT 'python' CHECK(mode IN ('python','blocks','mixed'));
+    ALTER TABLE submission_jobs ADD COLUMN source TEXT;
+    ALTER TABLE submission_jobs ADD COLUMN translator TEXT;
+    ALTER TABLE submission_jobs ADD COLUMN policy TEXT;
+    CREATE TABLE assignment_block_drafts(user_id TEXT NOT NULL REFERENCES users(id),assignment_id TEXT NOT NULL REFERENCES assignments(id),org_id TEXT NOT NULL REFERENCES organizations(id),workspace TEXT NOT NULL,format INTEGER NOT NULL DEFAULT 1,revision INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL,PRIMARY KEY(user_id,assignment_id));
+    CREATE TABLE assignment_block_draft_history(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id),user_id TEXT NOT NULL REFERENCES users(id),assignment_id TEXT NOT NULL REFERENCES assignments(id),base_revision INTEGER NOT NULL,workspace TEXT NOT NULL,conflict INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL);
+    CREATE TABLE assignment_mode_state(assignment_id TEXT NOT NULL REFERENCES assignments(id),user_id TEXT NOT NULL REFERENCES users(id),org_id TEXT NOT NULL REFERENCES organizations(id),mode TEXT CHECK(mode IS NULL OR mode IN ('python','blocks','mixed')),offered_mode TEXT CHECK(offered_mode IS NULL OR offered_mode IN ('python','blocks','mixed')),override TEXT,revision INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL,updated_by TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(assignment_id,user_id));
+    CREATE TABLE mode_events(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id),assignment_id TEXT NOT NULL REFERENCES assignments(id),user_id TEXT REFERENCES users(id),actor_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL CHECK(kind IN ('policy_changed','override_changed','offered','offer_accepted','offer_declined','switched','teacher_set')),from_mode TEXT,to_mode TEXT,reason TEXT NOT NULL DEFAULT '',details TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+    CREATE INDEX mode_events_assignment ON mode_events(org_id,assignment_id,created_at);
+    CREATE INDEX block_drafts_assignment ON assignment_block_drafts(org_id,assignment_id);
+  `)}}
 ];
 export const schemaVersion = migrations.at(-1).version;
 export function openDatabase(path) {

@@ -1,20 +1,71 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import {grade} from './grader.mjs';
+import {grade,translateBlocks,checkWithBlockly} from './grader.mjs';
 import {taskTemplates} from './task-templates.mjs';
+import {adaptive} from './modes.mjs';
 const digest=s=>createHash('sha256').update(s).digest('hex');
-function runtimeHash(){try{return digest(readFileSync(new URL('../../.runner/runner.cjs',import.meta.url)))}catch{return 'unavailable'}}
-const fingerprint=t=>{const fields=[t.check_mode,t.tests,t.starter,t.reference_solution,t.wrong_solutions,t.manual_criteria];if(t.learning_rules&&t.learning_rules!=='[]')fields.push(t.learning_rules);return digest(JSON.stringify(fields))};
+// Semantic identity of the checking chain (scripts/build-runner.mjs). Python-only tasks depend on the
+// interpreter and learning rules; block tasks additionally on the translator. Rebuilding the bundle
+// without changing these sources keeps approvals valid; a semantic change requires re-verification
+// (scripts/reverify-published.mjs), which records NEW verifications instead of rewriting history.
+function runtimeIdentity(){try{return JSON.parse(readFileSync(new URL('../../.runner/runtime.json',import.meta.url),'utf8'))}catch{return null}}
+const configOf=t=>adaptive.parseLearningConfig(t.learning_config||'{}');
+const usesBlocks=t=>configOf(t).modes.length>0;
+export function runtimeFor(t){const id=runtimeIdentity();if(!id)return 'unavailable';return usesBlocks(t)?`${id.python}+${id.blocks}`:id.python}
+const fingerprint=t=>{
+  const fields=[t.check_mode,t.tests,t.starter,t.reference_solution,t.wrong_solutions,t.manual_criteria];
+  if(t.learning_rules&&t.learning_rules!=='[]')fields.push(t.learning_rules);
+  // Block settings only participate when block modes are on, so Python-only approvals stay valid.
+  const c=configOf(t);
+  if(c.modes.length)fields.push(JSON.stringify({modes:c.modes,palette:c.palette,starter_blocks:c.starter_blocks}),t.block_solution||'');
+  return digest(JSON.stringify(fields));
+};
 export function createTaskQuality({db,own,teacher,fail,tx,validateTask,limit}){
   const get=(sql,...args)=>db.prepare(sql).get(...args);
-  function approval(task){const proof=get("SELECT id,revision,created_at,runtime_hash,status FROM task_verifications WHERE org_id=? AND task_id=? AND revision=? AND fingerprint=? AND runtime_hash=? AND status='approved' ORDER BY created_at DESC LIMIT 1",task.org_id,task.id,task.revision,fingerprint(task),runtimeHash());return proof||null}
+  const parsed=task=>({...task,hints:JSON.parse(task.hints),tests:JSON.parse(task.tests),wrong_solutions:JSON.parse(task.wrong_solutions||'[]'),learning_rules:JSON.parse(task.learning_rules||'[]'),learning_config:JSON.parse(task.learning_config||'{}'),block_solution:task.block_solution?JSON.parse(task.block_solution):''});
+  function approval(task){const proof=get("SELECT id,revision,created_at,runtime_hash,status FROM task_verifications WHERE org_id=? AND task_id=? AND revision=? AND fingerprint=? AND runtime_hash=? AND status='approved' ORDER BY created_at DESC LIMIT 1",task.org_id,task.id,task.revision,fingerprint(task),runtimeFor(task));return proof||null}
   function assertApproved(task){const proof=approval(task);if(!proof)fail(409,'Сначала сохраните и подтвердите проверку именно этой ревизии задания. Изменения требуют новой проверки.');return proof}
-  function assertPublishedVersion(id,u){const version=own('task_versions',id,u),proof=version.verification_id&&get('SELECT * FROM task_verifications WHERE id=? AND org_id=?',version.verification_id,u.org_id);if(!proof||proof.status!=='approved'||proof.runtime_hash!==runtimeHash())fail(409,'Сохраните новую ревизию практики, подтвердите её проверку и опубликуйте перед новой выдачей. Назначенные работы остаются доступны.');return proof}
+  /**
+   * A published version is issuable when its own proof was made in the current checking environment,
+   * or when the compatibility procedure (scripts/reverify-published.mjs) recorded an approved replay of
+   * exactly that snapshot for the current environment. Versions themselves are immutable.
+   */
+  function assertPublishedVersion(id,u){
+    const version=own('task_versions',id,u),snapshot=JSON.parse(version.snapshot),runtime=runtimeFor(snapshot);
+    const proof=version.verification_id&&get('SELECT * FROM task_verifications WHERE id=? AND org_id=?',version.verification_id,u.org_id);
+    if(proof&&proof.status==='approved'&&proof.runtime_hash===runtime)return proof;
+    // Only the explicit compatibility procedure may vouch for an old version in a new environment;
+    // an ordinary re-check of the working draft never replaces the evidence of a published snapshot.
+    const replay=proof&&get("SELECT v.* FROM task_verifications v JOIN audit_log l ON l.org_id=v.org_id AND l.action='task.version_reverified' AND l.target_id=? AND json_extract(l.details,'$.verification_id')=v.id WHERE v.org_id=? AND v.task_id=? AND v.revision=? AND v.fingerprint=? AND v.runtime_hash=? AND v.status='approved' ORDER BY v.created_at DESC LIMIT 1",version.id,u.org_id,version.task_id,version.revision,fingerprint(snapshot),runtime);
+    if(replay)return replay;
+    fail(409,'Сохраните новую ревизию практики, подтвердите её проверку и опубликуйте перед новой выдачей. Назначенные работы остаются доступны.');
+  }
+  /** The block solution must pass through exactly the learner path. */
+  async function blockProof(task,u){
+    const config=configOf(task);
+    if(!config.modes.length)return {status:'not_required'};
+    const solution=task.block_solution?JSON.parse(task.block_solution):null;
+    if(!solution)return {status:'missing',message:'Добавьте закрытый блоковый образец решения.'};
+    const loaded=await checkWithBlockly([solution,config.starter_blocks],config.palette,{tenant:u.org_id});
+    if(loaded.infrastructure)return {status:'checker_error',message:loaded.error};
+    const [sol,starter]=loaded.results||[];
+    if(!sol?.ok)return {status:'bad_block_solution',message:'Блоковый образец: '+(sol?.message||'не открывается в Blockly.')};
+    if(starter&&!starter.ok)return {status:'bad_block_solution',message:'Стартовые блоки: '+starter.message};
+    const translation=await translateBlocks(solution,config.palette,{tenant:u.org_id});
+    if(translation.infrastructure)return {status:'checker_error',message:translation.error};
+    if(!translation.ok)return {status:'bad_block_solution',message:'Блоковый образец не собирается в программу: '+translation.errors[0]?.message,errors:translation.errors};
+    const result=await grade(task,translation.python,{tenant:u.org_id});
+    if(result.status==='checker_error')return {status:'checker_error',message:result.message};
+    if(result.status!=='passed')return {status:'bad_block_solution',message:'Блоковый образец не проходит тесты или учебные правила: '+result.message,result};
+    let starterNote=null;
+    if(starter?.translatable){const t=await translateBlocks(config.starter_blocks,config.palette,{tenant:u.org_id});if(t.ok){const r=await grade(task,t.python,{tenant:u.org_id});if(r.status==='passed')starterNote='Стартовые блоки уже проходят все тесты — ученику нечего делать.'}}
+    return {status:'approved',python:translation.python,translator:translation.translator,used_blocks:translation.block_types,starter_note:starterNote};
+  }
   async function handle(path,method,b,u){
     let match;
     if(path==='/api/task-templates'&&method==='GET'){teacher(u);return {items:taskTemplates}}
     if((match=/^\/api\/tasks\/([^/]+)\/verifications$/.exec(path))&&method==='GET'){
-      teacher(u);own('tasks',match[1],u);return {items:db.prepare('SELECT id,author_id,revision,runtime_hash,status,reference_result,wrong_results,created_at FROM task_verifications WHERE org_id=? AND task_id=? ORDER BY created_at DESC LIMIT 50').all(u.org_id,match[1]).map(v=>({...v,reference_result:JSON.parse(v.reference_result),wrong_results:JSON.parse(v.wrong_results)}))};
+      teacher(u);own('tasks',match[1],u);return {items:db.prepare('SELECT id,author_id,revision,runtime_hash,status,reference_result,wrong_results,block_result,created_at FROM task_verifications WHERE org_id=? AND task_id=? ORDER BY created_at DESC LIMIT 50').all(u.org_id,match[1]).map(v=>({...v,reference_result:JSON.parse(v.reference_result),wrong_results:JSON.parse(v.wrong_results),block_result:JSON.parse(v.block_result||'{}')}))};
     }
     if((match=/^\/api\/tasks\/([^/]+)\/verify$/.exec(path))&&method==='POST'){
       teacher(u);limit(`execute:${u.id}`,50,60000);
@@ -27,9 +78,9 @@ export function createTaskQuality({db,own,teacher,fail,tx,validateTask,limit}){
         if(!task)fail(409,'Исходный снимок проверки недоступен. Текущий черновик не изменён.');
         replay=true;
       }else if(b.revision!==task.revision)fail(409,'Ревизия изменилась. Сохраните актуальный черновик.');
-      validateTask({...task,hints:JSON.parse(task.hints),tests:JSON.parse(task.tests),wrong_solutions:JSON.parse(task.wrong_solutions),learning_rules:JSON.parse(task.learning_rules||'[]')},u,true);
-      const wrong=JSON.parse(task.wrong_solutions),runtime=runtimeHash();
-      let reference,results=[],status;
+      validateTask(parsed(task),u,true);
+      const wrong=JSON.parse(task.wrong_solutions),runtime=runtimeFor(task);
+      let reference,results=[],status,block={status:'not_required'};
       if(task.check_mode==='manual'){
         if(!task.manual_criteria.trim())fail(400,'Добавьте понятные критерии ручной проверки.');
         reference={status:'manual_configured',message:'Критерии ручной проверки сохранены. Качество работы оценивает преподаватель.'};status='approved';
@@ -43,16 +94,17 @@ export function createTaskQuality({db,own,teacher,fail,tx,validateTask,limit}){
           for(const [index,code] of wrong.entries())results.push({index:index+1,...await grade(task,code,{tenant:u.org_id})});
           status=results.some(r=>r.status==='checker_error')?'checker_error':results.some(r=>r.status==='passed')?'weak_tests':'approved';
         }
+        if(status==='approved'){block=await blockProof(task,u);if(block.status==='checker_error')status='checker_error';else if(block.status!=='approved'&&block.status!=='not_required')status='bad_block_solution'}
       }
       // No await inside the transaction; a second author can edit while checks run.
       const current=own('tasks',task.id,u);
-      if((!replay&&(current.revision!==task.revision||fingerprint(current)!==fingerprint(task)))||runtimeHash()!==runtime)fail(409,'Задание или исполнитель изменились во время проверки. Результат не подтверждает новую ревизию.');
+      if((!replay&&(current.revision!==task.revision||fingerprint(current)!==fingerprint(task)))||runtimeFor(task)!==runtime)fail(409,'Задание или исполнитель изменились во время проверки. Результат не подтверждает новую ревизию.');
       const id=randomUUID(),at=new Date().toISOString();
       tx(()=>{
-        db.prepare('INSERT INTO task_verifications VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id,u.org_id,task.id,u.id,task.revision,fingerprint(task),runtime,status,JSON.stringify(reference),JSON.stringify(results),at);
+        db.prepare('INSERT INTO task_verifications VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,u.org_id,task.id,u.id,task.revision,fingerprint(task),runtime,status,JSON.stringify(reference),JSON.stringify(results),at,JSON.stringify(block));
         db.prepare('INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)').run(randomUUID(),u.org_id,u.id,replay?'task.verification_replayed':'task.verified',task.id,JSON.stringify({verification_id:id,revision:task.revision,status,runtime_hash:runtime}),at);
       });
-      return {id,revision:task.revision,status,replay,publication_eligible:current.revision===task.revision&&fingerprint(current)===fingerprint(task),reference,wrong:results,message:({approved:task.check_mode==='manual'?'Критерии ручной проверки подтверждены.':'Эталон проходит, неправильные примеры отклоняются.',bad_reference:'Эталон не проходит проверку. Исправьте решение или тесты.',weak_tests:'Неправильное решение прошло. Усильте тесты перед публикацией.',checker_error:'Технический сбой проверки. Подтверждение не выдано.'})[status]};
+      return {id,revision:task.revision,status,replay,publication_eligible:current.revision===task.revision&&fingerprint(current)===fingerprint(task),reference,wrong:results,block,message:({approved:task.check_mode==='manual'?'Критерии ручной проверки подтверждены.':block.status==='approved'?'Эталон и блоковый образец проходят, неправильные примеры отклоняются.':'Эталон проходит, неправильные примеры отклоняются.',bad_reference:'Эталон не проходит проверку. Исправьте решение или тесты.',weak_tests:'Неправильное решение прошло. Усильте тесты перед публикацией.',bad_block_solution:block.message||'Блоковый образец не подтверждён.',checker_error:'Технический сбой проверки. Подтверждение не выдано.'})[status]};
     }
     return undefined;
   }

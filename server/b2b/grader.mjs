@@ -6,16 +6,38 @@ import { outputMatches } from "../../src/shared/outputMatch.mjs";
 const runner = fileURLToPath(
   new URL("../../.runner/runner.cjs", import.meta.url),
 );
+const blocklyChecker = fileURLToPath(
+  new URL("../../.runner/blockly-check.cjs", import.meta.url),
+);
 export const executionQueue = new ExecutionQueue();
 export function execute(code, inputs = [], options = {}) {
   return executionQueue.run(
     options.tenant || "local",
-    () => executeProcess(code, inputs, options.rules || []),
+    () => spawnRestricted(runner, { code, inputs, rules: options.rules || [] }),
     options,
   );
 }
-function executeProcess(code, inputs, rules) {
-  if(!existsSync(runner))return Promise.resolve({infrastructure:true,error:'Исполнитель не собран. Решение не оценивалось.',output:[]});
+/**
+ * Trusted block → Python translation inside the restricted executor process.
+ * Returns {ok, python, errors, warnings, translator, block_types} or {infrastructure, error}.
+ */
+export function translateBlocks(workspace, palette, options = {}) {
+  return executionQueue.run(
+    options.tenant || "local",
+    () => spawnRestricted(runner, { action: "translate", workspace, palette }),
+    options,
+  );
+}
+/** Publication-time load of workspaces into real (headless) Blockly, in its own restricted process. */
+export function checkWithBlockly(workspaces, palette, options = {}) {
+  return executionQueue.run(
+    options.tenant || "local",
+    () => spawnRestricted(blocklyChecker, { workspaces, palette }, 10000, 128),
+    options,
+  );
+}
+function spawnRestricted(file, payload, deadline = 2500, heapMb = 48) {
+  if(!existsSync(file))return Promise.resolve({infrastructure:true,error:'Исполнитель не собран. Решение не оценивалось.',output:[]});
   return new Promise((resolve) => {
     let output = "",
       finished = false, diagnostic='';
@@ -29,10 +51,10 @@ function executeProcess(code, inputs, rules) {
       process.execPath,
       [
         "--permission",
-        `--allow-fs-read=${runner}`,
-        "--max-old-space-size=48",
+        `--allow-fs-read=${file}`,
+        `--max-old-space-size=${heapMb}`,
         "--stack-size=512",
-        runner,
+        file,
       ],
       {
         windowsHide: true,
@@ -43,7 +65,7 @@ function executeProcess(code, inputs, rules) {
     const timer = setTimeout(() => {
       child.kill();
       finish({ output: [], error: "Превышено время или ресурсы выполнения." });
-    }, 2500);
+    }, deadline);
     child.stdout.on("data", (chunk) => {
       output += chunk;
       if (output.length > 128000) {
@@ -74,7 +96,7 @@ function executeProcess(code, inputs, rules) {
       }
     });
     child.stdin.on("error", () => {});
-    child.stdin.end(JSON.stringify({ code, inputs, rules }));
+    child.stdin.end(JSON.stringify(payload));
   });
 }
 export async function grade(task, code, options = {}) {

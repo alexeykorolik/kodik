@@ -17,13 +17,20 @@ export function createSubmissionService(
     task_id: j.task_id,
     assignment_id:j.assignment_id,
     version_id:j.version_id,
+    mode: j.mode,
     status: j.status,
     result: j.result ? JSON.parse(j.result) : null,
     attempt_id: j.attempt_id,
     created_at: j.created_at,
     updated_at: j.updated_at,
   });
-  function enqueue(user, task, code, key) {
+  /**
+   * program = {mode, code, source, translator, policy}. For block modes `code` is the Python the
+   * server generated in the restricted executor; `source` is the learner's workspace JSON.
+   * The context (version snapshot and policy) is frozen at acceptance.
+   */
+  function enqueue(user, task, program, key) {
+    const { mode = "python", code, source = null, translator = null, policy = null } = program;
     if (typeof key !== "string" || !/^[a-zA-Z0-9_-]{10,100}$/.test(key))
       return { error: "Укажите уникальный ключ отправки.", status: 400 };
     const old = db
@@ -32,10 +39,13 @@ export function createSubmissionService(
       )
       .get(user.id, key);
     if (old) {
-      if (old.task_id !== task.id || old.code !== code || old.assignment_id !== (task.assignment_id??null))
+      // Same key must mean the same assignment, mode and actual solution (code or block structure).
+      const sameSolution = mode === "python" ? old.code === code : (old.source ?? null) === source;
+      if (old.task_id !== task.id || old.assignment_id !== (task.assignment_id??null) || (old.mode ?? "python") !== mode || !sameSolution)
         return {
           error: "Ключ уже использован для другого решения.",
           status: 409,
+          details: { code: "request_key_reused" },
         };
       return visible(old);
     }
@@ -80,7 +90,7 @@ export function createSubmissionService(
     const id = randomUUID(),
       at = now();
     db.prepare(
-      "INSERT INTO submission_jobs(id,org_id,user_id,task_id,request_key,code,snapshot,status,created_at,updated_at,assignment_id,version_id) VALUES(?,?,?,?,?,?,?,'queued',?,?,?,?)",
+      "INSERT INTO submission_jobs(id,org_id,user_id,task_id,request_key,code,snapshot,status,created_at,updated_at,assignment_id,version_id,mode,source,translator,policy) VALUES(?,?,?,?,?,?,?,'queued',?,?,?,?,?,?,?,?)",
     ).run(
       id,
       user.org_id,
@@ -93,6 +103,10 @@ export function createSubmissionService(
       at,
       task.assignment_id??null,
       task.version_id??null,
+      mode,
+      source,
+      translator,
+      policy,
     );
     const job = visible(
       db.prepare("SELECT * FROM submission_jobs WHERE id=?").get(id),
@@ -110,8 +124,9 @@ export function createSubmissionService(
         "UPDATE submission_jobs SET status='cancelled',result=?,updated_at=? WHERE id=?",
       ).run(
         JSON.stringify({
-          status: "checker_error",
-          message: "Доступ к аккаунту изменён. Решение не оценивалось.",
+          status: "cancelled",
+          reason: "access_revoked",
+          message: "Доступ к заданию или аккаунту изменён. Решение не оценивалось и не считается ошибкой.",
           cases: [],
         }),
         now(),
@@ -128,7 +143,7 @@ export function createSubmissionService(
     db.exec("BEGIN IMMEDIATE");
     try {
       db.prepare(
-        "INSERT OR IGNORE INTO attempts(id,org_id,user_id,task_id,code,status,result,snapshot,created_at,assignment_id,version_id,context_origin) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT OR IGNORE INTO attempts(id,org_id,user_id,task_id,code,status,result,snapshot,created_at,assignment_id,version_id,context_origin,mode,source,translator,policy) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       ).run(
         job.id,
         job.org_id,
@@ -142,6 +157,10 @@ export function createSubmissionService(
         job.assignment_id,
         job.version_id,
         job.assignment_id?'assignment':'legacy',
+        job.mode ?? "python",
+        job.source ?? null,
+        job.translator ?? null,
+        job.policy ?? null,
       );
       db.prepare(
         "UPDATE submission_jobs SET status='completed',result=?,attempt_id=?,updated_at=? WHERE id=?",

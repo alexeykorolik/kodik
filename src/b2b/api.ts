@@ -58,4 +58,5 @@ export const statusNames: Record<string, string> = {
   runtime_error: "Ошибка выполнения",
   pending_review: "На проверке",
   checker_error: "Ошибка проверки",
+  cancelled: "Проверка отменена",
 };

@@ -17,6 +17,8 @@ jobs:
           python-version: 3.11.9
       - run: npm ci
       - run: npm run check:critical
+        env:
+          KODIK_REQUIRE_CPYTHON: "1"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

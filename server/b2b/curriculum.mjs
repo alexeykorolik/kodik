@@ -3,7 +3,7 @@ const now=()=>new Date().toISOString();
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const kinds=new Set(['text','code','practice','question','final','summary']);
 const practical=s=>s.type==='practice'||s.type==='final';
-export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion}){
+export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion,modePolicyFor}){
   const get=(sql,...args)=>db.prepare(sql).get(...args),all=(sql,...args)=>db.prepare(sql).all(...args),run=(sql,...args)=>db.prepare(sql).run(...args);
   const audit=(u,action,id,details={})=>run('INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)',randomUUID(),u.org_id,u.id,action,id,JSON.stringify(details),now());
   const field=(value,label,max=12000)=>{if(typeof value!=='string'||value.length>max)fail(400,`${label}: не более ${max} символов.`);return value};
@@ -203,7 +203,7 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
   function createAssignment(taskId,versionId,lessonRunId,stepId,order,runId,groupId,due,at,u){
     // Referenced versions come from the published lesson, never the mutable task.
     const version=own('task_versions',versionId,u);if(version.task_id!==taskId)fail(409,'Ссылка на версию задания повреждена.');
-    run('INSERT INTO assignments(id,org_id,group_id,task_id,due_at,version_id,created_at,order_snapshot,run_id,lesson_run_id,step_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)',randomUUID(),u.org_id,groupId,taskId,due,versionId,at,JSON.stringify(order),runId,lessonRunId,stepId);
+    run('INSERT INTO assignments(id,org_id,group_id,task_id,due_at,version_id,created_at,order_snapshot,run_id,lesson_run_id,step_id,mode_policy) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',randomUUID(),u.org_id,groupId,taskId,due,versionId,at,JSON.stringify(order),runId,lessonRunId,stepId,modePolicyFor(version.snapshot));
   }
   return {handle,state,canAccessAssignment};
 }

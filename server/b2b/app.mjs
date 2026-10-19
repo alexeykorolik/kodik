@@ -12,7 +12,8 @@ import { existsSync } from "node:fs";
 import { resolve, extname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { openDatabase, schemaVersion } from "./database.mjs";
-import { execute, grade, executionQueue } from "./grader.mjs";
+import { execute, grade, executionQueue, translateBlocks } from "./grader.mjs";
+import { createModes, adaptive } from "./modes.mjs";
 import { createSubmissionService } from "./submissions.mjs";
 import {createCurriculum} from './curriculum.mjs';
 import {createTaskQuality} from './task-quality.mjs';
@@ -124,11 +125,14 @@ export function createApp({
     return {...JSON.parse(version.snapshot),id:task.id,published:1,assignment_id:assignment.id,version_id:version.id,run_id:assignment.run_id,lesson_run_id:assignment.lesson_run_id,step_id:assignment.step_id};
   }
   function safeTask(task, user) {
-    const { tests,reference_solution,wrong_solutions,preview_solution,template_id, ...rest } = task;
-    const publicFields=new Set(['id','org_id','lesson_id','title','description','goal','theory','instruction','difficulty','starter','check_mode','manual_criteria','published','position','revision','updated_at','assignment_id','version_id','run_id','lesson_run_id','step_id','group_id','group_title','due_at','assigned_at','order_snapshot']);
+    const { tests,reference_solution,wrong_solutions,preview_solution,template_id,block_solution,learning_config, ...rest } = task;
+    const learning=adaptive.parseLearningConfig(learning_config||'{}');
+    const publicFields=new Set(['id','org_id','modes','lesson_id','title','description','goal','theory','instruction','difficulty','starter','check_mode','manual_criteria','published','position','revision','updated_at','assignment_id','version_id','run_id','lesson_run_id','step_id','group_id','group_title','due_at','assigned_at','order_snapshot']);
     return {
       ...(user.role==='student'?Object.fromEntries(Object.entries(rest).filter(([key])=>publicFields.has(key))):rest),
       learning_rules:JSON.parse(task.learning_rules||'[]'),
+      learning: adaptive.publicLearningConfig(learning),
+      ...(user.role==='student'?{}:{learning_config:learning,block_solution:block_solution?JSON.parse(block_solution):null}),
       hints: JSON.parse(task.hints),
       examples: JSON.parse(tests)
         .filter((t) => !t.hidden)
@@ -173,6 +177,16 @@ export function createApp({
     if(!Array.isArray(rules)||rules.length>learningRules.length||new Set(rules).size!==rules.length||rules.some(id=>!learningRules.some(rule=>rule.id===id)))fail(400,'Выберите учебные приёмы из списка.');
     if(mode==='manual'&&rules.length)fail(400,'Для ручной работы укажите учебные приёмы в критериях оценки.');
     if(!Array.isArray(wrong)||wrong.length>6||wrong.some(s=>typeof s!=='string'||s.length>12000))fail(400,'Допустимо до шести неправильных программ, каждая до 12000 символов.');
+    const learning=adaptive.validateLearningConfig(b.learning_config);
+    if(learning.error)fail(400,learning.error);
+    let blockSolution='';
+    if(b.block_solution!==undefined&&b.block_solution!==null&&b.block_solution!==''){
+      const shape=adaptive.validateWorkspaceShape(b.block_solution);
+      if(!shape.ok)fail(400,'Блоковый образец: '+shape.errors[0].message);
+      blockSolution=JSON.stringify(b.block_solution);
+    }
+    if(learning.config.modes.length&&mode==='manual')fail(400,'Ручную работу пока можно решать только на Python. Выключите режимы с блоками.');
+    if(publication&&learning.config.modes.length&&!blockSolution)fail(400,'Для режимов с блоками добавьте закрытый блоковый образец решения.');
     return [
       b.lesson_id,
       text(b.title, "Название", 200, !publication),
@@ -187,8 +201,63 @@ export function createApp({
       JSON.stringify(checked),
       codeText(b.reference_solution??''),JSON.stringify(wrong),text(b.manual_criteria,'Критерии ручной проверки',8000,true),codeText(b.preview_solution??''),text(b.template_id,'Шаблон',80,true),
       JSON.stringify(rules),
+      JSON.stringify(learning.config),
+      blockSolution,
     ];
   }
+  const inputsOf = (value) => {
+    if (!Array.isArray(value) || value.length > 30 || value.some((i) => typeof i !== "string" || i.length > 1000)) fail(400, "Неверный ввод.");
+    return value;
+  };
+  /**
+   * One request format for every mode: {mode, code} for Python, {mode, workspace} for blocks.
+   * For blocks the server translates the workspace itself, in the restricted executor, with the
+   * palette of the exact version. Any Python a client sends alongside blocks is ignored.
+   */
+  async function programOf(user, task, b) {
+    const mode = b.mode ?? "python";
+    if (!adaptive.isMode(mode)) fail(400, "Неизвестный способ решения.");
+    if (mode === "python") return { mode, code: codeText(b.code), source: null, translator: null };
+    // A cached page with another translator would show a Python mirror that differs from what is
+    // checked. Refuse to run or submit (the draft is still saved) and ask for a reload.
+    if (b.client_translator !== undefined && b.client_translator !== adaptive.TRANSLATOR_VERSION) fail(409, "Kodik обновился. Ваши блоки сохранены — обновите страницу, чтобы продолжить.", { code: "client_outdated" });
+    const shape = adaptive.validateWorkspaceShape(b.workspace);
+    if (!shape.ok) fail(400, shape.errors[0].message, { translation_errors: shape.errors.slice(0, 5) });
+    const palette = adaptive.parseLearningConfig(task.learning_config ?? "{}").palette;
+    const translation = await translateBlocks(b.workspace, palette, { tenant: user.org_id });
+    if (translation.infrastructure) fail(503, "Сервис проверки временно недоступен. Работа сохранена; попробуйте ещё раз.");
+    if (!translation.ok) fail(422, translation.errors[0]?.message || "Программа из блоков не готова.", { translation_errors: translation.errors, code: "translation" });
+    return { mode, code: translation.python, source: JSON.stringify(b.workspace), translator: translation.translator, warnings: translation.warnings };
+  }
+  /** Learners: mode must be allowed by the assignment policy. Teachers: by the version. */
+  function modeRules(action, mode, task, user) {
+    if (user.role === "student" && task.assignment_id) {
+      const assignment = get("SELECT * FROM assignments WHERE id=? AND org_id=?", task.assignment_id, user.org_id);
+      return modes.assertMode(action, mode, assignment, user.id, task).eff;
+    }
+    if (!modes.supportedForSnapshot(task).includes(mode)) fail(409, "Это задание нельзя решать в этом режиме.", { code: "mode_not_supported" });
+    return null;
+  }
+  async function acceptSubmission(user, task, b) {
+    if (user.role !== "student") fail(403, "Отправка доступна ученику.");
+    const mode = b.mode ?? "python";
+    const eff = modeRules("submit", mode, task, user);
+    limit(`execute:${user.id}`, 50, 60000);
+    const program = await programOf(user, task, b);
+    const result = submissions.enqueue(user, task, { ...program, policy: eff ? JSON.stringify(eff) : null }, b.request_key);
+    if (result.error) fail(result.status, result.error, result.details);
+    return result;
+  }
+  /** Stored task row → the shape validateTask expects. */
+  const parsedTask = (task) => ({
+    ...task,
+    hints: JSON.parse(task.hints),
+    tests: JSON.parse(task.tests),
+    wrong_solutions: JSON.parse(task.wrong_solutions || '[]'),
+    learning_rules: JSON.parse(task.learning_rules || '[]'),
+    learning_config: JSON.parse(task.learning_config || '{}'),
+    block_solution: task.block_solution ? JSON.parse(task.block_solution) : '',
+  });
   function rememberMaterial(
     task,
     author,
@@ -213,7 +282,7 @@ export function createApp({
   }
   const insertTask = (id, org, values, position = 0) =>
     run(
-      "INSERT INTO tasks(id,org_id,lesson_id,title,description,goal,theory,instruction,difficulty,starter,hints,check_mode,tests,reference_solution,wrong_solutions,manual_criteria,preview_solution,template_id,learning_rules,position,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO tasks(id,org_id,lesson_id,title,description,goal,theory,instruction,difficulty,starter,hints,check_mode,tests,reference_solution,wrong_solutions,manual_criteria,preview_solution,template_id,learning_rules,learning_config,block_solution,position,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       id,
       org,
       ...values,
@@ -221,7 +290,8 @@ export function createApp({
       now(),
     );
   const taskQuality=createTaskQuality({db,own,teacher,fail,tx,validateTask,limit});
-  const curriculum=createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion:taskQuality.assertPublishedVersion});
+  const modes=createModes({db,own,teacher,fail,tx});
+  const curriculum=createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion:taskQuality.assertPublishedVersion,modePolicyFor:modes.policyForNewAssignment});
   function makeSession(user, res) {
     const token = randomBytes(32).toString("hex");
     run("DELETE FROM sessions WHERE expires<?", Date.now());
@@ -347,6 +417,8 @@ export function createApp({
     }
     const qualityResult=await taskQuality.handle(path,method,b,user);
     if(qualityResult!==undefined)return qualityResult;
+    const modesResult=await modes.handle(path,method,b,user);
+    if(modesResult!==undefined)return modesResult;
     const curriculumResult=await curriculum.handle(path,method,b,user);
     if(curriculumResult!==undefined)return curriculumResult;
     if (path === "/api/state" && method === "GET") {
@@ -359,7 +431,8 @@ export function createApp({
         tasks=assignments.filter(a=>curriculum.canAccessAssignment(a,user)).map(a=>{
           const task=availableTask(a.task_id,user,a.id),lesson=get('SELECT * FROM lessons WHERE id=? AND org_id=?',task.lesson_id,user.org_id),module=lesson&&get('SELECT * FROM modules WHERE id=? AND org_id=?',lesson.module_id,user.org_id);
           const frozen=JSON.parse(a.order_snapshot);
-          return {...task,group_id:a.group_id,group_title:a.group_title,due_at:a.due_at,assigned_at:a.created_at,order_snapshot:Object.keys(frozen).length?frozen:{course_id:module?.course_id,module_position:module?.position??0,lesson_position:lesson?.position??0,task_position:task.position,legacy:true}};
+          const effective=modes.effectiveFor(a,user.id,task);
+          return {...task,modes:modes.publicModes(effective.supported,effective.eff),group_id:a.group_id,group_title:a.group_title,due_at:a.due_at,assigned_at:a.created_at,order_snapshot:Object.keys(frozen).length?frozen:{course_id:module?.course_id,module_position:module?.position??0,lesson_position:lesson?.position??0,task_position:task.position,legacy:true}};
         }).sort((a,b)=>{
           if(a.run_id!==b.run_id&&(a.run_id||b.run_id))return !a.run_id?-1:!b.run_id?1:a.assigned_at.localeCompare(b.assigned_at)||a.run_id.localeCompare(b.run_id);
           if(a.run_id&&a.run_id===b.run_id){const delta=(a.order_snapshot.program_position??0)-(b.order_snapshot.program_position??0);if(delta)return delta}
@@ -393,12 +466,12 @@ export function createApp({
       const attempts =
         user.role === "student"
           ? all(
-              "SELECT id,user_id,task_id,assignment_id,version_id,context_origin,json_extract(snapshot,'$.title') AS task_title,json_extract(snapshot,'$.revision') AS version_revision,status,result,feedback,created_at FROM attempts WHERE org_id=? AND user_id=? ORDER BY created_at DESC",
+              "SELECT id,user_id,task_id,assignment_id,version_id,context_origin,mode,json_extract(snapshot,'$.title') AS task_title,json_extract(snapshot,'$.revision') AS version_revision,status,result,feedback,created_at FROM attempts WHERE org_id=? AND user_id=? ORDER BY created_at DESC",
               user.org_id,
               user.id,
             )
           : all(
-              "SELECT id,user_id,task_id,assignment_id,version_id,context_origin,json_extract(snapshot,'$.title') AS task_title,json_extract(snapshot,'$.revision') AS version_revision,status,result,feedback,created_at FROM attempts WHERE org_id=? ORDER BY created_at DESC",
+              "SELECT id,user_id,task_id,assignment_id,version_id,context_origin,mode,json_extract(snapshot,'$.title') AS task_title,json_extract(snapshot,'$.revision') AS version_revision,status,result,feedback,created_at FROM attempts WHERE org_id=? ORDER BY created_at DESC",
               user.org_id,
             );
       return curriculum.state(user,{
@@ -442,6 +515,10 @@ export function createApp({
           user.role === "student"
             ? all("SELECT d.*,a.task_id FROM assignment_drafts d JOIN assignments a ON a.id=d.assignment_id WHERE d.user_id=? AND a.archived=0", user.id)
             : [],
+        block_drafts:
+          user.role === "student"
+            ? all("SELECT d.assignment_id,d.workspace,d.format,d.revision,d.updated_at,a.task_id FROM assignment_block_drafts d JOIN assignments a ON a.id=d.assignment_id WHERE d.user_id=? AND d.org_id=? AND a.archived=0", user.id, user.org_id).map((d) => ({ ...d, workspace: JSON.parse(d.workspace) }))
+            : [],
       });
     }
     if (path === "/api/users" && method === "POST") {
@@ -469,18 +546,23 @@ export function createApp({
     }
     if(path==='/api/preview/run'&&method==='POST'){
       teacher(user);limit(`execute:${user.id}`,50,60000);
-      if(!Array.isArray(b.inputs)||b.inputs.length>30||b.inputs.some(s=>typeof s!=='string'||s.length>1000))fail(400,'Неверный ввод.');
-      return await execute(codeText(b.code),b.inputs,{tenant:user.org_id});
+      const inputs=inputsOf(b.inputs);
+      const learning=adaptive.validateLearningConfig(b.learning_config);
+      if(learning.error)fail(400,learning.error);
+      const program=await programOf(user,{learning_config:learning.config},b);
+      return {...await execute(program.code,inputs,{tenant:user.org_id}),mode:program.mode,...(program.mode==='python'?{}:{python:program.code,translator:program.translator,warnings:program.warnings})};
     }
     if (path === "/api/preview" && method === "POST") {
       teacher(user);
       limit(`execute:${user.id}`, 50, 60000);
       const values = validateTask(b.task, user);
-      return await grade(
+      const program = await programOf(user, { learning_config: values[17] }, b);
+      const result = await grade(
         { check_mode: values[9], tests: values[10],learning_rules:values[16] },
-        codeText(b.code),
+        program.code,
         { tenant: user.org_id },
       );
+      return { ...result, mode: program.mode, ...(program.mode === "python" ? {} : { python: program.code, translator: program.translator }) };
     }
     let match;
     if (
@@ -488,12 +570,7 @@ export function createApp({
       method === "POST"
     ) {
       if (user.role !== "student") fail(403, "Отправка доступна ученику.");
-      const task = availableTask(match[1], user, b.assignment_id,true),
-        code = codeText(b.code);
-      limit(`execute:${user.id}`, 50, 60000);
-      const result = submissions.enqueue(user, task, code, b.request_key);
-      if (result.error) fail(result.status, result.error);
-      return result;
+      return await acceptSubmission(user, availableTask(match[1], user, b.assignment_id, true), b);
     }
     if (
       (match = /^\/api\/submissions\/([^/]+)$/.exec(path)) &&
@@ -708,7 +785,7 @@ export function createApp({
       tx(() => {
         rememberMaterial(task, user, task.revision, task.revision, false);
         run(
-          "UPDATE tasks SET lesson_id=?,title=?,description=?,goal=?,theory=?,instruction=?,difficulty=?,starter=?,hints=?,check_mode=?,tests=?,reference_solution=?,wrong_solutions=?,manual_criteria=?,preview_solution=?,template_id=?,learning_rules=?,revision=revision+1,updated_at=? WHERE id=?",
+          "UPDATE tasks SET lesson_id=?,title=?,description=?,goal=?,theory=?,instruction=?,difficulty=?,starter=?,hints=?,check_mode=?,tests=?,reference_solution=?,wrong_solutions=?,manual_criteria=?,preview_solution=?,template_id=?,learning_rules=?,learning_config=?,block_solution=?,revision=revision+1,updated_at=? WHERE id=?",
           ...values,
           now(),
           task.id,
@@ -746,17 +823,7 @@ export function createApp({
       if (typeof b.published !== "boolean") fail(400, "Укажите статус.");
       if(b.revision!==undefined&&b.revision!==task.revision)fail(409,"Черновик изменился. Обновите его перед публикацией.");
       if (b.published)
-        validateTask(
-          {
-            ...task,
-            hints: JSON.parse(task.hints),
-            tests: JSON.parse(task.tests),
-            wrong_solutions:JSON.parse(task.wrong_solutions),
-            learning_rules:JSON.parse(task.learning_rules||'[]'),
-          },
-          user,
-          true,
-        );
+        validateTask(parsedTask(task), user, true);
       const proof=b.published?taskQuality.assertApproved(task):null;
       const versionId=tx(()=>{
         let version=get('SELECT id FROM task_versions WHERE task_id=? AND revision=?',task.id,task.revision)?.id;
@@ -791,7 +858,7 @@ export function createApp({
           t.hints,
           t.check_mode,
           t.tests,
-          t.reference_solution,t.wrong_solutions,t.manual_criteria,t.preview_solution,t.template_id,t.learning_rules,
+          t.reference_solution,t.wrong_solutions,t.manual_criteria,t.preview_solution,t.template_id,t.learning_rules,t.learning_config,t.block_solution,
         ],
         t.position + 1,
       );
@@ -863,7 +930,7 @@ export function createApp({
                   t.hints,
                   t.check_mode,
                   t.tests,
-                  t.reference_solution,t.wrong_solutions,t.manual_criteria,t.preview_solution,t.template_id,t.learning_rules,
+                  t.reference_solution,t.wrong_solutions,t.manual_criteria,t.preview_solution,t.template_id,t.learning_rules,t.learning_config,t.block_solution,
                 ],
                 t.position,
               );
@@ -914,7 +981,7 @@ export function createApp({
       if(typeof b.request_key!=='string'||!/^[a-zA-Z0-9_-]{10,100}$/.test(b.request_key))fail(400,'Укажите устойчивый ключ выдачи задания.');
       let due=null;
       if(b.due_at){if(typeof b.due_at!=='string'||!Number.isFinite(Date.parse(b.due_at)))fail(400,'Неверная дата.');due=new Date(b.due_at).toISOString()}
-      const payload=JSON.stringify({group_id:b.group_id,task_id:b.task_id,due_at:due,repeat_of:b.repeat_of??null});
+      const payload=JSON.stringify({group_id:b.group_id,task_id:b.task_id,due_at:due,repeat_of:b.repeat_of??null,...(b.mode_policy!==undefined?{mode_policy:b.mode_policy}:{})});
       const previous=get('SELECT * FROM assignment_operations WHERE org_id=? AND request_key=?',user.org_id,b.request_key);
       if(previous){
         if(previous.actor_id!==user.id||previous.payload!==payload)fail(409,'Этот ключ выдачи уже использован для другой операции.');
@@ -929,13 +996,14 @@ export function createApp({
       const version=get('SELECT * FROM task_versions WHERE id=? AND org_id=?',task.published_version_id,user.org_id);
       if(!version)fail(409,'Опубликованная версия не найдена.');
       taskQuality.assertPublishedVersion(version.id,user);
+      const modePolicy=modes.policyForNewAssignment(version.snapshot,b.mode_policy);
       const content=JSON.parse(version.snapshot),lesson=own('lessons',content.lesson_id,user),module=own('modules',lesson.module_id,user),course=own('courses',module.course_id,user);
       const order=JSON.stringify({course_id:course.id,course_title:course.title,module_id:module.id,module_title:module.title,module_position:module.position,lesson_id:lesson.id,lesson_title:lesson.title,lesson_position:lesson.position,task_position:content.position});
       const id=randomUUID();
       const response={ok:true,id,version_id:task.published_version_id};
       tx(()=>{
         run(
-        "INSERT INTO assignments(id,org_id,group_id,task_id,due_at,version_id,created_at,order_snapshot) VALUES(?,?,?,?,?,?,?,?)",
+        "INSERT INTO assignments(id,org_id,group_id,task_id,due_at,version_id,created_at,order_snapshot,mode_policy) VALUES(?,?,?,?,?,?,?,?,?)",
         id,
         user.org_id,
         b.group_id,
@@ -944,6 +1012,7 @@ export function createApp({
         task.published_version_id,
         now(),
         order,
+        modePolicy,
       );
         run('INSERT INTO assignment_operations VALUES(?,?,?,?,?,?)',user.org_id,b.request_key,user.id,payload,JSON.stringify(response),now());
         run('INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)',randomUUID(),user.org_id,user.id,b.repeat_of?'assignment.repeated':'assignment.created',id,JSON.stringify({group_id:b.group_id,task_id:task.id,version_id:version.id,repeat_of:b.repeat_of??null}),now());
@@ -980,17 +1049,38 @@ export function createApp({
     ) {
       const task = availableTask(match[1], user, b.assignment_id,true),
         action = match[2],
-        code = codeText(b.code);
+        mode = b.mode ?? "python";
       if (action === "draft") {
         if (user.role !== "student") fail(403, "Черновик доступен ученику.");
+        // Saving one's own safe draft is allowed even if the mode was closed later (MODE_MODEL §5).
+        modeRules("draft", mode, task, user);
+        const base = b.revision ?? 0;
+        if (!Number.isInteger(base) || base < 0)
+          fail(400, "Неверная версия черновика.");
+        if (mode !== "python") {
+          // Draft-level check only: incomplete programs, empty sockets and unnamed values are normal.
+          const shape = adaptive.validateWorkspaceShape(b.workspace);
+          if (!shape.ok) fail(400, shape.errors[0].message, { translation_errors: shape.errors.slice(0, 5) });
+          const workspace = JSON.stringify(b.workspace);
+          const current = get("SELECT workspace,revision FROM assignment_block_drafts WHERE user_id=? AND assignment_id=?", user.id, task.assignment_id);
+          if (current && base !== current.revision) {
+            const conflictId = randomUUID();
+            run("INSERT INTO assignment_block_draft_history VALUES(?,?,?,?,?,?,?,?)", conflictId, user.org_id, user.id, task.assignment_id, base, workspace, 1, now());
+            fail(409, "В другой вкладке сохранён другой вариант блоков. Оба варианта сохранены.", { current: { workspace: JSON.parse(current.workspace), revision: current.revision }, conflict_id: conflictId });
+          }
+          const revision = (current?.revision || 0) + 1;
+          tx(() => {
+            if (current) run("INSERT INTO assignment_block_draft_history VALUES(?,?,?,?,?,?,?,?)", randomUUID(), user.org_id, user.id, task.assignment_id, current.revision, current.workspace, 0, now());
+            run("INSERT INTO assignment_block_drafts(user_id,assignment_id,org_id,workspace,format,revision,updated_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id,assignment_id) DO UPDATE SET workspace=excluded.workspace,format=excluded.format,revision=excluded.revision,updated_at=excluded.updated_at", user.id, task.assignment_id, user.org_id, workspace, adaptive.WORKSPACE_FORMAT, revision, now());
+          });
+          return { saved_at: now(), revision, mode };
+        }
+        const code = codeText(b.code);
         const current = get(
             "SELECT code,revision FROM assignment_drafts WHERE user_id=? AND assignment_id=?",
             user.id,
             task.assignment_id,
-          ),
-          base = b.revision ?? 0;
-        if (!Number.isInteger(base) || base < 0)
-          fail(400, "Неверная версия черновика.");
+          );
         if (current && base !== current.revision) {
           const conflictId = randomUUID();
           run(
@@ -1033,23 +1123,18 @@ export function createApp({
             revision,
           );
         });
-        return { saved_at: now(), revision };
+        return { saved_at: now(), revision, mode };
       }
-      limit(`execute:${user.id}`, 50, 60000);
       if (action === "run") {
-        if (
-          !Array.isArray(b.inputs) ||
-          b.inputs.length > 30 ||
-          b.inputs.some((i) => typeof i !== "string" || i.length > 1000)
-        )
-          fail(400, "Неверный ввод.");
-        return await execute(code, b.inputs, { tenant: user.org_id });
+        modeRules("run", mode, task, user);
+        const inputs = inputsOf(b.inputs);
+        limit(`execute:${user.id}`, 50, 60000);
+        const program = await programOf(user, task, b);
+        const result = await execute(program.code, inputs, { tenant: user.org_id });
+        // The mirror shows exactly the program that ran.
+        return { ...result, mode, ...(mode === "python" ? {} : { python: program.code, translator: program.translator, warnings: program.warnings }) };
       }
-      if (user.role !== "student")
-        fail(403, "Для предпросмотра используйте запуск.");
-      const result=submissions.enqueue(user,task,code,b.request_key);
-      if(result.error)fail(result.status,result.error);
-      return result;
+      return await acceptSubmission(user, task, b);
     }
     if ((match = /^\/api\/attempts\/([^/]+)$/.exec(path)) && method === "GET") {
       const a = own("attempts", match[1], user);
