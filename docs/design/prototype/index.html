@@ -106,7 +106,7 @@ svg.i.sm { width: 16px; height: 16px; }
 .proto-bar nav button[aria-current="page"] { background: #fffefa; color: var(--k-ink); }
 .proto-bar .note { margin-left: auto; font-size: 12px; color: #c4d2cb; white-space: nowrap; }
 .stage { overflow-x: auto; }
-.screen { min-width: 1280px; height: calc(100vh - 46px); min-height: 720px; display: none; }
+.screen { min-width: 1024px; height: calc(100vh - 46px); min-height: 720px; display: none; }
 .screen.on { display: flex; }
 
 /* Логотип */
@@ -198,6 +198,23 @@ svg.i.sm { width: 16px; height: 16px; }
 .side.rail .lbl, .side.rail .school, .side.rail .nav-sep, .side.rail .me div, .side.rail .count { display: none; }
 .side.rail .nav button { justify-content: center; padding: 0; }
 .side.rail .me { justify-content: center; padding: 10px 0; }
+/* 1024–1199 CSS px (например, 1366 × 768 при масштабе Windows 125%): сайдбар сворачивается в рейку иконок */
+@media (max-width: 1199px) {
+  .side { width: 64px; padding: 20px 8px 12px; }
+  .side .logo { padding: 0 0 16px; justify-content: center; }
+  .side .logo .wm { height: 18px; }
+  .side .lbl, .side .school, .side .nav-sep, .side .me div, .side .count { display: none; }
+  .side .nav button { justify-content: center; padding: 0; }
+  .side .me { justify-content: center; padding: 10px 0; }
+  .content, .s-content { padding: 24px; }
+  .grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .s-wrap { grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; }
+  .ws { --left-w: 340px; }
+  .b-shell { grid-template-columns: 200px minmax(480px, 1fr) var(--preview-w, 400px); }
+  .topbar { padding: 0 20px; gap: 10px; }
+  #save-sim, #toggle-preview span { display: none; }
+  #toggle-preview { width: var(--k-control); padding: 0; }
+}
 .me { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--k-line); font-size: 14px; line-height: 18px; font-weight: 700; }
 .me small { display: block; color: var(--k-muted); font-weight: 600; font-size: 12px; }
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -254,6 +271,19 @@ svg.i.sm { width: 16px; height: 16px; }
 .b-preview .ph { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--k-line); background: var(--k-surface); }
 .b-preview .pb { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .b-foot { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 -32px; padding: 12px 32px; background: var(--k-canvas); border-top: 1px solid var(--k-line); }
+.bsec { display: flex; flex-direction: column; gap: 16px; padding: 24px; background: var(--k-surface); border: 1px solid var(--k-line); border-radius: var(--k-radius-md); }
+.bsec-h { display: flex; gap: 12px; align-items: flex-start; }
+.bnum { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--k-green-soft); color: var(--k-green); font-weight: 800; font-size: 14px; flex: none; }
+.advwrap { border: 1px dashed var(--k-line-strong); border-radius: var(--k-radius-md); background: var(--k-surface); }
+.advwrap > summary { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; padding: 16px 20px; list-style: none; }
+.advwrap > summary h2 { white-space: nowrap; }
+.advwrap > summary::-webkit-details-marker, .advd > summary::-webkit-details-marker { display: none; }
+.advwrap > summary::before, .advd > summary::before { content: "▸"; color: var(--k-green); font-weight: 800; }
+.advwrap[open] > summary::before, .advd[open] > summary::before { content: "▾"; }
+.advd { border-top: 1px solid var(--k-line); }
+.advd > summary { display: flex; align-items: center; gap: 12px; padding: 12px 20px; list-style: none; font-weight: 700; color: var(--k-ink); font-size: 15px; }
+.advd > summary [data-sum] { margin-left: auto; font-weight: 600; }
+.advb { padding: 4px 20px 20px 44px; display: flex; flex-direction: column; gap: 12px; }
 .type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .type-card { position: relative; display: flex; gap: 14px; padding: 16px; border: 1.5px solid var(--k-line); border-radius: var(--k-radius-md); background: var(--k-surface); cursor: pointer; text-align: left; }
 .type-card:hover { border-color: var(--k-line-strong); }
@@ -466,7 +496,7 @@ details summary { cursor: pointer; font-weight: 700; color: var(--k-green); font
     </div>
     <div class="content"><div class="wrap">
       <div class="page-h">
-        <div><h1>Добрый день, Анна</h1><p class="muted">Понедельник, 19 октября · 2 занятия сегодня</p></div>
+        <div><h1>Добрый день, Анна</h1><p class="muted">3 группы · 34 ученика · 5 решений ждут внимания</p></div>
         <div class="row">
           <button class="btn" data-modal="m-group"><svg class="i"><use href="#i-users"/></svg>Создать группу</button>
           <button class="btn primary" data-go="builder"><svg class="i"><use href="#i-plus"/></svg>Создать задание</button>
@@ -478,10 +508,10 @@ details summary { cursor: pointer; font-weight: 700; color: var(--k-green); font
           <section class="card" aria-labelledby="att-h">
             <div class="card-h"><div class="row"><h2 id="att-h">Требуют внимания</h2><span class="tag task plain num">5</span></div><button class="link" data-go="group">Все результаты</button></div>
             <div>
-              <div class="list-row"><span class="avatar">МК</span><div class="grow"><b>Миша Ковалёв · «Моя программа»</b><span class="muted">Ручная проверка · отправлено 25 минут назад</span></div><span class="tag warn">На проверке</span><button class="btn sm" data-drawer>Проверить</button></div>
+              <div class="list-row"><span class="avatar">МК</span><div class="grow"><b>Миша Ковалёв · «Моя программа»</b><span class="muted">Ручная проверка · отправлено 25 минут назад</span></div><span class="tag warn">На проверке</span><button class="btn sm" data-drawer="r">Проверить</button></div>
               <div class="list-row"><span class="avatar">ЕС</span><div class="grow"><b>Ева Смирнова · «Удвоим число»</b><span class="muted">4 попытки, тест 2 не пройден</span></div><span class="tag bad">Не пройдено</span><button class="btn sm" data-drawer>Открыть</button></div>
               <div class="list-row"><span class="avatar">ДП</span><div class="grow"><b>Даня Петров · «Чётное или нечётное»</b><span class="muted">Ошибка выполнения в 3 попытках подряд</span></div><span class="tag bad">Ошибка</span><button class="btn sm" data-drawer>Открыть</button></div>
-              <div class="list-row"><span class="avatar">АЛ</span><div class="grow"><b>Алиса Лебедева · «Моя программа»</b><span class="muted">Ручная проверка · вчера, 18:40</span></div><span class="tag warn">На проверке</span><button class="btn sm" data-drawer>Проверить</button></div>
+              <div class="list-row"><span class="avatar">АЛ</span><div class="grow"><b>Алиса Лебедева · «Моя программа»</b><span class="muted">Ручная проверка · вчера, 18:40</span></div><span class="tag warn">На проверке</span><button class="btn sm" data-drawer="r">Проверить</button></div>
             </div>
           </section>
           <section class="card" aria-labelledby="act-h">
@@ -501,17 +531,17 @@ details summary { cursor: pointer; font-weight: 700; color: var(--k-green); font
           <section aria-labelledby="gr-h" style="display:flex;flex-direction:column;gap:12px">
             <div class="row" style="justify-content:space-between"><h2 id="gr-h">Мои группы</h2><button class="link" data-go="group">Все группы</button></div>
             <button class="group-card" data-go="group">
-              <div class="row" style="justify-content:space-between;width:100%"><h3>Python · Старт 7А</h3><span class="tag info">Сегодня 15:00</span></div>
+              <div class="row" style="justify-content:space-between;width:100%"><h3>Python · Старт 7А</h3><span class="tag info">Урок 3 открыт</span></div>
               <div class="kv"><span>14 учеников · урок 3 «Ввод и вычисления»</span><b class="num">9/14</b></div>
               <div class="bar" aria-label="Выполнили текущий урок: 9 из 14"><i style="width:64%"></i></div>
             </button>
             <button class="group-card" data-go="group">
-              <div class="row" style="justify-content:space-between;width:100%"><h3>Python · Старт 7Б</h3><span class="tag plain">Ср 16:30</span></div>
+              <div class="row" style="justify-content:space-between;width:100%"><h3>Python · Старт 7Б</h3><span class="tag info">Урок 2 открыт</span></div>
               <div class="kv"><span>12 учеников · урок 2 «Первая программа»</span><b class="num">12/12</b></div>
               <div class="bar" aria-label="Выполнили текущий урок: 12 из 12"><i style="width:100%"></i></div>
             </button>
             <button class="group-card" data-go="group">
-              <div class="row" style="justify-content:space-between;width:100%"><h3>Олимпиадный кружок</h3><span class="tag plain">Пт 17:00</span></div>
+              <div class="row" style="justify-content:space-between;width:100%"><h3>Олимпиадный кружок</h3><span class="tag info">Урок 6 открыт</span></div>
               <div class="kv"><span>8 учеников · урок 6 «Функции»</span><b class="num">3/8</b></div>
               <div class="bar" aria-label="Выполнили текущий урок: 3 из 8"><i style="width:37%"></i></div>
             </button>
@@ -563,13 +593,15 @@ details summary { cursor: pointer; font-weight: 700; color: var(--k-green); font
       <div class="seg" role="group" aria-label="Состояние сохранения (прототип)" id="save-sim">
         <button aria-pressed="true" data-s="ok">ок</button><button aria-pressed="false" data-s="busy">…</button><button aria-pressed="false" data-s="bad">ошибка</button>
       </div>
-      <button class="btn" id="toggle-preview"><svg class="i"><use href="#i-eye"/></svg><span>Скрыть предпросмотр</span></button>
+      <button class="btn" id="toggle-preview" aria-label="Предпросмотр"><svg class="i"><use href="#i-eye"/></svg><span>Скрыть предпросмотр</span></button>
       <button class="btn primary" id="publish-top" aria-disabled="true" title="Сначала проверьте задание на шаге «Проверка»">Опубликовать</button>
     </div>
     <div class="b-shell" id="b-shell">
-      <nav class="steps" aria-label="Шаги конструктора">
-        <span class="caption muted" style="padding:0 10px">7 ШАГОВ · ~5 МИНУТ</span>
+      <nav class="steps" aria-label="Разделы задания">
+        <span class="caption muted" style="padding:0 10px">БЫСТРОЕ СОЗДАНИЕ</span>
         <ol id="steps"></ol>
+        <span class="caption muted" style="padding:16px 10px 0;display:block">ПО НЕОБХОДИМОСТИ</span>
+        <ol id="steps-adv"></ol>
       </nav>
       <div class="b-form" id="b-form"><div class="inner" id="b-inner"></div></div>
       <aside class="b-preview" id="b-preview" aria-label="Предпросмотр глазами ученика">
@@ -578,12 +610,12 @@ details summary { cursor: pointer; font-weight: 700; color: var(--k-green); font
           <span class="tag task plain" style="align-self:flex-start">ЗАДАНИЕ · НАЧАЛЬНЫЙ</span>
           <h2 id="pv-title">Удвоим число</h2>
           <p id="pv-text" style="font-size:16px;line-height:26px">Программа получает целое число. Выведи число, которое в два раза больше.</p>
-          <div class="ex">Ввод:   21
-Вывод:  42</div>
-          <div class="code sm" style="min-height:120px"><div class="gut"><div>1</div><div>2</div></div><pre><span class="cm"># Прочитай число и выведи удвоенное</span>
-n = <span class="fn">int</span>(<span class="fn">input</span>())</pre></div>
-          <div class="row"><button class="btn sm" id="pv-run"><svg class="i sm"><use href="#i-play"/></svg>Запустить</button><button class="btn sm primary" id="pv-check">Проверить</button><span class="muted small" id="pv-vis">Ученик видит 1 тест из 2</span></div>
+          <div class="ex" id="pv-example">Ввод:   2
+Вывод:  4</div>
+          <div class="code sm" style="min-height:96px"><div class="gut"><div>1</div></div><pre id="pv-starter"><span class="cm"># Напиши решение здесь</span></pre></div>
+          <div class="row"><button class="btn sm" id="pv-run"><svg class="i sm"><use href="#i-play"/></svg>Запустить</button><button class="btn sm primary" id="pv-check">Проверить</button><span class="muted small" id="pv-vis"></span></div>
           <div class="out card" id="pv-out" style="min-height:64px;flex:none">Здесь появится результат запуска.</div>
+          <p class="muted small">Пробные запуски автора не попадают в результаты учеников.</p>
         </div>
       </aside>
     </div>
@@ -624,21 +656,10 @@ n = <span class="fn">int</span>(<span class="fn">input</span>())</pre></div>
       </div>
     </div></div>
   </div>
-  <aside class="drawer" id="drawer" hidden aria-label="Решение ученика" role="dialog" aria-modal="false">
-    <div class="dh"><span class="avatar">ЕС</span><div style="flex:1"><b>Ева Смирнова</b><div class="muted small">Удвоим число · попытка 4 из 4 · 10:39</div></div><button class="btn icon sm" id="drawer-close" aria-label="Закрыть"><svg class="i sm"><use href="#i-x"/></svg></button></div>
-    <div class="db">
-      <span class="tag bad" style="align-self:flex-start">Не пройдено · 1 из 3 тестов</span>
-      <div class="code sm"><div class="gut"><div>1</div><div>2</div></div><pre>n = <span class="fn">int</span>(<span class="fn">input</span>())
-<span class="fn">print</span>(n + <span class="nm">2</span>)</pre></div>
-      <table class="table"><thead><tr><th>Тест</th><th>Ввод</th><th>Ожидалось</th><th>Получено</th></tr></thead><tbody>
-        <tr><td><span class="tag ok">1</span></td><td class="mono">2</td><td class="mono">4</td><td class="mono">4</td></tr>
-        <tr><td><span class="tag bad">2</span></td><td class="mono">21</td><td class="mono">42</td><td class="mono">23</td></tr>
-        <tr><td><span class="tag bad">3 · скрытый</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">2</td></tr>
-      </tbody></table>
-      <label class="field"><span>Комментарий ученику</span><textarea class="textarea" placeholder="Например: сравни сложение и умножение на 2"></textarea></label>
-      <details><summary>История попыток (4)</summary><p class="muted small" style="margin-top:8px">10:12 ошибка выполнения · 10:20 1/3 · 10:31 1/3 · 10:39 1/3</p></details>
-    </div>
-    <div class="df"><button class="btn primary">Отправить комментарий</button><button class="btn">Засчитать вручную</button></div>
+  <aside class="drawer" id="drawer" hidden aria-labelledby="dr-name" role="dialog" aria-modal="false">
+    <div class="dh"><span class="avatar" id="dr-av">ЕС</span><div style="flex:1"><b id="dr-name">Ева Смирнова</b><div class="muted small" id="dr-sub"></div></div><button class="btn icon sm" id="drawer-close" aria-label="Закрыть"><svg class="i sm"><use href="#i-x"/></svg></button></div>
+    <div class="db" id="dr-body"></div>
+    <div class="df" id="dr-foot"></div>
   </aside>
 </section>
 
@@ -673,12 +694,13 @@ n = <span class="fn">int</span>(<span class="fn">input</span>())</pre></div>
       <div style="display:flex;flex-direction:column;gap:24px">
         <section class="s-card" aria-labelledby="sk-h">
           <h3 id="sk-h">Что ты уже умеешь</h3>
-          <div class="row" style="flex-wrap:wrap;gap:8px"><span class="skill"><svg class="i sm"><use href="#i-check"/></svg>print</span><span class="skill"><svg class="i sm"><use href="#i-check"/></svg>Переменные</span><span class="skill"><svg class="i sm"><use href="#i-check"/></svg>Строки</span><span class="skill next">input — изучаешь</span></div>
+          <div class="row" style="flex-wrap:wrap;gap:8px"><span class="skill"><svg class="i sm"><use href="#i-check"/></svg>Переменные</span><span class="skill"><svg class="i sm"><use href="#i-check"/></svg>Ввод через input</span><span class="skill next">Условие if — дальше</span></div><p class="muted small">По приёмам, которые учитель отметил в принятых заданиях</p><div style="display:none"></div>
         </section>
         <section class="s-card" aria-labelledby="st-h">
-          <h3 id="st-h">Путь Kodik</h3>
-          <div class="stage-ladder"><span class="done">Блоки</span><span class="done">Блоки + Python</span><span class="on">Код с подсказкой</span><span>Сборка кода</span><span>Свой Python</span></div>
-          <p class="muted small">Сейчас ты пишешь код сам, а подсказки открываются по шагам.</p>
+          <h3 id="st-h">Мой прогресс</h3>
+          <div class="kv"><span>Выполнено заданий</span><b class="num">4 из 9</b></div>
+          <div class="bar" aria-label="Выполнено 4 задания из 9"><i style="width:44%"></i></div>
+          <div class="kv"><span>Текущая тема</span><b>Ввод и вычисления</b></div>
         </section>
         <section class="s-card"><h3>Следующее после этого</h3><p class="small">Урок 4 · Условия <span class="muted">— откроет учитель</span></p></section>
       </div>
@@ -721,7 +743,7 @@ n = <span class="fn">int</span>(<span class="fn">input</span>())</pre></div>
 print(age + 1)</div>
       </div>
       <div class="ws-scroll" id="w-hints" hidden>
-        <p class="muted small">Подсказки открываются по очереди. Учитель видит, сколько ты открыл, — это нормально и не снижает оценку.</p>
+        <p class="muted small">Подсказки открываются по очереди: сначала направление, потом пример. Готового решения в подсказках нет.</p>
         <div class="hint" id="h1"><h4><svg class="i sm" style="color:var(--k-warning)"><use href="#i-bulb"/></svg>Подсказка 1 · Куда смотреть</h4><button class="btn sm" data-hint="1">Открыть подсказку</button></div>
         <div class="hint locked" id="h2"><h4><svg class="i sm"><use href="#i-lock"/></svg>Подсказка 2 · Похожий пример</h4><p class="muted small">Откроется после первой</p></div>
         <div class="hint locked" id="h3"><h4><svg class="i sm"><use href="#i-lock"/></svg>Подсказка 3 · Почти решение</h4><p class="muted small">Откроется после второй</p></div>
@@ -762,22 +784,37 @@ print(n + 2)</textarea></div>
 <section class="screen" id="school" aria-label="Школа">
   <aside class="side" data-side="school"></aside>
   <div class="main">
-    <div class="topbar"><div class="crumbs"><b>Школа</b></div><div class="spacer"></div><button class="btn primary" data-modal="m-invite"><svg class="i"><use href="#i-plus"/></svg>Добавить преподавателя</button></div>
+    <div class="topbar"><div class="crumbs"><b>Школа</b></div><div class="spacer"></div><button class="btn" data-modal="m-invite"><svg class="i"><use href="#i-plus"/></svg>Добавить учеников</button><button class="btn primary"><svg class="i"><use href="#i-plus"/></svg>Добавить преподавателя</button></div>
     <div class="content"><div class="wrap">
-      <div class="page-h"><div><h1>IT-школа «Код будущего»</h1><p class="muted">Администратор: Алексей Орлов</p></div></div>
-      <div class="banner info"><svg class="i"><use href="#i-info"/></svg><p><b>Спроектировано, не подключено.</b> Данных о тарифе и местах в базе пока нет; ниже — макет. В рабочем интерфейсе без данных будет показано «Сведения о подписке появятся после заключения договора».</p></div>
+      <div class="page-h"><div><h1>IT-школа «Код будущего»</h1><p class="muted">Только администратор: доступ, пароли и состав школы</p></div></div>
       <div class="grid-3">
-        <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">ТАРИФ</span><h2>Школа · годовой</h2><div class="kv"><span>Доступ до</span><b class="num">31 августа 2027</b></div><div class="kv"><span>Осталось</span><b class="num">316 дней</b></div></section>
-        <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">УЧЕНИЧЕСКИЕ МЕСТА</span><h2 class="num">87 из 120</h2><div class="bar" aria-label="Занято 87 мест из 120"><i style="width:72.5%"></i></div><div class="kv"><span>Свободно</span><b class="num">33</b></div></section>
-        <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">АКТИВНОСТЬ ЗА 7 ДНЕЙ</span><h2 class="num">412 решений</h2><div class="kv"><span>Активных учеников</span><b class="num">71 из 87</b></div><div class="kv"><span>Групп</span><b class="num">9</b></div></section>
+        <section class="card card-b" style="display:flex;flex-direction:column;gap:8px"><span class="caption muted">ПРЕПОДАВАТЕЛИ</span><h2 class="num">3</h2><span class="muted small">1 с отключённым доступом</span></section>
+        <section class="card card-b" style="display:flex;flex-direction:column;gap:8px"><span class="caption muted">УЧЕНИКИ</span><h2 class="num">87</h2><span class="muted small">71 отправили решение за 7 дней</span></section>
+        <section class="card card-b" style="display:flex;flex-direction:column;gap:8px"><span class="caption muted">ГРУППЫ</span><h2 class="num">9</h2><span class="muted small">2 без выданных заданий</span></section>
       </div>
-      <section class="card">
-        <div class="card-h"><h2>Преподаватели</h2><div class="search" style="width:260px"><svg class="i"><use href="#i-search"/></svg><input class="input" placeholder="Найти преподавателя" aria-label="Найти преподавателя"></div></div>
-        <table class="table"><thead><tr><th>Имя</th><th>Логин</th><th>Группы</th><th>Учеников</th><th>Статус</th><th></th></tr></thead><tbody>
-          <tr><td>Анна Белова</td><td class="mono">a.belova</td><td>3</td><td class="num">34</td><td><span class="tag ok">Активен</span></td><td><button class="btn sm icon" aria-label="Действия: Анна Белова"><svg class="i sm"><use href="#i-more"/></svg></button></td></tr>
-          <tr><td>Игорь Ким</td><td class="mono">i.kim</td><td>4</td><td class="num">41</td><td><span class="tag ok">Активен</span></td><td><button class="btn sm icon" aria-label="Действия: Игорь Ким"><svg class="i sm"><use href="#i-more"/></svg></button></td></tr>
-          <tr><td>Ольга Нестерова</td><td class="mono">o.nesterova</td><td>2</td><td class="num">12</td><td><span class="tag plain">Доступ отключён</span></td><td><button class="btn sm icon" aria-label="Действия: Ольга Нестерова"><svg class="i sm"><use href="#i-more"/></svg></button></td></tr>
+      <div class="tabs" role="tablist" style="padding:0" id="sc-tabs"><button role="tab" aria-selected="true" data-t="sc-teachers">Преподаватели</button><button role="tab" aria-selected="false" data-t="sc-students">Ученики</button><button role="tab" aria-selected="false" data-t="sc-plan">Подписка<span class="cnt">концепт</span></button></div>
+      <section class="card" id="sc-teachers">
+        <div class="card-h"><div class="search" style="width:280px"><svg class="i"><use href="#i-search"/></svg><input class="input" placeholder="Найти преподавателя" aria-label="Найти преподавателя"></div><span class="muted small">Сейчас все преподаватели видят все группы школы</span></div>
+        <table class="table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Статус</th><th></th></tr></thead><tbody>
+          <tr><td>Анна Белова</td><td class="mono">a.belova</td><td>Администратор</td><td><span class="tag ok">Активен</span></td><td></td></tr>
+          <tr><td>Игорь Ким</td><td class="mono">i.kim</td><td>Преподаватель</td><td><span class="tag ok">Активен</span></td><td><div class="row" style="justify-content:flex-end"><button class="btn sm">Сбросить пароль</button><button class="btn sm" data-modal="m-block">Отключить доступ</button></div></td></tr>
+          <tr><td>Ольга Нестерова</td><td class="mono">o.nesterova</td><td>Преподаватель</td><td><span class="tag plain">Доступ отключён</span></td><td><div class="row" style="justify-content:flex-end"><button class="btn sm">Включить доступ</button></div></td></tr>
         </tbody></table>
+      </section>
+      <section class="card" id="sc-students" hidden>
+        <div class="card-h"><div class="search" style="width:280px"><svg class="i"><use href="#i-search"/></svg><input class="input" placeholder="Найти ученика" aria-label="Найти ученика"></div><div class="seg"><button aria-pressed="true">Активные</button><button aria-pressed="false">Отключённые</button></div></div>
+        <table class="table"><thead><tr><th>Ученик</th><th>Логин</th><th>Группы</th><th>Статус</th><th></th></tr></thead><tbody>
+          <tr><td>Ковалёв Миша</td><td class="mono">7a-02</td><td>Python · Старт 7А</td><td><span class="tag ok">Активен</span></td><td><div class="row" style="justify-content:flex-end"><button class="btn sm">Сбросить пароль</button><button class="btn sm" data-modal="m-block">Отключить доступ</button></div></td></tr>
+          <tr><td>Петров Даня</td><td class="mono">7a-04</td><td>Python · Старт 7А, Олимпиадный кружок</td><td><span class="tag ok">Активен</span></td><td><div class="row" style="justify-content:flex-end"><button class="btn sm">Сбросить пароль</button><button class="btn sm" data-modal="m-block">Отключить доступ</button></div></td></tr>
+        </tbody></table>
+      </section>
+      <section id="sc-plan" hidden>
+        <div class="banner warn" style="margin-bottom:16px"><svg class="i"><use href="#i-alert"/></svg><p><b>Концепт, не входит в MVP.</b> Тарифов, лимитов мест и сроков доступа в базе нет. Пока данных нет, рабочий интерфейс эту вкладку не показывает. Цифры ниже — пример для обсуждения.</p></div>
+        <div class="grid-3" style="border:2px dashed var(--k-line-strong);border-radius:var(--k-radius-lg);padding:16px">
+          <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">ТАРИФ · ПРИМЕР</span><h2>Школа · годовой</h2><div class="kv"><span>Доступ до</span><b class="num">31 августа 2027</b></div></section>
+          <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">УЧЕНИЧЕСКИЕ МЕСТА · ПРИМЕР</span><h2 class="num">87 из 120</h2><div class="bar" aria-label="Пример: занято 87 мест из 120"><i style="width:72.5%"></i></div><div class="kv"><span>Свободно</span><b class="num">33</b></div></section>
+          <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">ЧТО СЧИТАЕТСЯ МЕСТОМ</span><p class="small">Активный ученический аккаунт. Отключение доступа освобождает место, решения сохраняются. Решение — PD-11.</p></section>
+        </div>
       </section>
     </div></div>
   </div>
@@ -828,6 +865,40 @@ print(n + 2)</textarea></div>
         <div class="empty card"><h3>Групп пока нет</h3><p class="muted small">Группа объединяет учеников и выданные им уроки.</p><button class="btn primary sm" data-modal="m-group">Создать группу</button></div>
         <div aria-busy="true" style="display:flex;flex-direction:column;gap:12px"><div class="skel" style="width:60%"></div><div class="skel"></div><div class="skel" style="width:80%"></div></div>
       </div></section>
+      <section class="card"><div class="card-h"><h2>Плотность</h2><span class="muted small">один бренд, две среды</span></div><div class="card-b">
+        <div class="row" style="align-items:flex-start;gap:24px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px"><span class="caption muted">ПРЕПОДАВАТЕЛЬ · КОМПАКТНО</span><button class="btn">Поле и кнопка 40</button><table class="table"><tbody><tr><td>Строка таблицы 44</td><td><span class="tag ok">Принято</span></td></tr></tbody></table><span class="muted small">Радиус 8–12, текст 14–15, отступ карточки 16–20</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px"><span class="caption muted">УЧЕНИК · СВОБОДНО</span><button class="btn xl primary">Главное действие 48</button><div class="s-card" style="padding:16px"><b>Карточка 16 радиус</b><span class="muted small">Текст условия 16/26</span></div><span class="muted small">Радиус 16–20, поля 44, отступ 20–28</span></div>
+        </div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Недоступные функции</h2></div><div class="card-b">
+        <p class="small">Правило: неподдерживаемое не показывается в основном пути. Если без упоминания непонятно, где функция, — одна строка с причиной, без кнопки.</p>
+        <div class="info-note"><svg class="i"><use href="#i-info"/></svg><p><b>Blockly-задания</b> пока доступны только в исходном курсе Kodik. В конструкторе школы их нет.</p></div>
+        <div class="row"><button class="btn" aria-disabled="true" aria-describedby="why-pub">Опубликовать</button><span class="muted small" id="why-pub">Станет доступно после проверки качества</span></div>
+        <p class="muted small">Заблокированная кнопка всегда объясняет причину рядом с собой, а не во всплывающей подсказке.</p>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Сообщения об ошибках</h2></div><div class="card-b">
+        <div class="feedback bad" style="margin:0"><b>Строка 2: нельзя сложить число и текст.</b><span>Преврати число в текст через str() или выведи их через запятую.</span><details><summary>Текст ошибки Python</summary><code>TypeError: unsupported operand type(s) for +: 'int' and 'str'</code></details></div>
+        <div class="feedback bad" style="margin:0"><b>Программа выполняется слишком долго.</b><span>Проверь условие окончания цикла while.</span></div>
+        <div class="banner bad" role="alert"><svg class="i"><use href="#i-alert"/></svg><div style="flex:1"><b>Проверка не выполнена</b><p>Сервер проверки перегружен. Решение сохранено и проверится автоматически.</p></div></div>
+        <p class="muted small">Три уровня: ошибка в коде ученика (понятно + исходный текст), неверный результат (diff), сбой системы (не вина ученика, решение не потеряно).</p>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Результат проверки</h2></div><div class="card-b">
+        <div class="feedback ok" style="margin:0"><b>Все 3 теста пройдены.</b><span>Задание выполнено.</span></div>
+        <div class="feedback bad" style="margin:0"><b>Пройдено 1 из 3 тестов.</b><div class="diff"><span>Тест 2 · ввод</span><span>21</span><span>Ожидалось</span><span>42</span><span>Получено</span><span style="color:var(--k-danger)">23</span></div><span class="small muted">Тест 3 скрытый — данные не показываются.</span></div>
+        <div class="row" style="flex-wrap:wrap"><span class="tag ok">passed · Принято</span><span class="tag bad">failed · Не пройдено</span><span class="tag bad">runtime_error · Ошибка выполнения</span><span class="tag warn">pending_review · На проверке</span><span class="tag info">checker_error · Сбой проверки</span></div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Редактор кода</h2></div><div class="card-b">
+        <div class="code sm"><div class="gut"><div>1</div><div style="color:var(--k-danger);font-weight:700">2</div></div><pre>n = <span class="fn">int</span>(<span class="fn">input</span>())
+<span style="background:var(--k-danger-soft);text-decoration:underline wavy var(--k-danger)"><span class="fn">print</span>(n + <span class="st">"!"</span>)</span></pre></div>
+        <div class="row small muted" style="flex-wrap:wrap;gap:8px 16px"><span><span class="kbd">Tab</span> отступ</span><span><span class="kbd">Esc</span> → <span class="kbd">Tab</span> выйти</span><span><span class="kbd">Ctrl</span>+<span class="kbd">↵</span> запустить</span><span><span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">↵</span> проверить</span></div>
+        <p class="muted small">Состояния: фокус (синяя рамка), строка ошибки, только чтение (решение ученика у преподавателя), черновик сохранён / не сохранён.</p>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Прогресс</h2></div><div class="card-b">
+        <div class="kv"><span>Ученик · курс</span><b class="num">урок 3 из 8</b></div><div class="path"><i class="done"></i><i class="done"></i><i class="cur"></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="kv"><span>Преподаватель · группа на открытом уроке</span><b class="num">9/14</b></div><div class="bar"><i style="width:64%"></i></div>
+        <div class="row"><button class="cell p" aria-label="принято">✓</button><button class="cell f" aria-label="не пройдено">✗</button><button class="cell r" aria-label="на проверке">?</button><button class="cell n" aria-label="не начато"></button><span class="muted small">Ячейка матрицы: цвет + знак + подпись для экранного диктора</span></div>
+      </div></section>
       <section class="card"><div class="card-h"><h2>Подсказки ученика</h2></div><div class="card-b">
         <div class="hint"><h4><svg class="i sm" style="color:var(--k-warning)"><use href="#i-bulb"/></svg>Подсказка 1 · Куда смотреть</h4><p class="small">Посмотри, какую операцию ты делаешь с числом. «В два раза больше» — это сложение или умножение?</p></div>
         <div class="hint locked"><h4><svg class="i sm"><use href="#i-lock"/></svg>Подсказка 2 · Похожий пример</h4><p class="muted small">Откроется после первой</p></div>
@@ -847,7 +918,7 @@ print(n + 2)</textarea></div>
   <div class="mh"><h2 id="mi-h">Добавить учеников в «Python · Старт 7А»</h2><p class="muted small">По одному имени в строке. Логины и временные пароли создадутся сразу — раздайте карточки входа на занятии.</p></div>
   <div class="mb"><label class="field"><span>Имена учеников</span><textarea class="textarea mono" rows="6">Ковалёв Михаил
 Смирнова Ева
-Петров Даниил</textarea><small>3 ученика · свободно 33 места из 120</small></label><div class="info-note"><svg class="i"><use href="#i-info"/></svg><p>Электронная почта детей не нужна. Можно вводить псевдонимы.</p></div></div>
+Петров Даниил</textarea><small>3 ученика. Пароли сгенерируются автоматически, их можно распечатать один раз.</small></label><div class="info-note"><svg class="i"><use href="#i-info"/></svg><p>Электронная почта детей не нужна. Можно вводить псевдонимы.</p></div></div>
   <div class="mf"><button class="btn ghost" data-close>Отмена</button><button class="btn primary" data-close data-toast="Создано 3 аккаунта. Карточки входа готовы к печати">Создать 3 аккаунта</button></div>
 </div></div>
 <div class="scrim" id="m-assign" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ma-h">
@@ -857,13 +928,26 @@ print(n + 2)</textarea></div>
 </div></div>
 <div class="scrim" id="m-confirm" hidden><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="mc-h" aria-describedby="mc-d">
   <div class="mh"><h2 id="mc-h">Снять задание с публикации?</h2></div>
-  <div class="mb" id="mc-d"><p>Ученики двух групп больше не смогут отправлять решения. Уже отправленные решения и результаты сохранятся.</p></div>
+  <div class="mb" id="mc-d"><p>Задание нельзя будет выдать новым группам. Уже выданные версии у групп «7А» и «7Б» продолжат работать — чтобы закрыть их, снимите назначение в группе. Решения и результаты сохранятся.</p></div>
   <div class="mf"><button class="btn" data-close>Оставить опубликованным</button><button class="btn danger" data-close data-toast="Задание снято с публикации">Снять с публикации</button></div>
 </div></div>
 <div class="scrim" id="m-leave" hidden><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="ml-h">
   <div class="mh"><h2 id="ml-h">Изменения не сохранены на сервере</h2></div>
   <div class="mb"><p>Последние правки хранятся только в этом браузере. Если уйти сейчас, они восстановятся при следующем открытии на этом компьютере.</p></div>
   <div class="mf"><button class="btn" data-close>Остаться</button><button class="btn danger" data-close>Уйти</button></div>
+</div></div>
+<div class="scrim" id="m-python" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mp-h" style="width:min(720px,100%)">
+  <div class="mh"><h2 id="mp-h">Что умеет учебный Python Kodik</h2><p class="muted small">Это собственный учебный интерпретатор, не CPython. Он запускается на сервере с ограничением времени и вывода. Если эталон использует неподдерживаемую конструкцию, проверка качества сразу это покажет.</p></div>
+  <div class="mb"><div class="grid-2" style="grid-template-columns:1fr 1fr;gap:24px">
+    <div><h3 style="color:var(--k-success)">Поддерживается</h3><ul class="small" style="padding-left:18px;margin:8px 0 0;line-height:24px"><li>print, input, int, str, len, range</li><li>Числа, строки, True/False/None, списки и индексы <code>a[0]</code></li><li>+ − * / // % ** и сравнения, в том числе цепочкой <code>1 &lt; x &lt; 5</code></li><li>and, or, not</li><li>if / elif / else, for … in range / по списку, while</li><li>def, return, параметры; pass; комментарии</li><li>Отступ ровно 4 пробела</li></ul></div>
+    <div><h3 style="color:var(--k-danger)">Пока нет</h3><ul class="small" style="padding-left:18px;margin:8px 0 0;line-height:24px"><li><code>+=</code> и другие сокращения</li><li>break, continue</li><li><code>print(…, end=…)</code>, <code>sep=</code></li><li>f-строки, методы <code>.append()</code>, <code>.split()</code>, <code>.upper()</code></li><li>Срезы <code>s[1:3]</code>, оператор <code>in</code></li><li>float, max, min, abs, round, sum, list</li><li>Словари, кортежи, import, class, try</li></ul></div>
+  </div><p class="small muted">Ограничения: до 250 строк, до 10 000 шагов выполнения. Бесконечный цикл остановится с понятным сообщением.</p></div>
+  <div class="mf"><button class="btn primary" data-close>Понятно</button></div>
+</div></div>
+<div class="scrim" id="m-block" hidden><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="mb-h" aria-describedby="mb-d">
+  <div class="mh"><h2 id="mb-h">Отключить доступ?</h2></div>
+  <div class="mb" id="mb-d"><p>Человек сразу выйдет из всех сессий и не сможет войти. Решения, попытки и членство в группах сохранятся. Доступ можно включить обратно.</p></div>
+  <div class="mf"><button class="btn" data-close>Отмена</button><button class="btn danger" data-close data-toast="Доступ отключён, сессии завершены">Отключить доступ</button></div>
 </div></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
@@ -900,7 +984,7 @@ document.addEventListener("click", e => {
   const m = e.target.closest("[data-modal]"); if (m) { openModal(m.dataset.modal); return; }
   const c = e.target.closest("[data-close]"); if (c) { closeModal(c.closest(".scrim")); if (c.dataset.toast) toast(c.dataset.toast); return; }
   if (e.target.classList.contains("scrim")) closeModal(e.target);
-  const d = e.target.closest("[data-drawer]"); if (d) { go("group"); $("#drawer").hidden = false; $("#drawer-close").focus(); }
+  const d = e.target.closest("[data-drawer]"); if (d) { go("group"); openDrawer(d.classList.contains("r") || d.dataset.drawer === "r" ? "r" : "f"); }
 });
 let lastFocus = null;
 function openModal(id) { lastFocus = document.activeElement; const m = $("#" + id); m.hidden = false; const f = $("input,select,textarea,button", m); f && f.focus(); }
@@ -918,117 +1002,119 @@ function tabs(el) { el.addEventListener("click", e => { const b = e.target.close
 /* Обзор: состояния */
 segment($("#ov-state"), b => ["data","onb","load","err"].forEach(s => $("#ov-" + s).hidden = s !== b.dataset.s));
 
-/* ============ Конструктор ============ */
-const steps = [
-  ["Тип задания", "Python с тест-кейсами"], ["Основное", "Название, цель, урок"], ["Содержимое", "Условие и подсказки"],
-  ["Редактор ученика", "Стартовый код"], ["Проверка", ""], ["Предпросмотр", "Пройти как ученик"], ["Публикация", "Назначить группе"]];
-let step = 4, verified = false, weak = true;
-const stepState = i => i === 4 ? (verified ? "done" : weak && checkedOnce ? "error" : "") : i < 4 ? "done" : "";
-let checkedOnce = false;
-function renderSteps() {
-  $("#steps").innerHTML = steps.map(([t, s], i) => {
-    const st = stepState(i), sub = i === 4 ? (verified ? "Подтверждено" : checkedOnce ? "Нужен ещё один тест" : "Не проверено") : s;
-    return `<li class="${st}"><button ${i === step ? 'aria-current="step"' : ""} data-step="${i}"><span class="dot">${st === "done" ? "✓" : st === "error" ? "!" : i + 1}</span><span>${t}<small>${sub}</small></span></button></li>`;
-  }).join("");
-}
-$("#steps").addEventListener("click", e => { const b = e.target.closest("[data-step]"); if (b) { step = +b.dataset.step; renderStep(); } });
-const types = [
-  ["task", "Python: написать код", "Ученик пишет программу с нуля. Проверка — тест-кейсы, ожидаемый вывод или вручную.", true],
-  ["tpl", "Python со стартовым кодом", "Готовая заготовка или шаблон: вывод, ввод, условие, цикл, функция, исправление ошибки, творческая.", true],
-  ["doc", "Теория и вопросы", "Шаг урока: объяснение, пример кода, вопрос с вариантами. Создаётся в сценарии урока.", true],
-  ["blocks", "Blockly", "Визуальные блоки. Пока доступны только в исходном курсе Kodik — создание в конструкторе появится позже.", false],
-  ["blocks", "Blockly → Python", "Переходный формат: блоки и код рядом. Появится вместе с Blockly-заданиями.", false]];
 const field = (label, input, help = "") => `<label class="field"><span>${label}</span>${input}${help ? `<small>${help}</small>` : ""}</label>`;
-const sectionH = (n, t, d) => `<div><p class="caption muted">ШАГ ${n} ИЗ 7</p><h1>${t}</h1>${d ? `<p class="muted" style="margin-top:4px">${d}</p>` : ""}</div>`;
-let tests = [{ i: "2", o: "4", v: true, s: "" }, { i: "0", o: "0", v: false, s: "" }];
+/* ============ Конструктор: быстрое создание + расширенные настройки на одном экране ============ */
+const B = {
+  title: "Удвоим число",
+  text: "Программа получает целое число. Выведи число, которое в два раза больше.",
+  ref: "n = int(input())\nprint(n * 2)",
+  tests: [{ i: "2", o: "4", v: true }, { i: "0", o: "", v: false }],
+  errors: ["n = int(input())\nprint(n * n)"],
+  criteria: "",
+  mode: "tests", quality: "none", qualityNote: "", published: false, dirty: false,
+  starter: "# Напиши решение здесь", hints: [], rules: []
+};
+const UNSUPPORTED = [[/\+=|-=|\*=/, "сокращённое присваивание += пока не поддерживается. Запишите s = s + 1"], [/\bbreak\b|\bcontinue\b/, "break и continue пока не поддерживаются. Используйте условие в while"], [/end\s*=|sep\s*=/, "параметры print end= и sep= пока не поддерживаются"], [/\bf["']/, "f-строки пока не поддерживаются. Соберите строку через + и str()"], [/\.\w+\(/, "методы вроде .append() и .split() пока не поддерживаются"], [/\bimport\b|\bclass\b|\btry\b/, "import, class и try не поддерживаются учебным Python"], [/\b(float|max|min|abs|round|sum|list)\(/, "эта встроенная функция пока не поддерживается: доступны print, input, int, str, len, range"]];
+function simulate(code, input) {
+  for (const [re, msg] of UNSUPPORTED) if (re.test(code)) return { error: "Строка " + (code.split("\n").findIndex(l => re.test(l)) + 1) + ": " + msg + "." };
+  const n = parseInt(input, 10); if (!/input/.test(code)) return { out: "" };
+  if (Number.isNaN(n)) return { error: "int() не смог превратить «" + input + "» в число." };
+  const m = code.match(/print\s*\(\s*n\s*([+*\-])\s*(\w+)\s*\)/); if (!m) return { out: "" };
+  const b = m[2] === "n" ? n : +m[2]; return { out: String(m[1] === "+" ? n + b : m[1] === "*" ? n * b : n - b) };
+}
+const QUICK = [["s-task", "Задание", () => B.title && B.text ? "done" : ""], ["s-solution", B => B.mode === "manual" ? "Критерии оценки" : "Решение и тесты", () => B.mode === "manual" ? (B.criteria ? "done" : "") : B.ref && B.tests.every(t => t.o !== "") ? "done" : B.tests.some(t => t.o === "") ? "error" : ""],
+  ["s-error", "Типичная ошибка", () => B.mode === "manual" ? "skip" : B.errors[0]?.trim() ? "done" : ""], ["s-quality", "Проверка качества", () => B.quality === "ok" ? "done" : ["weak", "bad"].includes(B.quality) ? "error" : ""], ["s-publish", "Публикация", () => B.published ? "done" : ""]];
+const ADV = [["a-starter", "Стартовый код"], ["a-tests", "Видимость тестов"], ["a-mode", "Способ проверки"], ["a-rules", "Обязательные конструкции"], ["a-hints", "Подсказки"], ["a-meta", "Цель, сложность, урок"], ["a-theory", "Теория"]];
+const advSummary = { "a-starter": () => B.starter ? "Комментарий-заготовка" : "Пустой редактор", "a-tests": () => `Видно ученику: ${B.tests.filter(t => t.v).length} из ${B.tests.length}`, "a-mode": () => ({ tests: "Тест-кейсы", output: "Только вывод", manual: "Ручная проверка" })[B.mode], "a-rules": () => B.rules.length ? "Получить данные через input" : "Нет", "a-hints": () => B.hints.length ? `${B.hints.length}` : "Нет", "a-meta": () => "Начальный · урок 3", "a-theory": () => "Нет" };
+function renderSteps() {
+  const label = x => typeof x === "function" ? x(B) : x;
+  $("#steps").innerHTML = QUICK.map(([id, t, st], i) => { const s = st(); if (s === "skip") return ""; return `<li class="${s}"><button data-jump="${id}"><span class="dot">${s === "done" ? "✓" : s === "error" ? "!" : i + 1}</span><span>${label(t)}<small>${id === "s-quality" ? ({ none: "Не проверено", ok: "Пройдена", weak: "Нужен ещё тест", bad: "Эталон не проходит" })[B.quality] : s === "error" && id === "s-solution" ? "Нет ожидаемого вывода" : ""}</small></span></button></li>`; }).join("");
+  $("#steps-adv").innerHTML = ADV.map(([id, t]) => `<li><button data-jump="${id}"><span class="dot" style="border-style:dashed">+</span><span>${t}<small>${advSummary[id]()}</small></span></button></li>`).join("");
+}
+document.addEventListener("click", e => { const j = e.target.closest("[data-jump]"); if (!j) return; const el = $("#" + j.dataset.jump); if (el.tagName === "DETAILS") { el.open = true; $("#adv").open = true; } el.scrollIntoView({ block: "start", behavior: "smooth" }); const f = $("input,textarea,button,summary", el); f && f.focus({ preventScroll: true }); });
+const sec = (id, n, t, d, body) => `<section id="${id}" class="bsec" aria-labelledby="${id}-h" style="scroll-margin-top:16px"><div class="bsec-h"><span class="bnum">${n}</span><div><h2 id="${id}-h">${t}</h2>${d ? `<p class="muted small">${d}</p>` : ""}</div></div>${body}</section>`;
+const adv = (id, t, body) => `<details id="${id}" class="advd"><summary><span>${t}</span><span class="muted small" data-sum="${id}">${advSummary[id]()}</span></summary><div class="advb">${body}</div></details>`;
 function renderStep() {
-  renderSteps();
-  const f = $("#b-inner");
-  const foot = `<div class="b-foot"><button class="btn" ${step === 0 ? "disabled" : ""} data-nav="-1">${icon("back")}Назад</button><span class="muted small">Сохраняется автоматически</span><button class="btn primary" data-nav="1" ${step === 6 ? "hidden" : ""}>Далее: ${steps[Math.min(step + 1, 6)][0]}${icon("arrow")}</button></div>`;
-  let h = "";
-  if (step === 0) h = sectionH(1, "Какое задание создаём?", "Доступны форматы, которые Kodik умеет проверять сейчас.") +
-    `<div class="type-grid" role="radiogroup" aria-label="Тип задания">${types.map(([ic, t, d, ok], i) => `<button class="type-card" role="radio" aria-checked="${i === 0}" ${ok ? "" : 'aria-disabled="true"'}><span class="ico">${icon(ic)}</span><span><h3>${t} ${ok ? "" : '<span class="tag soon">Скоро</span>'}</h3><p>${d}</p></span></button>`).join("")}</div>
-    <div class="card card-b" style="display:flex;flex-direction:column;gap:12px"><h3>Начать с шаблона <span class="muted small" style="font-weight:600">— необязательно</span></h3><div class="row" style="flex-wrap:wrap;gap:8px">${["Вывод текста","Ввод и вычисление","Условие","Цикл","Функция","Исправление ошибки","Творческая работа"].map((t, i) => `<button class="btn sm" aria-pressed="${i === 1}" style="${i === 1 ? "border-color:var(--k-green);background:var(--k-green-soft)" : ""}">${t}</button>`).join("")}</div><p class="muted small">Шаблон заполнит условие, тесты и эталон. Всё можно изменить.</p></div>`;
-  if (step === 1) h = sectionH(2, "Основная информация") +
-    field("Название", `<input class="input" id="f-title" value="Удвоим число">`, "Видно ученику в списке заданий") +
-    field("Учебная цель", `<input class="input" value="Научиться превращать ввод в число и считать с ним">`, "Ученик увидит цель над условием") +
-    `<div class="row" style="align-items:flex-start;gap:16px">${field("Урок", `<select class="select"><option>Python: первые открытия › Модуль 1 › Урок 3 · Ввод и вычисления</option><option>+ Создать новый урок…</option></select>`)}</div>
-    <div class="row" style="gap:24px;align-items:flex-start"><div class="field"><span>Сложность</span><div class="seg"><button aria-pressed="true">Начальный</button><button aria-pressed="false">Средний</button><button aria-pressed="false">Продвинутый</button></div></div>
-    ${field("Тема", `<input class="input" value="input, int, арифметика">`)}</div>` +
-    field("Краткое описание · для преподавателей", `<textarea class="textarea" rows="2">Первое задание на int(input()). Хорошо после разбора типов данных.</textarea>`);
-  if (step === 2) h = sectionH(3, "Содержимое", "Условие, теория и поэтапные подсказки. Изменения сразу видны в предпросмотре.") +
-    `<div class="field"><span>Условие</span><div class="rte"><div class="tb" role="toolbar" aria-label="Форматирование"><button aria-label="Заголовок">H</button><button aria-label="Жирный">B</button><button aria-label="Список">• —</button><button aria-label="Пример кода" class="mono">{ }</button><button disabled aria-label="Изображение — скоро" title="Изображения появятся позже">Изображение · скоро</button></div><div class="body" contenteditable="true" id="f-text" aria-label="Текст условия" role="textbox" aria-multiline="true">Программа получает целое число. Выведи число, которое в два раза больше.</div></div></div>
-    <div class="field"><span>Теория · вкладка «Теория» у ученика</span><div class="rte"><div class="body" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Теория"><p><code>input()</code> всегда возвращает строку. Чтобы считать, преврати её в число:</p><pre class="ex">age = int(input())
-print(age + 1)</pre></div></div></div>
-    <div class="field"><span>Подсказки · открываются по очереди</span><small>Начните с направления мысли, закончите почти готовым решением. Полное решение ученику не показывается.</small>
-    ${[["1 · Направление","Посмотри, какую операцию ты делаешь с числом. «В два раза больше» — это сложение или умножение?"],["2 · Пример","Умножение в Python записывается звёздочкой: 3 * 4 даёт 12."],["3 · Почти решение","Выведи n, умноженное на 2, через print."]].map(([l, t]) => `<div class="hint-edit"><span class="lvl">${l}</span><textarea class="textarea" rows="2" style="min-height:64px" aria-label="Подсказка ${l}">${t}</textarea></div>`).join("")}</div>`;
-  if (step === 3) h = sectionH(4, "Редактор ученика", "Что ученик увидит в редакторе при первом открытии.") +
-    `<div class="field"><span>Стартовый код</span><div class="code sm"><div class="gut"><div>1</div><div>2</div><div>3</div></div><textarea rows="3" aria-label="Стартовый код"># Прочитай число и выведи удвоенное
-n = int(input())
-</textarea></div></div>
-    <div class="field"><span>Обязательные приёмы</span><small>Проверяются автоматически: приём должен влиять на результат, комментарии не засчитываются.</small><div class="row" style="flex-wrap:wrap;gap:8px 24px;margin-top:4px">${["Сохранить значение в переменной","Получить данные через input","Использовать условие if","Использовать цикл for","Описать и вызвать функцию"].map((t, i) => `<label class="check"><input type="checkbox" ${i < 2 ? "checked" : ""}>${t}</label>`).join("")}</div></div>
-    <div class="field"><span>Возможности ученика</span><div style="display:flex;flex-direction:column;gap:10px;margin-top:4px"><label class="check"><input type="checkbox" class="switch" role="switch" checked>Пробный запуск со своим вводом</label><label class="check"><input type="checkbox" class="switch" role="switch" checked>Подсказки (3)</label><label class="check"><input type="checkbox" class="switch" role="switch" checked>Показать пример ввода и вывода</label></div></div>
-    <div class="info-note">${icon("info")}<p><b>Ограничения учебного Python.</b> Нет import, классов и сторонних библиотек; время выполнения и объём вывода ограничены. Ученик увидит это в подписи редактора.</p></div>`;
-  if (step === 4) h = sectionH(5, "Проверка", "Задайте ввод и ожидаемый вывод — Kodik сравнит их с выводом программы ученика.") +
-    `<div class="field"><span>Способ проверки</span><div class="seg" id="mode"><button aria-pressed="true">Тест-кейсы</button><button aria-pressed="false">Только вывод</button><button aria-pressed="false">Ручная проверка</button></div></div>
-    <div class="card" style="padding:16px"><table class="tests"><thead><tr><th style="width:28px">#</th><th>Ввод</th><th>Ожидаемый вывод</th><th style="width:104px">Видимость</th><th style="width:128px">Эталон</th><th style="width:40px"></th></tr></thead><tbody id="tests"></tbody></table>
-    <div class="row" style="justify-content:space-between;margin-top:12px"><button class="btn sm" id="add-test">${icon("plus", "i sm")}Добавить тест</button><span class="muted small">Каждая строка ввода — один вызов input()</span></div></div>
-    <div class="field"><span>Эталонное решение · ученик его не увидит</span><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><textarea rows="2" aria-label="Эталонное решение">n = int(input())
-print(n * 2)</textarea></div></div>
-    <details ${checkedOnce ? "open" : ""}><summary>Типичные ошибки учеников · ${weak ? 2 : 2} примера</summary><p class="muted small" style="margin:8px 0">Kodik убедится, что тесты их отклоняют. Так скрытые ошибки не пройдут проверку.</p>
-    <div class="field"><span>Ошибка 1 · сложение вместо умножения</span><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><textarea rows="2" aria-label="Ошибка 1">n = int(input())
-print(n + 2)</textarea></div></div>
-    <div class="field" style="margin-top:12px"><span>Ошибка 2 · возведение в квадрат</span><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><textarea rows="2" aria-label="Ошибка 2">n = int(input())
-print(n * n)</textarea></div></div></details>
-    <div class="verify"><div class="card-h" style="padding:12px 16px"><h3>Проверка задания перед публикацией</h3><button class="btn primary" id="verify">${checkedOnce ? "Проверить снова" : "Проверить задание"}</button></div>
-    <div id="verify-out">${verifyOut()}</div></div>`;
-  if (step === 5) h = sectionH(6, "Предпросмотр", "Пройдите задание как ученик. Пробные запуски не попадают в результаты.") +
-    `<div class="info-note">${icon("eye")}<p>Панель справа — точная копия экрана ученика с теми же тестами. Попробуйте ошибочное решение, чтобы увидеть обратную связь.</p></div>
-    <button class="btn lg primary" style="align-self:flex-start" data-go="workspace">Открыть на весь экран как ученик ${icon("arrow")}</button>`;
-  if (step === 6) h = sectionH(7, "Публикация") +
-    `<div class="verify"><ul>
-      <li><span class="ok">${icon("check", "i sm")}</span>Условие, цель и урок заполнены</li>
-      <li><span class="ok">${icon("check", "i sm")}</span>Тестов: ${tests.length}, скрытых: ${tests.filter(t => !t.v).length}</li>
-      <li><span class="${verified ? "ok" : "bad"}">${icon(verified ? "check" : "x", "i sm")}</span>${verified ? "Проверка пройдена: эталон проходит, обе ошибки отклонены" : "Проверка не пройдена — вернитесь к шагу «Проверка»"}</li></ul></div>
-    <div class="row"><button class="btn lg primary" id="publish" ${verified ? "" : "disabled"}>Опубликовать</button><button class="btn lg">Оставить черновиком</button></div>
-    <p class="muted small">После публикации выдайте задание группе. Ученики получат ту версию, которая опубликована сейчас; следующие правки станут новой версией.</p>`;
-  f.innerHTML = h + foot;
-  if (step === 4) { renderTests(); segment($("#mode"), () => {}); $("#verify").onclick = runVerify; $("#add-test").onclick = () => { tests.push({ i: "", o: "", v: true, s: "" }); renderTests(); }; }
-  if (step === 6) { const p = $("#publish"); p && (p.onclick = () => { $(".crumbs .tag", $("#builder")).className = "tag ok"; $(".crumbs .tag", $("#builder")).textContent = "Опубликовано · версия 1"; openModal("m-assign"); }); }
-  $$("[data-nav]", f).forEach(b => b.onclick = () => { step = Math.max(0, Math.min(6, step + +b.dataset.nav)); renderStep(); $("#b-form").scrollTop = 0; });
-  $$(".type-card", f).forEach(c => c.onclick = () => { if (c.getAttribute("aria-disabled")) return; $$(".type-card", f).forEach(x => x.setAttribute("aria-checked", x === c)); });
-  const t = $("#f-title"); t && t.addEventListener("input", () => { $("#pv-title").textContent = t.value || "Без названия"; setSave("busy"); clearTimeout(window.st); window.st = setTimeout(() => setSave("ok"), 800); });
-  const tx = $("#f-text"); tx && tx.addEventListener("input", () => $("#pv-text").textContent = tx.textContent);
-  $("#publish-top").setAttribute("aria-disabled", !verified);
-}
-function renderTests() {
-  const pv = $("#pv-vis"); pv && (pv.textContent = `Ученик видит тестов: ${tests.filter(t => t.v).length} из ${tests.length}`);
-  $("#tests").innerHTML = tests.map((t, n) => `<tr><td class="num" style="padding-top:14px"><b>${n + 1}</b></td>
+  const manual = B.mode === "manual";
+  const testRows = B.tests.map((t, n) => `<tr><td class="num" style="padding-top:14px"><b>${n + 1}</b></td>
     <td><textarea aria-label="Ввод теста ${n + 1}" data-k="i" data-n="${n}">${t.i}</textarea></td>
-    <td><textarea aria-label="Ожидаемый вывод теста ${n + 1}" data-k="o" data-n="${n}" style="${t.o === "" ? "border-color:var(--k-danger)" : ""}">${t.o}</textarea>${t.o === "" ? '<small style="color:var(--k-danger);font-weight:600">Заполните вывод</small>' : ""}</td>
-    <td style="padding-top:12px"><label class="check small"><input type="checkbox" class="switch" role="switch" data-v="${n}" ${t.v ? "checked" : ""} aria-label="Тест ${n + 1} виден ученику">${t.v ? "Да" : "Скрыт"}</label></td>
-    <td class="st">${t.s === "ok" ? '<span class="tag ok">Эталон: верно</span>' : t.s === "bad" ? '<span class="tag bad">Эталон: неверно</span>' : '<span class="tag plain">Не проверен</span>'}</td>
-    <td><button class="btn sm icon" aria-label="Удалить тест ${n + 1}" data-del="${n}">${icon("x", "i sm")}</button></td></tr>`).join("");
-  $$("#tests textarea").forEach(a => a.oninput = () => { tests[a.dataset.n][a.dataset.k] = a.value; tests[a.dataset.n].s = ""; verified = false; renderSteps(); });
-  $$("#tests [data-v]").forEach(a => a.onchange = () => { tests[a.dataset.v].v = a.checked; renderTests(); });
-  $$("#tests [data-del]").forEach(a => a.onclick = () => { tests.splice(+a.dataset.del, 1); renderTests(); });
+    <td><textarea aria-label="Ожидаемый вывод теста ${n + 1}" aria-invalid="${t.o === ""}" data-k="o" data-n="${n}" style="${t.o === "" ? "border-color:var(--k-danger)" : ""}">${t.o}</textarea>${t.o === "" ? '<small style="color:var(--k-danger);font-weight:700;display:block">Нет ожидаемого вывода</small>' : ""}</td>
+    <td><button class="btn sm icon" aria-label="Удалить тест ${n + 1}" data-del="${n}" ${B.tests.length === 1 ? "disabled" : ""}>${icon("x", "i sm")}</button></td></tr>`).join("");
+  const qualityBody = B.quality === "none" ? `<p class="muted small" style="padding:12px 16px">Kodik запустит эталон на всех тестах и убедится, что типичная ошибка не проходит. Без этого публикация закрыта.</p>`
+    : B.quality === "bad" ? `<ul><li><span class="bad">${icon("x", "i sm")}</span><div><b>Эталон не прошёл проверку.</b> ${B.qualityNote}</div></li></ul>`
+    : `<ul><li><span class="ok">${icon("check", "i sm")}</span><div>Эталон проходит все тесты (${B.tests.length})</div></li>
+      ${B.quality === "weak" ? `<li><span class="bad">${icon("x", "i sm")}</span><div><b>Типичная ошибка проходит все тесты.</b> Для чисел ${B.tests.map(t => t.i).join(" и ")} квадрат и удвоение совпадают — тесты её не отличают. Добавьте тест с другим числом.<div style="margin-top:8px"><button class="btn sm" id="fix">Добавить тест 21 → 42</button></div></div></li>`
+      : `<li><span class="ok">${icon("check", "i sm")}</span><div>Типичная ошибка отклонена тестом ${B.tests.length}</div></li>`}</ul>
+      ${B.quality === "ok" ? `<div class="banner" style="background:var(--k-success-soft);color:var(--k-success);margin:0 16px 16px">${icon("check")}<p><b>Задание проверено.</b> Его можно публиковать.</p></div>` : ""}`;
+  const h = `<div class="row" style="justify-content:space-between;align-items:flex-end"><div><p class="caption muted">PYTHON · УРОК 3 «ВВОД И ВЫЧИСЛЕНИЯ»</p><h1>Новое задание</h1></div><button class="link" data-modal="m-python">Что умеет учебный Python</button></div>
+  <div class="info-note">${icon("info")}<p>Обязательное — пять разделов ниже, обычно 3–5 минут. Остальное уже заполнено значениями по умолчанию и меняется в «Расширенных настройках». Теорию и вопросы с вариантами добавляйте в <button class="link">сценарий урока</button>.</p></div>
+  ${sec("s-task", 1, "Задание", "", `${field("Название", `<input class="input" id="f-title" value="${B.title}">`)}
+    <div class="field"><span>Условие для ученика</span><div class="rte"><div class="tb" role="toolbar" aria-label="Форматирование"><button aria-label="Жирный">B</button><button aria-label="Список">• —</button><button aria-label="Код" class="mono">{ }</button></div><div class="body" contenteditable="true" id="f-text" aria-label="Условие для ученика" role="textbox" aria-multiline="true">${B.text}</div></div></div>`)}
+  ${manual ? sec("s-solution", 2, "Критерии оценки", "Ученик отправит решение, вы примете его или вернёте с комментарием.", field("Что должно быть в работе", `<textarea class="textarea" id="f-crit" rows="4" placeholder="Например: программа спрашивает имя и выводит приветствие с ним; нет ошибок выполнения">${B.criteria}</textarea>`))
+  : sec("s-solution", 2, "Решение и тесты", "Напишите правильную программу. Ожидаемый вывод тестов можно получить её запуском.", `
+    <div class="field"><span>Эталонное решение · ученик его не увидит</span><div class="code sm"><div class="gut"><div>1</div><div>2</div><div>3</div></div><textarea rows="3" id="f-ref" aria-label="Эталонное решение">${B.ref}</textarea></div><small id="ref-msg"></small></div>
+    <div class="card" style="padding:16px"><table class="tests"><thead><tr><th style="width:28px">#</th><th>Ввод · одна строка на input()</th><th>Ожидаемый вывод</th><th style="width:40px"></th></tr></thead><tbody id="tests">${testRows}</tbody></table>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn sm" id="add-test">${icon("plus", "i sm")}Добавить тест</button><button class="btn sm" id="fill-out">${icon("play", "i sm")}Заполнить вывод запуском эталона</button><span class="muted small">Первый тест виден ученику как пример, остальные скрыты</span></div></div>`)}
+  ${manual ? "" : sec("s-error", 3, "Типичная ошибка ученика", "Хотя бы одна неправильная программа. Kodik убедится, что тесты её не пропускают.", `
+    <div class="field"><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><textarea rows="2" id="f-err" aria-label="Типичная ошибка ученика">${B.errors[0]}</textarea></div></div>
+    <div class="row"><button class="btn sm" id="copy-ref">${icon("copy", "i sm")}Скопировать эталон и изменить</button><button class="btn sm ghost">${icon("plus", "i sm")}Ещё одна ошибка</button><span class="muted small">до 6</span></div>`)}
+  ${sec("s-quality", manual ? 3 : 4, "Проверка качества", "", `<div class="verify"><div class="card-h" style="padding:12px 16px"><h3>${manual ? "Подтвердите критерии" : "Эталон и ошибка на всех тестах"}</h3><button class="btn primary" id="verify">${B.quality === "none" ? "Проверить задание" : "Проверить снова"}</button></div><div id="verify-out">${manual && B.quality === "ok" ? `<div class="banner" style="background:var(--k-success-soft);color:var(--k-success);margin:16px">${icon("check")}<p>Критерии сохранены. Решения будут ждать вашей оценки.</p></div>` : qualityBody}</div></div>`)}
+  ${sec("s-publish", manual ? 4 : 5, "Публикация", "", `<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px"><legend class="small" style="font-weight:700;margin-bottom:8px">Сразу выдать группам</legend>
+      <label class="check"><input type="checkbox" checked>Python · Старт 7А <span class="muted small">— вы пришли из этой группы</span></label><label class="check"><input type="checkbox">Python · Старт 7Б</label></fieldset>
+    <div class="row" style="align-items:flex-end;gap:16px">${field("Срок, необязательно", `<input class="input" type="date" value="2026-10-24" style="width:200px">`)}</div>
+    <div class="row"><button class="btn lg primary" id="publish" ${B.quality === "ok" ? "" : "disabled"}>${B.published ? icon("check") + "Опубликовано и выдано" : "Опубликовать и выдать"}</button><button class="btn lg" ${B.quality === "ok" ? "" : "disabled"}>Только опубликовать</button>${B.quality === "ok" ? "" : '<span class="muted small">Станет доступно после проверки качества</span>'}</div>
+    <p class="muted small">Группа получит именно эту версию. Если позже вы измените задание, выданная версия не изменится — новую можно выдать повторно.</p>`)}
+  <details id="adv" class="advwrap"><summary><h2>Расширенные настройки</h2><span class="muted small">Значения по умолчанию подходят для простого упражнения</span></summary>
+    ${adv("a-starter", "Стартовый код", `<div class="code sm"><div class="gut"><div>1</div><div>2</div></div><textarea rows="2" id="f-starter" aria-label="Стартовый код">${B.starter}</textarea></div><small class="muted">Что увидит ученик при первом открытии. Можно дать заготовку или программу с ошибкой.</small>`)}
+    ${adv("a-tests", "Видимость тестов", `<p class="small">Видимый тест ученик видит как пример и в результате проверки. У скрытого — только «пройден / не пройден».</p>${B.tests.map((t, n) => `<label class="check"><input type="checkbox" class="switch" role="switch" data-v="${n}" ${t.v ? "checked" : ""}>Тест ${n + 1}: ${t.i || "—"} → ${t.o || "—"} · ${t.v ? "виден" : "скрыт"}</label>`).join("")}`)}
+    ${adv("a-mode", "Способ проверки", `<div class="seg" id="mode"><button aria-pressed="${B.mode === "tests"}" data-m="tests">Тест-кейсы</button><button aria-pressed="${B.mode === "output"}" data-m="output">Только вывод</button><button aria-pressed="${B.mode === "manual"}" data-m="manual">Ручная проверка</button></div><small class="muted">«Только вывод» — для программ без input. «Ручная» — для творческих работ: решение ждёт вашей оценки.</small>`)}
+    ${adv("a-rules", "Обязательные конструкции", `<small class="muted">Проверяются по выполнению программы: конструкция должна влиять на результат, комментарии не засчитываются.</small><div class="row" style="flex-wrap:wrap;gap:8px 24px">${["Сохранить значение в переменной", "Получить данные через input", "Использовать условие if", "Использовать цикл for", "Использовать цикл while", "Описать и вызвать функцию", "Вернуть результат через return", "Вложить один цикл в другой"].map(t => `<label class="check"><input type="checkbox">${t}</label>`).join("")}</div>`)}
+    ${adv("a-hints", "Подсказки", `<small class="muted">Открываются ученику по очереди: от направления мысли к почти готовому решению. До 10.</small><div class="hint-edit"><span class="lvl">Подсказка 1</span><textarea class="textarea" rows="2" style="min-height:64px" aria-label="Подсказка 1" placeholder="Например: «В два раза больше» — это сложение или умножение?"></textarea></div><button class="btn sm" style="align-self:flex-start">${icon("plus", "i sm")}Добавить подсказку</button>`)}
+    ${adv("a-meta", "Цель, сложность, урок", `${field("Учебная цель · ученик видит над условием", `<input class="input" placeholder="Например: превращать ввод в число">`)}<div class="field"><span>Сложность</span><div class="seg"><button aria-pressed="true">Начальный</button><button aria-pressed="false">Средний</button><button aria-pressed="false">Продвинутый</button></div></div>${field("Урок", `<select class="select"><option>Python: первые открытия › Модуль 1 › Урок 3 · Ввод и вычисления</option></select>`)}`)}
+    ${adv("a-theory", "Теория", `<small class="muted">Короткое объяснение во вкладке «Теория». Для полноценного разбора с вопросами используйте сценарий урока.</small><div class="rte"><div class="body" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Теория"></div></div>`)}
+  </details>`;
+  $("#b-inner").innerHTML = h;
+  renderSteps(); syncPreview(); bindBuilder();
+  $("#publish-top").setAttribute("aria-disabled", B.quality !== "ok");
 }
-function verifyOut() {
-  if (!checkedOnce) return `<p class="muted small" style="padding:12px 16px">Kodik запустит эталон на всех тестах и убедится, что типичные ошибки не проходят. Без этого публикация закрыта.</p>`;
-  return `<ul>
-    <li><span class="ok">${icon("check", "i sm")}</span><div>Эталон проходит все тесты (${tests.length})</div></li>
-    <li><span class="ok">${icon("check", "i sm")}</span><div>Ошибка 1 (сложение) отклонена тестом 2</div></li>
-    ${weak ? `<li><span class="bad">${icon("x", "i sm")}</span><div><b>Ошибка 2 (квадрат) проходит все тесты.</b> Для чисел 2 и 0 квадрат и удвоение совпадают. Добавьте тест с другим числом.<div style="margin-top:8px"><button class="btn sm" id="fix">Добавить тест 21 → 42</button></div></div></li>`
-    : `<li><span class="ok">${icon("check", "i sm")}</span><div>Ошибка 2 (квадрат) отклонена тестом 3</div></li>`}</ul>
-    ${verified ? `<div class="banner" style="background:var(--k-success-soft);color:var(--k-success);margin:0 16px 16px">${icon("check")}<p><b>Задание проверено.</b> Его можно публиковать.</p></div>` : ""}`;
+function invalidate() { if (B.quality !== "none") { B.quality = "none"; const v = $("#verify-out"); if (v) v.innerHTML = `<p class="muted small" style="padding:12px 16px;color:var(--k-warning)">Задание изменено после проверки — проверьте снова.</p>`; $("#verify") && ($("#verify").textContent = "Проверить снова"); $("#publish") && ($("#publish").disabled = true); } B.dirty = true; renderSteps(); autosave(); }
+function autosave() { setSave("busy"); clearTimeout(window.st); window.st = setTimeout(() => setSave("ok"), 700); }
+function syncPreview() {
+  $("#pv-title").textContent = B.title || "Без названия"; $("#pv-text").textContent = B.text;
+  const vis = B.tests.filter(t => t.v); $("#pv-example").textContent = vis.length ? vis.map(t => `Ввод:   ${t.i}\nВывод:  ${t.o}`).join("\n\n") : "Пример не показывается: все тесты скрыты";
+  $("#pv-starter").textContent = B.starter; $("#pv-vis").textContent = `Видно тестов: ${vis.length} из ${B.tests.length}`;
+}
+function bindBuilder() {
+  const on = (sel, ev, fn) => { const el = $(sel); el && el.addEventListener(ev, fn); };
+  on("#f-title", "input", e => { B.title = e.target.value; syncPreview(); renderSteps(); autosave(); });
+  on("#f-text", "input", e => { B.text = e.target.textContent; syncPreview(); renderSteps(); autosave(); });
+  on("#f-crit", "input", e => { B.criteria = e.target.value; invalidate(); });
+  on("#f-ref", "input", e => { B.ref = e.target.value; const r = simulate(B.ref, "2"); $("#ref-msg").innerHTML = r.error ? `<span style="color:var(--k-danger);font-weight:700">${r.error}</span>` : ""; invalidate(); });
+  on("#f-err", "input", e => { B.errors[0] = e.target.value; invalidate(); });
+  on("#f-starter", "input", e => { B.starter = e.target.value; syncPreview(); autosave(); });
+  $$("#tests textarea").forEach(a => a.addEventListener("input", () => { B.tests[a.dataset.n][a.dataset.k] = a.value; syncPreview(); invalidate(); }));
+  $$("#tests [data-del]").forEach(a => a.onclick = () => { B.tests.splice(+a.dataset.del, 1); B.quality = "none"; renderStep(); });
+  on("#add-test", "click", () => { B.tests.push({ i: "", o: "", v: false }); B.quality = "none"; renderStep(); $$("#tests textarea").at(-2).focus(); });
+  on("#fill-out", "click", () => { let n = 0, err = ""; B.tests.forEach(t => { const r = simulate(B.ref, t.i); if (r.error) err = r.error; else if (t.o === "") { t.o = r.out; n++; } }); B.quality = "none"; renderStep(); toast(err ? "Эталон не запустился: " + err : n ? `Ожидаемый вывод заполнен по эталону: тестов — ${n}. Проверьте значения` : "Все тесты уже заполнены"); });
+  on("#copy-ref", "click", () => { B.errors[0] = B.ref; renderStep(); const t = $("#f-err"); t.focus(); t.setSelectionRange(t.value.length, t.value.length); });
+  on("#verify", "click", runVerify);
+  on("#fix", "click", () => { B.tests.push({ i: "21", o: "42", v: false }); B.quality = "none"; renderStep(); toast("Тест добавлен. Запустите проверку снова"); $("#verify").focus(); });
+  on("#publish", "click", () => { B.published = true; const tag = $(".crumbs .tag", $("#builder")); tag.className = "tag ok"; tag.textContent = "Опубликовано · версия 1"; renderStep(); toast("Опубликовано и выдано группе «Python · Старт 7А»"); });
+  $$("#a-tests [data-v]").forEach(a => a.onchange = () => { B.tests[a.dataset.v].v = a.checked; renderStep(); $("#a-tests").open = true; $("#adv").open = true; });
+  const mode = $("#mode"); mode && segment(mode, b => { B.mode = b.dataset.m; B.quality = "none"; renderStep(); $("#adv").open = true; $("#a-mode").open = true; });
 }
 function runVerify() {
   const b = $("#verify"); b.classList.add("loading"); b.innerHTML = '<span class="spin"></span>Проверяем…'; b.disabled = true;
   setTimeout(() => {
-    checkedOnce = true; verified = !weak;
-    if (weak) tests = tests.map(t => ({ ...t, s: "ok" }));
-    renderStep();
-    const fx = $("#fix"); fx && (fx.onclick = () => { tests.push({ i: "21", o: "42", v: true, s: "" }); weak = false; renderStep(); toast("Тест добавлен. Запустите проверку снова"); });
+    if (B.mode === "manual") B.quality = B.criteria.trim() ? "ok" : "bad";
+    else {
+      const ref = B.tests.map(t => simulate(B.ref, t.i)), refErr = ref.find(r => r.error), refFail = ref.findIndex((r, i) => r.out !== B.tests[i].o);
+      if (B.tests.some(t => t.o === "")) { B.quality = "bad"; B.qualityNote = "У теста нет ожидаемого вывода. Заполните его или нажмите «Заполнить вывод запуском эталона»."; }
+      else if (refErr) { B.quality = "bad"; B.qualityNote = refErr.error; }
+      else if (refFail >= 0) { B.quality = "bad"; B.qualityNote = `Тест ${refFail + 1}: ожидалось ${B.tests[refFail].o}, эталон вывел ${ref[refFail].out || "ничего"}.`; }
+      else B.quality = B.tests.every(t => simulate(B.errors[0], t.i).out === t.o) ? "weak" : "ok";
+    }
+    renderStep(); $("#s-quality").scrollIntoView({ block: "start" }); $("#verify").focus({ preventScroll: true });
   }, 900);
 }
 function setSave(s) {
@@ -1036,15 +1122,15 @@ function setSave(s) {
   el.className = "save " + s;
   el.innerHTML = s === "ok" ? icon("cloud", "i sm") + "Сохранено · " + new Date().toTimeString().slice(0, 5)
     : s === "busy" ? '<span class="spin" style="width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>Сохраняем…'
-    : icon("alert", "i sm") + 'Не сохранено <button class="link" style="color:inherit">Повторить</button>';
+    : icon("alert", "i sm") + 'Не сохранено — изменения в этом браузере <button class="link" style="color:inherit">Повторить</button>';
 }
 segment($("#save-sim"), b => setSave(b.dataset.s));
 const setPreview = on => { const s = $("#b-shell"); s.classList.toggle("nopreview", !on); $("#b-preview").hidden = !on; $("#toggle-preview span").textContent = on ? "Скрыть предпросмотр" : "Показать предпросмотр"; };
-if (innerWidth < 1366) setPreview(false);
-$("#toggle-preview").onclick = e => { const s = $("#b-shell"); s.classList.toggle("nopreview"); $("#b-preview").hidden = s.classList.contains("nopreview"); $("span", e.currentTarget).textContent = s.classList.contains("nopreview") ? "Показать предпросмотр" : "Скрыть предпросмотр"; };
-$("#publish-top").onclick = () => { if (verified) { step = 6; renderStep(); } else { step = 4; renderStep(); toast("Сначала проверьте задание"); } };
-$("#pv-run").onclick = () => $("#pv-out").innerHTML = '<span class="mono"><span style="color:var(--k-info)">21</span>\n</span><span class="muted small">Программа завершилась без вывода. Добавь print.</span>';
-$("#pv-check").onclick = () => $("#pv-out").innerHTML = '<b style="color:var(--k-danger)">Тест 1 не пройден.</b> <span class="small">Ожидалось <code>4</code>, программа ничего не вывела.</span>';
+const mq = matchMedia("(max-width: 1365px)"); setPreview(!mq.matches); mq.addEventListener("change", e => setPreview(!e.matches));
+$("#toggle-preview").onclick = () => setPreview($("#b-shell").classList.contains("nopreview"));
+$("#publish-top").onclick = () => { if (B.quality === "ok") $("#s-publish").scrollIntoView({ block: "start" }); else { $("#s-quality").scrollIntoView({ block: "start" }); toast("Сначала пройдите проверку качества"); } };
+$("#pv-run").onclick = () => { const r = simulate(B.starter, "2"); $("#pv-out").innerHTML = r.error ? `<b style="color:var(--k-danger)">${r.error}</b>` : '<span class="mono" style="color:var(--k-info)">2</span><br><span class="muted small">Программа завершилась без вывода. Добавь print.</span>'; };
+$("#pv-check").onclick = () => { const v = B.tests.find(t => t.v); $("#pv-out").innerHTML = v ? `<b style="color:var(--k-danger)">Тест 1 не пройден.</b> <span class="small">Ввод ${v.i}: ожидалось <code>${v.o}</code>, программа ничего не вывела.</span>` : '<b style="color:var(--k-danger)">Не пройдено.</b> <span class="small">Все тесты скрыты — ученик увидит только число пройденных.</span>'; };
 
 /* ============ Группа и результаты ============ */
 const students = ["Алиев Тимур","Ковалёв Миша","Лебедева Алиса","Петров Даня","Смирнова Ева","Орлова Соня","Захаров Кирилл","Иванова Маша"];
@@ -1053,6 +1139,7 @@ const status = (r, c) => ["p","f","r","n"][(r * 7 + c * 3 + (r === 4 && c === 3 
 function renderMatrix(attOnly) {
   const flat = cols.flatMap(([, t]) => t);
   const grid = students.map((_, r) => flat.map((__, c) => r === 4 && c === 3 ? "f" : r === 1 && c === 5 ? "r" : r === 2 && c === 5 ? "r" : r === 3 && c >= 3 ? (c === 3 ? "f" : "n") : status(r, c)));
+  grid.forEach(g => g.forEach((s, c) => { if (s === "r" && c !== g.length - 1) g[c] = "p"; }));
   const rows = students.map((n, r) => [n, grid[r]]).filter(([, g]) => !attOnly || g.some(s => s === "f" || s === "r"));
   const label = { p: "✓", f: "✗", r: "?", n: "" }, word = { p: "принято", f: "не пройдено", r: "на проверке", n: "не начато" };
   $("#matrix").innerHTML = `<thead><tr><th></th>${cols.map(([m, t]) => `<th colspan="${t.length}">${m}</th>`).join("")}</tr><tr><th></th>${flat.map(t => `<th style="max-width:60px;font-weight:700">${t}</th>`).join("")}</tr></thead>
@@ -1060,6 +1147,22 @@ function renderMatrix(attOnly) {
   $("#st-rows").innerHTML = students.map((n, r) => { const done = grid[r].filter(s => s === "p").length; return `<tr class="click"><td><div class="row"><span class="avatar">${n.split(" ").map(w => w[0]).join("")}</span>${n}</div></td><td class="mono">7a-${(r + 1).toString().padStart(2, "0")}</td><td style="width:240px"><div class="row"><div class="bar" style="flex:1"><i style="width:${done / 6 * 100}%"></i></div><span class="num small">${done}/6</span></div></td><td class="muted">${["сегодня, 10:42","сегодня, 10:39","вчера","2 дня назад"][r % 4]}</td><td><button class="btn sm">Сбросить пароль</button></td></tr>`; }).join("");
 }
 renderMatrix(false);
+function openDrawer(kind) {
+  $("#drawer").hidden = false;
+  if (kind === "r") {
+    $("#dr-name").textContent = "Ковалёв Миша"; $("#dr-av").textContent = "КМ"; $("#dr-sub").textContent = "Моя программа · ручная проверка · отправлено 25 минут назад";
+    $("#dr-body").innerHTML = '<span class="tag warn" style="align-self:flex-start">Ждёт вашей оценки</span><div class="info-note">' + icon("info") + '<p><b>Критерии:</b> программа спрашивает имя и выводит приветствие с ним; нет ошибок выполнения.</p></div><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><pre>name = <span class="fn">input</span>(<span class="st">"Как тебя зовут? "</span>)\n<span class="fn">print</span>(<span class="st">"Привет, "</span> + name + <span class="st">"!"</span>)</pre></div><label class="field"><span>Комментарий ученику</span><textarea class="textarea" placeholder="Что получилось и что исправить"></textarea><small>Ученик увидит комментарий рядом с оценкой</small></label>';
+    $("#dr-foot").innerHTML = '<button class="btn primary" data-close-drawer data-toast="Решение принято">Принять</button><button class="btn" data-close-drawer data-toast="Возвращено на доработку">Вернуть на доработку</button>';
+  } else {
+    $("#dr-name").textContent = "Ева Смирнова"; $("#dr-av").textContent = "ЕС"; $("#dr-sub").textContent = "Удвоим число · версия 1 · попытка 4 из 4 · 10:39";
+    $("#dr-body").innerHTML = '<span class="tag bad" style="align-self:flex-start">Не пройдено · 1 из 3 тестов</span><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><pre>n = <span class="fn">int</span>(<span class="fn">input</span>())\n<span class="fn">print</span>(n + <span class="nm">2</span>)</pre></div><table class="table"><thead><tr><th>Тест</th><th>Ввод</th><th>Ожидалось</th><th>Получено</th></tr></thead><tbody><tr><td><span class="tag ok">1</span></td><td class="mono">2</td><td class="mono">4</td><td class="mono">4</td></tr><tr><td><span class="tag bad">2</span></td><td class="mono">21</td><td class="mono">42</td><td class="mono">23</td></tr><tr><td><span class="tag bad">3 · скрыт от ученика</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">2</td></tr></tbody></table><details><summary>История попыток (4)</summary><p class="muted small" style="margin-top:8px">10:12 ошибка выполнения · 10:20 1/3 · 10:31 1/3 · 10:39 1/3</p></details><div class="info-note">' + icon("info") + '<p>Автоматический результат нельзя изменить вручную. Комментарий к таким попыткам — в плане (PD-07).</p></div>';
+    $("#dr-foot").innerHTML = '<button class="btn" data-modal="m-assign">Назначить повторно</button>';
+  }
+  $("#drawer-close").focus();
+}
+document.addEventListener("click", e => { const c = e.target.closest("[data-close-drawer]"); if (c) { $("#drawer").hidden = true; toast(c.dataset.toast); } });
+tabs($("#sc-tabs"));
+
 segment($("#mx-filter"), b => renderMatrix(b.dataset.f === "att"));
 tabs($("#g-tabs"));
 
