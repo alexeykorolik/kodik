@@ -737,7 +737,7 @@ export default function B2BApp() {
   else if(page==='school'&&s.user.role==='admin')content=<SchoolPanel state={s} refresh={refresh}/>;
   else if(page==='modes'&&!student)content=<ModeManagement state={s}/>;
   else if(page==='classroom'&&!student)content=<ClassroomPanel/>;
-  else if(page==='journal'&&!student)content=<Journal state={s} onAttempt={openAttempt}/>;
+  else if(page==='journal'&&!student)content=<Journal state={s} onAttempt={openAttempt} refreshedAt={refreshedAt}/>;
   else if(page==='preview'&&!student){const task=s.tasks.find(t=>t.id===id);content=task?<TaskPreview key={id} task={task} state={s} refresh={refresh} onBack={()=>go(`builder/${id}?step=3`)} onPublish={()=>go(`builder/${id}?step=5`)}/>:<Empty title="Черновик недоступен" text="Откройте конструктор и сохраните задание."/>}
   else if(page==='lesson-editor'&&!student&&s.lessons.some(l=>l.id===id))content=<LessonEditor key={id} state={s} lessonId={id} refresh={refresh} onBack={()=>{const lesson=s.lessons.find(l=>l.id===id),module=s.modules.find(m=>m.id===lesson?.module_id);go(`courses/${module?.course_id||''}`)}}/>;
   else if(page==='lesson-run')content=<LessonRun key={`${s.user.id}:${id}`} id={id} state={s} refresh={refresh} onBack={()=>go('courses')} onAttempt={openAttempt}/>;
