@@ -11,6 +11,7 @@ import { BLOCKS, translateWorkspace, type Translation } from '../blockProgram'
 import { registerToolboxButtons, toolboxFor } from '../blocklyBlocks'
 import { analyzeReference, skillLabel } from '../referenceAnalysis'
 import { parseCourseProgram, runPythonAst } from '../../pythonRuntime'
+import { joinOutput, outputMatches } from '../../shared/outputMatch.mjs'
 import '../../../docs/design/prototype/tokens.css'
 import './poc.css'
 
@@ -27,9 +28,8 @@ const MODE_LABEL: Record<Mode, string> = { blocks: 'Блоки', mixed: 'Бло�
 const store = { get: (k: string) => { try { return localStorage.getItem('kodik-poc:' + k) } catch { return null } }, set: (k: string, v: string) => { try { localStorage.setItem('kodik-poc:' + k, v) } catch { /* private mode */ } } }
 
 function run(code: string, inputs: string[]) {
-  try { const r = runPythonAst(parseCourseProgram(code), inputs); return { output: r.output.join(''), error: r.error } } catch (e) { return { output: '', error: (e as Error).message } }
+  try { const r = runPythonAst(parseCourseProgram(code), inputs); return { lines: r.output, output: joinOutput(r.output), error: r.error } } catch (e) { return { lines: [] as string[], output: '', error: (e as Error).message } }
 }
-const normalize = (s: string) => s.replace(/\r\n/g, '\n').split('\n').map(l => l.trimEnd()).join('\n').trim()
 function highlight(line: string) {
   const parts: ReactNode[] = []; let rest = line, k = 0
   const re = /("(?:\\.|[^"\\])*")|(\b\d+(?:\.\d+)?\b)|(\b(?:if|elif|else|while|for|in|def|return|and|or|not|pass|True|False|None)\b)|(\b(?:print|input|int|str|len|range)\b)/
@@ -92,7 +92,7 @@ function App() {
   }
   const doCheck = () => {
     if (mode !== 'python' && !translation?.ok) { setResult({ kind: 'check', error: translation?.errors[0]?.message ?? 'Собери программу из блоков.' }); return }
-    const cases = tests.map((t, i) => { const r = run(code, t.inputs === '' ? [] : t.inputs.split('\n')); return { i: i + 1, hidden: t.hidden, passed: !r.error && normalize(r.output) === normalize(t.expected), inputs: t.inputs, expected: t.expected, got: r.error ? 'Ошибка: ' + r.error : r.output } })
+    const cases = tests.map((t, i) => { const r = run(code, t.inputs === '' ? [] : t.inputs.split('\n')); return { i: i + 1, hidden: t.hidden, passed: !r.error && outputMatches(r.lines, t.expected), inputs: t.inputs, expected: t.expected, got: r.error ? 'Ошибка: ' + r.error : r.output } })
     setResult({ kind: 'check', cases })
   }
   const selectBlock = (id?: string) => { const b = id ? ws.current?.getBlockById(id) : null; if (b && ws.current) { b.select(); ws.current.centerOnBlock(b.id) } }

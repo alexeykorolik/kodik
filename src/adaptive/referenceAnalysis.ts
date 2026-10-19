@@ -1,13 +1,14 @@
 /**
- * Suggests skills and a Blockly palette from a teacher's reference solution,
- * and explains why a task cannot have a visual mode. The suggestion is a
- * starting point: the teacher confirms skills and edits the palette.
+ * Authoring aid only. Suggests skills and a Blockly palette from a teacher's Python
+ * reference and explains which constructs of THIS reference have no block. It never
+ * proves that a task is solvable with blocks: that proof is a private block solution
+ * that passes the tests through the learner path (docs/adaptive/PUBLICATION_PROOF.md).
  */
 import { parseCourseProgram, type Expr, type Statement } from '../pythonRuntime'
-import type { SkillId } from './blockProgram'
+import { nameProblem, type SkillId } from './blockProgram'
 
 export type Compatibility = {
-  /** The reference parses and every construct has a block. */
+  /** Every construct of this particular reference has a block. Advisory, not a proof. */
   blocklyCompatible: boolean
   reasons: string[]
   skills: SkillId[]
@@ -69,6 +70,7 @@ export function analyzeReference(source: string): Compatibility {
     for (const s of items) {
       switch (s.kind) {
         case 'assign':
+          { const p = nameProblem(s.name); if (p) no(`Переменная эталона: ${p}`) }
           if (s.index) { no('Присваивание по индексу пока не поддерживается визуальными блоками.'); break }
           use('variables', 'variables_set')
           if (s.value.kind === 'binary' && s.value.operator === '+' && s.value.left.kind === 'name' && s.value.left.name === s.name && !isStringy(s.value)) palette.add('math_change')
@@ -91,6 +93,7 @@ export function analyzeReference(source: string): Compatibility {
           else no('Цикл for со счётчиком, который используется внутри, или с range(a, b) пока не имеет блока. Блок «повторить N раз» подходит, только если счётчик не нужен.')
           break
         case 'function':
+          { const p = nameProblem(s.name); if (p) no(`Функция эталона: ${p.replace('У переменной', 'У функции')}`) }
           if (depth > 0) no('Вложенные функции не поддерживаются.')
           if (s.params.length) no('Функции с параметрами пока доступны только в режиме Python.')
           use('functions', 'kodik_define', 'kodik_call'); statements(s.body, depth + 1); break

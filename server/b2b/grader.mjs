@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {existsSync} from 'node:fs';
 import { ExecutionQueue } from "./execution-queue.mjs";
+import { outputMatches } from "../../src/shared/outputMatch.mjs";
 const runner = fileURLToPath(
   new URL("../../.runner/runner.cjs", import.meta.url),
 );
@@ -76,7 +77,6 @@ function executeProcess(code, inputs, rules) {
     child.stdin.end(JSON.stringify({ code, inputs, rules }));
   });
 }
-const normalize = (s) => s.replace(/\r\n/g, "\n").trimEnd();
 export async function grade(task, code, options = {}) {
   if (task.check_mode === "manual")
     return {
@@ -101,7 +101,7 @@ export async function grade(task, code, options = {}) {
     if(result.learning_error&&!test.hidden)
       return {status:'failed',message:result.learning_error,cases};
     const passed = !result.learning_error &&
-      normalize(result.output.join("\n")) === normalize(test.expected);
+      outputMatches(result.output, test.expected);
     cases.push(
       test.hidden
         ? { index: index + 1, hidden: true, passed }

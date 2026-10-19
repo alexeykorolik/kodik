@@ -25,8 +25,8 @@ export type CourseCheck = CourseRun & { passed: boolean; message: string }
 const namePattern = /^[\p{L}_][\p{L}\p{N}_]*$/u
 const forbidden = new Set('False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield exec eval open'.split(' '))
 const builtins = new Set('print input int str len range forward right left'.split(' '))
-function validName(name: string) { return namePattern.test(name) && !forbidden.has(name) && !name.startsWith('__') }
-function variableName(name: string) { return validName(name) && !builtins.has(name) }
+export function validName(name: string) { return namePattern.test(name) && !forbidden.has(name) && !name.startsWith('__') }
+export function variableName(name: string) { return validName(name) && !builtins.has(name) }
 function syntax(message: string): never { throw new Error(message) }
 
 function tokenize(source: string): string[] {
