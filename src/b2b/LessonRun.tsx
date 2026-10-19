@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {api,type Row,type State} from './api';
 import {Workspace} from './Workspace';
+import {HelpButton} from './PilotPanels';
 const labels:Record<string,string>={text:'Объяснение',code:'Пример кода',practice:'Практика',question:'Вопрос',final:'Итоговая работа',summary:'Итог'};
 export function LessonRun({id,state,refresh,onBack,onAttempt}:{id:string;state:State;refresh:()=>Promise<void>;onBack:()=>void;onAttempt:(id:string)=>void}){
   const [data,setData]=useState<Row|null>(null),[selected,setSelected]=useState(''),[answer,setAnswer]=useState<number|null>(null),[message,setMessage]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
@@ -17,6 +18,7 @@ export function LessonRun({id,state,refresh,onBack,onAttempt}:{id:string;state:S
     <button className="link" onClick={onBack}>← К программе</button>
     <div className="page-heading"><div><div className="eyebrow">{student?'ТЕКУЩЕЕ ЗАНЯТИЕ':'ПРОВЕДЕНИЕ ЗАНЯТИЯ'} · {data.group_title}</div><h1>{data.lesson.title}</h1><p>{data.lesson.goal} · около {data.lesson.duration} минут</p></div><div className="actions">{!student&&<><button onClick={async()=>{try{await api(`/lesson-runs/${id}/state`,{state:'open',revision:data.state_revision});await load();await refresh()}catch(e){setError((e as Error).message)}}}>Открыть занятие</button><button onClick={async()=>{try{await api(`/lesson-runs/${id}/state`,{state:'closed',revision:data.state_revision});await load();await refresh()}catch(e){setError((e as Error).message)}}}>Завершить занятие</button></>}</div></div>
     {student&&<div className="lesson-progress"><b>Завершено {completed} из {steps.length} шагов</b><progress value={completed} max={steps.length}/></div>}
+    {student&&step&&<HelpButton lessonRunId={id} stepId={step.id}/>}
     {data.state!=='open'&&<p className="notice">{data.state==='closed'?'Занятие завершено. Материалы и результаты доступны для просмотра.':'Занятие ещё не открыто ученикам.'}</p>}
     {!student&&<details className="panel teacher-notes" open><summary>Заметки преподавателя · ученики их не видят</summary><p>{data.lesson.teacher_notes||'Заметки не добавлены.'}</p></details>}
     {error&&<p className="error" role="alert">{error}</p>}{message&&<p className="notice" role="status">{message}</p>}

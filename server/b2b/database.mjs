@@ -177,7 +177,39 @@ const migrations = [
     CREATE TABLE mode_events(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id),assignment_id TEXT NOT NULL REFERENCES assignments(id),user_id TEXT REFERENCES users(id),actor_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL CHECK(kind IN ('policy_changed','override_changed','offered','offer_accepted','offer_declined','switched','teacher_set')),from_mode TEXT,to_mode TEXT,reason TEXT NOT NULL DEFAULT '',details TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
     CREATE INDEX mode_events_assignment ON mode_events(org_id,assignment_id,created_at);
     CREATE INDEX block_drafts_assignment ON assignment_block_drafts(org_id,assignment_id);
-  `)}}
+  `)}},
+  {version:12,name:'school_pilot_operations',up(db){db.exec(`
+    ALTER TABLE groups_ ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN created_by TEXT REFERENCES users(id);
+    ALTER TABLE users ADD COLUMN platform_owner INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE attempts ADD COLUMN review_revision INTEGER NOT NULL DEFAULT 0;
+    CREATE TABLE group_teachers(group_id TEXT NOT NULL REFERENCES groups_(id),user_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL CHECK(kind IN ('primary','co')),PRIMARY KEY(group_id,user_id));
+    CREATE TABLE help_requests(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id),user_id TEXT NOT NULL REFERENCES users(id),assignment_id TEXT REFERENCES assignments(id),lesson_run_id TEXT REFERENCES lesson_runs(id),step_id TEXT,status TEXT NOT NULL DEFAULT 'open',message TEXT NOT NULL,answer TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL,resolved_at TEXT,resolved_by TEXT REFERENCES users(id));
+    CREATE UNIQUE INDEX help_open_assignment ON help_requests(user_id,assignment_id) WHERE status='open' AND assignment_id IS NOT NULL;
+    CREATE UNIQUE INDEX help_open_step ON help_requests(user_id,lesson_run_id,step_id) WHERE status='open' AND assignment_id IS NULL;
+    CREATE TABLE review_history(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id),attempt_id TEXT NOT NULL REFERENCES attempts(id),actor_id TEXT NOT NULL REFERENCES users(id),revision INTEGER NOT NULL,before_status TEXT NOT NULL,after_status TEXT NOT NULL,before_feedback TEXT NOT NULL,after_feedback TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(attempt_id,revision));
+    CREATE TABLE licenses(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id),revision INTEGER NOT NULL,student_limit INTEGER NOT NULL,expires_at TEXT,status TEXT NOT NULL CHECK(status IN ('active','suspended','legacy')),actor_id TEXT,created_at TEXT NOT NULL,UNIQUE(org_id,revision));
+    CREATE TABLE companies(id TEXT PRIMARY KEY,org_id TEXT UNIQUE REFERENCES organizations(id),name TEXT NOT NULL,contact_name TEXT NOT NULL DEFAULT '',contact TEXT NOT NULL DEFAULT '',source TEXT NOT NULL DEFAULT '',responsible TEXT NOT NULL DEFAULT '',stage TEXT NOT NULL DEFAULT 'new',notes TEXT NOT NULL DEFAULT '',next_action TEXT NOT NULL DEFAULT '',next_at TEXT,revision INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL);
+    CREATE TABLE pilot_operations(org_id TEXT NOT NULL REFERENCES organizations(id),request_key TEXT NOT NULL,actor_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL,payload TEXT NOT NULL,response TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(org_id,request_key));
+    CREATE TABLE task_families(task_id TEXT PRIMARY KEY REFERENCES tasks(id),org_id TEXT NOT NULL REFERENCES organizations(id),family TEXT NOT NULL);
+    CREATE TABLE recommendations(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id),assignment_id TEXT NOT NULL REFERENCES assignments(id),user_id TEXT NOT NULL REFERENCES users(id),target_mode TEXT NOT NULL,rule_version TEXT NOT NULL,basis TEXT NOT NULL,status TEXT NOT NULL CHECK(status IN ('proposed','offered','accepted','declined','dismissed','expired')),expires_at TEXT NOT NULL,created_at TEXT NOT NULL,teacher_id TEXT REFERENCES users(id),UNIQUE(assignment_id,user_id,target_mode,rule_version));
+    CREATE TABLE recommendation_events(id TEXT PRIMARY KEY,recommendation_id TEXT NOT NULL REFERENCES recommendations(id),actor_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL,created_at TEXT NOT NULL);
+    CREATE INDEX help_school ON help_requests(org_id,status,created_at);
+    CREATE INDEX review_school ON review_history(org_id,attempt_id,revision);
+    INSERT INTO licenses SELECT lower(hex(randomblob(16))),id,1,300,NULL,'legacy',NULL,datetime('now') FROM organizations;
+  `)}},
+  {version:13,name:'resumable_course_installation',up(db){
+    db.exec("CREATE TABLE course_imports(org_id TEXT NOT NULL REFERENCES organizations(id),template TEXT NOT NULL,course_id TEXT NOT NULL REFERENCES courses(id),status TEXT NOT NULL CHECK(status IN ('building','ready')),updated_at TEXT NOT NULL,PRIMARY KEY(org_id,template));");
+    const legacyCourses=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='courses'").get()?db.prepare("SELECT * FROM courses WHERE description LIKE '[starter/v1]%' ORDER BY created_at").all():[];
+    for(const c of legacyCourses){
+      const count=db.prepare('SELECT COUNT(*) n FROM lessons l JOIN modules m ON m.id=l.module_id WHERE m.course_id=? AND l.published_version_id IS NOT NULL').get(c.id).n;
+      db.prepare('INSERT OR IGNORE INTO course_imports VALUES(?,?,?,?,?)').run(c.org_id,'starter/v1',c.id,count===6?'ready':'building',new Date().toISOString());
+      db.prepare("UPDATE courses SET description=? WHERE id=?").run('Шесть занятий по 40 минут: объяснение, пример, практика, вопрос и самостоятельная работа.',c.id);
+    }
+  }},
+  {version:14,name:'existing_school_company_links',up(db){
+    if(db.prepare("PRAGMA table_info(organizations)").all().some(c=>c.name==='name'))db.exec("INSERT INTO companies(id,org_id,name,source,stage,created_at) SELECT lower(hex(randomblob(16))),o.id,o.name,'Существующая школа','active',o.created_at FROM organizations o WHERE NOT EXISTS(SELECT 1 FROM companies c WHERE c.org_id=o.id) AND NOT EXISTS(SELECT 1 FROM users u WHERE u.org_id=o.id AND u.platform_owner=1);");
+  }}
 ];
 export const schemaVersion = migrations.at(-1).version;
 export function openDatabase(path) {

@@ -111,6 +111,7 @@ test("one task, three modes: publication proof, policy, drafts, queue, isolation
       return { ...job, key };
     };
 
+    let pythonSubmission;
     await t.test("submission: forged Python ignored, three modes recorded, idempotent keys", async () => {
       const forged = await submit({ mode: "blocks", workspace: doubled("ADD"), code: "n = int(input())\nprint(n * 2)" });
       assert.equal(forged.result.status, "failed");
@@ -126,6 +127,7 @@ test("one task, three modes: publication proof, policy, drafts, queue, isolation
       assert.equal(mixed.result.status, "passed");
       await h.request(`/tasks/${blockTask.id}/draft`, { assignment_id: assignment.id, mode: "python", code: "n = int(input())\n", revision: 0 }, student, 200, "PUT");
       const py = await submit({ mode: "python", code: "n = int(input())\nprint(2 * n)" });
+      pythonSubmission=py;
       assert.equal(py.result.status, "passed");
       const attempts = h.db.prepare("SELECT mode,code,source,translator,policy,version_id FROM attempts WHERE assignment_id=? ORDER BY created_at").all(assignment.id);
       assert.deepEqual(attempts.map((a) => a.mode), ["blocks", "blocks", "mixed", "python"]);
@@ -156,6 +158,8 @@ test("one task, three modes: publication proof, policy, drafts, queue, isolation
       row = await mine(); assert.equal(row.modes.current, "blocks", "closed mode → back to an allowed one only in the effective view");
       const closed = await h.request(`/tasks/${blockTask.id}/submit`, { assignment_id: assignment.id, request_key: randomUUID(), mode: "python", code: "print(1)" }, student, 409);
       assert.equal(closed.code, "mode_not_allowed");
+      const acceptedAgain=await h.request(`/tasks/${blockTask.id}/submissions`,{assignment_id:assignment.id,request_key:pythonSubmission.key,mode:'python',code:'n = int(input())\nprint(2 * n)'},student);
+      assert.equal(acceptedAgain.id,pythonSubmission.id,'same accepted request returns its operation after the mode is closed');
       await h.request(`/tasks/${blockTask.id}/draft`, { assignment_id: assignment.id, mode: "python", code: "print('мой код')", revision: (await h.request("/state", undefined, student)).drafts.find((d) => d.assignment_id === assignment.id).revision }, student, 200, "PUT");
       await h.request(`/assignments/${assignment.id}/students/${uid}/mode`, { override: { allowed: ["blocks", "python"], switching: "free" }, reason: "Индивидуально" }, admin, 200, "PUT");
       await h.request(`/assignments/${assignment.id}/mode`, { mode: "python" }, student);

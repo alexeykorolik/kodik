@@ -17,6 +17,9 @@ import { createModes, adaptive } from "./modes.mjs";
 import { createSubmissionService } from "./submissions.mjs";
 import {createCurriculum} from './curriculum.mjs';
 import {createTaskQuality} from './task-quality.mjs';
+import {createPilot} from './pilot.mjs';
+import {createLearningEvidence} from './learning-evidence.mjs';
+import {createStarterCourse} from './starter-course.mjs';
 import learningRules from '../../src/b2b/learningRules.json' with {type:'json'};
 
 const scrypt = promisify(scryptCallback);
@@ -46,7 +49,7 @@ const passwordText = (value) => {
     fail(400, "Пароль: от 10 до 128 символов.");
   return value;
 };
-async function passwordHash(password) {
+export async function passwordHash(password) {
   const salt = randomBytes(16).toString("hex");
   return `${salt}:${Buffer.from(await scrypt(password, salt, 64)).toString("hex")}`;
 }
@@ -61,11 +64,13 @@ const publicUser = (u) => ({
   login: u.login,
   role: u.role,
   org_id: u.org_id,
+  platform_owner: !!u.platform_owner,
 });
 
 export function createApp({
   dbPath = process.env.KODIK_DB || resolve(root, "data/kodik.sqlite"),
   secure = process.env.NODE_ENV === "production",
+  registrationBudget = 10,
 } = {}) {
   const db = openDatabase(dbPath),
     limits = new Map();
@@ -99,12 +104,14 @@ export function createApp({
     if (entry.n > max) fail(429, "Слишком много запросов. Попробуйте позже.");
   }
   function own(table, id, user) {
+    if(typeof id!=='string'||!id||id.length>100)fail(404,'Объект не найден.');
     const row = get(
       `SELECT * FROM ${table} WHERE id=? AND org_id=?`,
       id,
       user.org_id,
     );
     if (!row) fail(404, "Объект не найден.");
+    pilot.assertScope(table,row,user);
     return row;
   }
   const teacher = (u) => {
@@ -121,6 +128,7 @@ export function createApp({
     if(!assignments.length)fail(404,"Назначение не найдено.");
     if(assignments.length!==1)fail(409,"Выберите конкретное назначение задания.",{assignment_required:true});
     const assignment=assignments[0],version=get("SELECT * FROM task_versions WHERE id=? AND org_id=?",assignment.version_id,user.org_id);
+    if(writing&&get('SELECT archived FROM groups_ WHERE id=?',assignment.group_id)?.archived)fail(409,'Группа архивирована. Работы сохранены для просмотра.');
     if(!version)fail(409,"У назначения отсутствует опубликованная версия. Обратитесь к преподавателю.");
     return {...JSON.parse(version.snapshot),id:task.id,published:1,assignment_id:assignment.id,version_id:version.id,run_id:assignment.run_id,lesson_run_id:assignment.lesson_run_id,step_id:assignment.step_id};
   }
@@ -240,6 +248,9 @@ export function createApp({
   }
   async function acceptSubmission(user, task, b) {
     if (user.role !== "student") fail(403, "Отправка доступна ученику.");
+    const replay=submissions.replay(user,task,b);
+    if(replay){if(replay.error)fail(replay.status,replay.error,replay.details);return replay;}
+    availableTask(task.id,user,task.assignment_id,true);
     const mode = b.mode ?? "python";
     const eff = modeRules("submit", mode, task, user);
     limit(`execute:${user.id}`, 50, 60000);
@@ -290,8 +301,10 @@ export function createApp({
       now(),
     );
   const taskQuality=createTaskQuality({db,own,teacher,fail,tx,validateTask,limit});
-  const modes=createModes({db,own,teacher,fail,tx});
-  const curriculum=createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion:taskQuality.assertPublishedVersion,modePolicyFor:modes.policyForNewAssignment});
+  const modes=createModes({db,own,teacher,fail,tx,onResponse:(...args)=>learningEvidence.respond(...args)});
+  const curriculum=createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion:taskQuality.assertPublishedVersion,groupManager:(u,id)=>pilot.groupManager(u,id),modePolicyFor:modes.policyForNewAssignment,modesFor:(a,id,t)=>{const e=modes.effectiveFor(a,id,t);return modes.publicModes(e.supported,e.eff)}});
+  const pilot=createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordText,publicUser,makeSession,availableTask,curriculum,modes,adaptive});
+  const learningEvidence=createLearningEvidence({db,own,teacher,fail,tx,modes,adaptive,groupAllowed:pilot.groupAllowed});
   function makeSession(user, res) {
     const token = randomBytes(32).toString("hex");
     run("DELETE FROM sessions WHERE expires<?", Date.now());
@@ -329,7 +342,7 @@ export function createApp({
       );
     if (path.startsWith("/api/ai/")) fail(503, "AI отключён.");
     if (path === "/api/auth/register" && method === "POST") {
-      limit(`register:${ip}`, 10, 3600000);
+      limit(`register:${ip}`, registrationBudget, 3600000);
       const orgName = text(b.school, "Название школы"),
         name = text(b.name, "Имя"),
         login = text(b.login, "Логин", 120).toLowerCase(),
@@ -341,6 +354,8 @@ export function createApp({
         if (get("SELECT id FROM users WHERE login=?", login))
           fail(409, "Логин уже занят.");
         run("INSERT INTO organizations VALUES(?,?,?)", orgId, orgName, now());
+        run("INSERT INTO companies(id,org_id,name,contact_name,source,stage,created_at) VALUES(?,?,?,?,'Самостоятельная регистрация','pilot',?)",randomUUID(),orgId,orgName,name,now());
+        run("INSERT INTO licenses VALUES(?,?,1,60,?,'active',?,?)",randomUUID(),orgId,new Date(Date.now()+14*86400000).toISOString(),id,now());
         run(
           "INSERT INTO users(id,org_id,name,login,password,role,recovery,created_at) VALUES(?,?,?,?,?,?,?,?)",
           id,
@@ -415,8 +430,17 @@ export function createApp({
       );
       return { ok: true };
     }
+    if(user.platform_owner && path==='/api/state' && method==='GET')return {user:publicUser(user),organization:{id:user.org_id,name:'Управление Kodik'},courses:[],modules:[],lessons:[],tasks:[],users:[],groups:[],members:[],assignments:[],attempts:[],drafts:[],programs:[]};
+    if(user.platform_owner&&!path.startsWith('/api/owner/'))fail(403,'Откройте кабинет владельца.');
+    if(!['GET','HEAD'].includes(method)&&!path.endsWith('/draft'))pilot.checkLicense(user);
+    if(path==='/api/starter-course/install'&&method==='POST')return await createStarterCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user);
+    const pilotResult=await pilot.handle(path,method,b,user,req,res);
+    if(pilotResult!==undefined)return pilotResult;
+    const learningResult=await learningEvidence.handle(path,method,b,user);
+    if(learningResult!==undefined)return learningResult;
     const qualityResult=await taskQuality.handle(path,method,b,user);
     if(qualityResult!==undefined)return qualityResult;
+    learningEvidence.expire();
     const modesResult=await modes.handle(path,method,b,user);
     if(modesResult!==undefined)return modesResult;
     const curriculumResult=await curriculum.handle(path,method,b,user);
@@ -449,7 +473,7 @@ export function createApp({
           user.org_id,
         ),
         courses = all(
-          "SELECT * FROM courses WHERE org_id=? ORDER BY created_at",
+          "SELECT c.*,(SELECT status FROM course_imports i WHERE i.course_id=c.id) import_status FROM courses c WHERE org_id=? ORDER BY created_at",
           user.org_id,
         );
       if (user.role === "student") {
@@ -474,7 +498,7 @@ export function createApp({
               "SELECT id,user_id,task_id,assignment_id,version_id,context_origin,mode,json_extract(snapshot,'$.title') AS task_title,json_extract(snapshot,'$.revision') AS version_revision,status,result,feedback,created_at FROM attempts WHERE org_id=? ORDER BY created_at DESC",
               user.org_id,
             );
-      return curriculum.state(user,{
+      return curriculum.state(user,pilot.scopeState({
         user: publicUser(user),
         organization: get(
           "SELECT id,name FROM organizations WHERE id=?",
@@ -519,17 +543,19 @@ export function createApp({
           user.role === "student"
             ? all("SELECT d.assignment_id,d.workspace,d.format,d.revision,d.updated_at,a.task_id FROM assignment_block_drafts d JOIN assignments a ON a.id=d.assignment_id WHERE d.user_id=? AND d.org_id=? AND a.archived=0", user.id, user.org_id).map((d) => ({ ...d, workspace: JSON.parse(d.workspace) }))
             : [],
-      });
+      },user));
     }
     if (path === "/api/users" && method === "POST") {
       teacher(user);
       if (!["student", "teacher", "admin"].includes(b.role))
         fail(400, "Выберите роль.");
       if (b.role !== "student") admin(user);
+      if(b.role==='student')pilot.seats(user);
       const id = randomUUID(),
         name = text(b.name, "Имя"),
         login = text(b.login, "Логин", 120).toLowerCase(),
         password = await passwordHash(passwordText(b.password));
+      if(b.role==='student')pilot.seats(user);
       if (get("SELECT id FROM users WHERE login=?", login))
         fail(409, "Логин уже занят.");
       run(
@@ -542,6 +568,7 @@ export function createApp({
         b.role,
         now(),
       );
+      run('UPDATE users SET created_by=? WHERE id=?',user.id,id);
       return { id };
     }
     if(path==='/api/preview/run'&&method==='POST'){
@@ -570,12 +597,13 @@ export function createApp({
       method === "POST"
     ) {
       if (user.role !== "student") fail(403, "Отправка доступна ученику.");
-      return await acceptSubmission(user, availableTask(match[1], user, b.assignment_id, true), b);
+      return await acceptSubmission(user, availableTask(match[1], user, b.assignment_id), b);
     }
     if (
       (match = /^\/api\/submissions\/([^/]+)$/.exec(path)) &&
       method === "GET"
     ) {
+      if(user.role==='teacher')own('submission_jobs',match[1],user);
       const result = submissions.get(match[1], user);
       if (!result) fail(404, "Проверка не найдена.");
       return result;
@@ -601,6 +629,7 @@ export function createApp({
       const target = own("users", match[1], user);
       if (target.id === user.id || typeof b.active !== "boolean")
         fail(400, "Нельзя отключить свой аккаунт. Укажите статус доступа.");
+      if(b.active&&!target.active&&target.role==='student')pilot.seats(user);
       tx(() => {
         run(
           "UPDATE users SET active=? WHERE id=?",
@@ -608,6 +637,7 @@ export function createApp({
           target.id,
         );
         run("DELETE FROM sessions WHERE user_id=?", target.id);
+        pilot.audit(user,'user.access_changed',target.id,{previous:!!target.active,current:b.active});
       });
       return { ok: true };
     }
@@ -623,6 +653,7 @@ export function createApp({
       tx(() => {
         run("UPDATE users SET password=? WHERE id=?", password, target.id);
         run("DELETE FROM sessions WHERE user_id=?", target.id);
+        pilot.audit(user,'user.password_reset',target.id);
       });
       return { ok: true };
     }
@@ -826,6 +857,7 @@ export function createApp({
         validateTask(parsedTask(task), user, true);
       const proof=b.published?taskQuality.assertApproved(task):null;
       const versionId=tx(()=>{
+        if(b.published)learningEvidence.family(task);
         let version=get('SELECT id FROM task_versions WHERE task_id=? AND revision=?',task.id,task.revision)?.id;
         if(b.published&&version&&!get('SELECT verification_id FROM task_versions WHERE id=?',version).verification_id)fail(409,'Сохраните новую ревизию и перепубликуйте задание: прежний снимок не имеет подтверждения качества.');
         if(b.published&&version)taskQuality.assertPublishedVersion(version,user);
@@ -862,6 +894,7 @@ export function createApp({
         ],
         t.position + 1,
       );
+      run('INSERT INTO task_families VALUES(?,?,?)',id,user.org_id,learningEvidence.family(t));
       return { id };
     }
     if (
@@ -934,6 +967,7 @@ export function createApp({
                 ],
                 t.position,
               );
+              run('INSERT INTO task_families VALUES(?,?,?)',copiedId,user.org_id,learningEvidence.family(t));
             }
             const steps=JSON.parse(l.steps).map(s=>{const {task_version_id,...draft}=s;return {...draft,...(s.task_id?{task_id:taskMap.get(s.task_id)||''}:{})}});
             run('UPDATE lessons SET goal=?,description=?,duration=?,teacher_notes=?,steps=?,updated_at=? WHERE id=?',l.goal,l.description,l.duration,l.teacher_notes,JSON.stringify(steps),now(),lid);
@@ -946,11 +980,12 @@ export function createApp({
       teacher(user);
       const id = randomUUID();
       run(
-        "INSERT INTO groups_ VALUES(?,?,?)",
+        "INSERT INTO groups_(id,org_id,title) VALUES(?,?,?)",
         id,
         user.org_id,
         text(b.title, "Название"),
       );
+      if(user.role==='teacher')run("INSERT INTO group_teachers VALUES(?,?,'primary')",id,user.id);
       return { id };
     }
     if (
@@ -958,7 +993,8 @@ export function createApp({
       ["POST", "DELETE"].includes(method)
     ) {
       teacher(user);
-      own("groups_", match[1], user);
+      const group=own("groups_", match[1], user);if(group.archived)fail(409,'Группа архивирована.');
+      pilot.groupManager(user,group.id);
       const student = own("users", b.user_id, user);
       if (student.role !== "student")
         fail(400, "В группу можно добавить ученика.");
@@ -974,6 +1010,7 @@ export function createApp({
           match[1],
           student.id,
         );
+      pilot.audit(user,method==='POST'?'group.member_added':'group.member_removed',group.id,{user_id:student.id});
       return { ok: true };
     }
     if (path === "/api/assignments" && method === "POST") {
@@ -982,12 +1019,14 @@ export function createApp({
       let due=null;
       if(b.due_at){if(typeof b.due_at!=='string'||!Number.isFinite(Date.parse(b.due_at)))fail(400,'Неверная дата.');due=new Date(b.due_at).toISOString()}
       const payload=JSON.stringify({group_id:b.group_id,task_id:b.task_id,due_at:due,repeat_of:b.repeat_of??null,...(b.mode_policy!==undefined?{mode_policy:b.mode_policy}:{})});
+      own('groups_',b.group_id,user);pilot.groupManager(user,b.group_id);
       const previous=get('SELECT * FROM assignment_operations WHERE org_id=? AND request_key=?',user.org_id,b.request_key);
       if(previous){
         if(previous.actor_id!==user.id||previous.payload!==payload)fail(409,'Этот ключ выдачи уже использован для другой операции.');
         return {...JSON.parse(previous.response),replayed:true};
       }
-      own("groups_", b.group_id, user);
+      if(own("groups_", b.group_id, user).archived)fail(409,'Группа архивирована.');
+      pilot.groupManager(user,b.group_id);
       const task = own("tasks", b.task_id, user);
       if (!task.published) fail(400, "Сначала опубликуйте задание.");
       const existing=get('SELECT id FROM assignments WHERE org_id=? AND group_id=? AND task_id=? AND archived=0 ORDER BY created_at DESC LIMIT 1',user.org_id,b.group_id,b.task_id);
@@ -1021,6 +1060,7 @@ export function createApp({
     }
     if((match=/^\/api\/assignments\/([^/]+)$/.exec(path))&&method==='PUT'){
       teacher(user);const assignment=own('assignments',match[1],user);
+      pilot.groupManager(user,assignment.group_id);
       if(assignment.archived)fail(409,'Назначение снято.');
       if(b.revision!==assignment.revision)fail(409,'Срок уже изменён в другой вкладке. Обновите данные.',{current:assignment});
       let due=null;
@@ -1036,7 +1076,7 @@ export function createApp({
       method === "DELETE"
     ) {
       teacher(user);
-      own("assignments", match[1], user);
+      pilot.groupManager(user,own("assignments", match[1], user).group_id);
       tx(()=>{
         run("UPDATE assignments SET archived=1 WHERE id=?", match[1]);
         run('INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)',randomUUID(),user.org_id,user.id,'assignment.archived',match[1],'{}',now());
@@ -1047,7 +1087,7 @@ export function createApp({
       (match = /^\/api\/tasks\/([^/]+)\/(draft|run|submit)$/.exec(path)) &&
       ["POST", "PUT"].includes(method)
     ) {
-      const task = availableTask(match[1], user, b.assignment_id,true),
+      const task = availableTask(match[1], user, b.assignment_id,match[2]!=='submit'),
         action = match[2],
         mode = b.mode ?? "python";
       if (action === "draft") {
@@ -1148,34 +1188,6 @@ export function createApp({
         result: JSON.parse(a.result),
         ...(user.role === "student" ? {} : { snapshot: JSON.parse(snapshot) }),
       };
-    }
-    if (
-      (match = /^\/api\/attempts\/([^/]+)\/review$/.exec(path)) &&
-      method === "POST"
-    ) {
-      teacher(user);
-      const attempt = own("attempts", match[1], user);
-      if (JSON.parse(attempt.snapshot).check_mode !== "manual")
-        fail(400, "Автоматические результаты нельзя переоценить вручную.");
-      if (!["passed", "failed"].includes(b.status))
-        fail(400, "Выберите результат.");
-      const feedback = text(b.feedback, "Комментарий", 4000, true);
-      run(
-        "UPDATE attempts SET status=?,feedback=?,result=? WHERE id=?",
-        b.status,
-        feedback,
-        JSON.stringify({
-          status: b.status,
-          message:
-            feedback ||
-            (b.status === "passed"
-              ? "Преподаватель принял решение."
-              : "Нужны исправления."),
-          cases: [],
-        }),
-        attempt.id,
-      );
-      return { ok: true };
     }
     fail(404, "Страница API не найдена.");
   }

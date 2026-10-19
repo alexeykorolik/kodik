@@ -2328,3 +2328,33 @@ body {
 .mirror-code .ln { display: inline-block; width: 26px; color: #5f6e67; user-select: none; }
 .mirror-errors { margin: 0 0 8px; padding-left: 18px; color: #b3412f; font-weight: 700; }
 @media (max-width: 1279px) { .block-area.mixed { grid-template-columns: minmax(0, 1fr); } .python-mirror { border-left: 0; border-top: 1px solid #e2e5dd; } }
+.workspace-page .coding-panel { display:flex; flex-direction:column; }
+.workspace-page .coding-panel > fieldset { flex:1; overflow:hidden; }
+.workspace-page .coding-panel > .block-area { flex:1; min-height:150px; overflow:auto; }
+.workspace-page .coding-panel > .console { flex:0 1 170px; min-height:100px; }
+.workspace-page .coding-panel > .editor-toolbar { flex:0 0 40px; }
+.workspace-page .coding-panel > .editor-bottom { flex-shrink:0; }
+.workspace-page .mode-bar { flex-shrink:0; padding:8px 12px; }
+.workspace-page .block-editor .blockly-host { height:100%; flex:1 1 160px; min-height:130px; }
+.workspace-page .block-keyboard[open] { max-height:250px; overflow:auto; flex-shrink:0; }
+.workspace-page .block-area .python-mirror { min-height:180px; }
+.author-blocks { border:1px solid #bdccc6; border-radius:10px; margin:12px 0; }
+.author-blocks .blockly-host { height:360px; }
+.compact-palette { display:flex; flex-wrap:wrap; align-items:end; gap:8px; padding:8px; border-bottom:1px solid #d8e1dd; background:#edf6f4; }
+.compact-palette label { display:flex; flex:1; min-width:0; align-items:center; gap:6px; margin:0; font-size:13px; color:#234d49; }
+.compact-palette select { width:100%; min-width:0; padding:6px; font-size:14px; }
+.compact-palette button { padding:7px 10px; }
+.block-keyboard-fields { display:grid; gap:8px; padding:10px 0; }
+.block-keyboard-fields label { display:grid; gap:4px; margin-bottom:8px; }
+.block-keyboard-fields form { margin-top:10px; }
+.help-button { position:relative; font-size:14px; margin:4px 0; }
+.help-button summary { color:#805100; cursor:pointer; }
+.help-button[open] { background:#fff4dc; padding:10px; border-radius:8px; }
+.help-button label { display:grid; gap:4px; }
+.b2b-shell :focus-visible { outline:3px solid #2462a0; outline-offset:3px; }
+.b2b-shell .panel > form, .b2b-shell form.panel { display:grid; gap:12px; }
+.b2b-shell .panel label { font-size:15px; }
+.b2b-shell .panel label:not(.checkbox) { display:grid; gap:6px; }
+.b2b-shell .panel .actions label { flex:1; min-width:120px; }
+.b2b-shell .panel { min-width:0; }
+@media (max-height:800px) { .workspace-page .coding-panel > .console { flex-basis:125px; } .workspace-page .workspace-title h1 { font-size:25px; } }

@@ -30,4 +30,6 @@ jobs:
         if: always()
         with:
           name: measured-local-load
-          path: work/pilot-load-report.json
+          path: |
+            work/pilot-load-report.json
+            work/multi-school-load-report.json

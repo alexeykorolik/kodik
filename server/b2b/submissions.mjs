@@ -214,6 +214,14 @@ export function createSubmissionService(
   queueMicrotask(pump);
   return {
     enqueue,
+    replay(user,task,b){
+      if(typeof b.request_key!=='string')return null;
+      const old=db.prepare('SELECT * FROM submission_jobs WHERE org_id=? AND user_id=? AND request_key=?').get(user.org_id,user.id,b.request_key);
+      if(!old)return null;
+      const mode=b.mode??'python',same=mode==='python'?old.code===b.code:old.source===JSON.stringify(b.workspace);
+      if(old.task_id!==task.id||old.assignment_id!==(task.assignment_id??null)||old.mode!==mode||!same)return {error:'Ключ уже использован для другого решения.',status:409,details:{code:'request_key_reused'}};
+      return visible(old);
+    },
     get(id, user) {
       const j = db
         .prepare("SELECT * FROM submission_jobs WHERE id=? AND org_id=?")

@@ -10,7 +10,8 @@ const ws = (vars: string[], ...roots: object[]) => ({ blocks: { languageVersion:
 const solution = ws(["n"], { type: "variables_set", id: "s", x: 10, y: 10, fields: { VAR: { id: "v-n" } }, inputs: { VALUE: { block: { type: "kodik_input_int", id: "i" } } }, next: { block: { type: "text_print", id: "p", inputs: { TEXT: { block: { type: "math_arithmetic", id: "m", fields: { OP: "MULTIPLY" }, inputs: { A: { block: { type: "variables_get", id: "g", fields: { VAR: { id: "v-n" } } } }, B: { block: { type: "math_number", id: "k", fields: { NUM: 2 } } } } } } } } } });
 const PALETTE = ["kodik_input_int", "variables_set", "variables_get", "math_arithmetic", "math_number", "text_print"];
 
-test("learner: blocks from the keyboard, restore after reload, own Python mirror, separate Python draft", async ({ page }) => {
+for(const width of [1366,1920]) test(`learner: keyboard blocks, restore, mirror and separate Python draft at ${width}`, async ({ page }) => {
+  await page.setViewportSize({width,height:width===1366?768:1080});
   const tag = crypto.randomUUID().slice(0, 8);
   await call(page, "/auth/register", { school: `Modes ${tag}`, name: "Teacher", login: `modes-${tag}`, password });
   const course = await call(page, "/courses", { title: "Course" }), module = await call(page, "/modules", { title: "M", course_id: course.id }), lesson = await call(page, "/lessons", { title: "L", module_id: module.id });
@@ -29,14 +30,15 @@ test("learner: blocks from the keyboard, restore after reload, own Python mirror
   await page.getByLabel("Логин", { exact: true }).fill(`modes-kid-${tag}`);
   await page.getByLabel("Пароль", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Войти в Kodik" }).click();
+  await expect(page.getByRole('heading', {name: 'Привет, Миша!'})).toBeVisible();
   await page.goto(`/#assignment/${assignment.id}`);
   const modeSwitch = page.getByRole("radiogroup", { name: "Способ решения" });
   await expect(modeSwitch.getByRole("radio", { name: "Блоки", exact: true })).toHaveAttribute("aria-checked", "true");
   await expect(page.locator(".blockly-host svg").first()).toBeVisible();
 
   // Keyboard path: add blocks with buttons; each connects into the selected block.
-  await page.getByText("Добавить блок с клавиатуры").click();
-  const add = (name: string) => page.getByRole("group", { name: "Блоки этого задания" }).getByRole("button", { name, exact: true }).click();
+  await page.getByText("Добавить блок с клавиатуры").focus(); await page.keyboard.press("Enter");
+  const add = async (name: string) => {await page.getByRole("group", { name: "Блоки этого задания" }).getByRole("button", { name, exact: true }).focus();await page.keyboard.press("Enter");};
   await add("присвоить");
   await add("ввести целое число");
   await expect(page.getByText("Блоки сохранены на сервере")).toBeVisible({ timeout: 10000 });
@@ -46,7 +48,7 @@ test("learner: blocks from the keyboard, restore after reload, own Python mirror
   await modeSwitch.getByRole("radio", { name: "Блоки + Python" }).click();
   const mirror = page.getByRole("region", { name: "Python из твоих блоков" });
   await expect(mirror).toContainText("int(input())");
-  await page.getByText("Добавить блок с клавиатуры").click();
+  await page.getByText("Добавить блок с клавиатуры").focus(); await page.keyboard.press("Enter");
   await add("напечатать");
   await expect(mirror).toContainText("пустое место");
   await page.getByRole("button", { name: "▷ Запустить" }).click();
@@ -68,6 +70,8 @@ test("learner: blocks from the keyboard, restore after reload, own Python mirror
   await page.reload();
   await modeSwitch.getByRole("radio", { name: "Блоки + Python" }).click();
   await expect(page.getByRole("region", { name: "Python из твоих блоков" })).toContainText("int(input())");
+  for(const name of ["▷ Запустить","Проверить решение"]){const button=page.getByRole("button",{name,exact:true}),r=await button.boundingBox();expect(r!.y+r!.height).toBeLessThanOrEqual(width===1366?768:1080);expect(await button.evaluate(e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})).toBeTruthy()}
+  await page.screenshot({path:"work/modes-"+width+".png"});
   const attempts = (await call(page, "/state")).attempts.filter((a: { assignment_id: string }) => a.assignment_id === assignment.id).map((a: { mode: string }) => a.mode).sort();
   expect(attempts).toEqual(["mixed", "python"]);
 });

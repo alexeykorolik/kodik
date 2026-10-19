@@ -24,3 +24,4 @@ data/
 .runner/
 work/
 playwright-report/
+desktop.ini

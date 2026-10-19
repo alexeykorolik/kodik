@@ -3,7 +3,7 @@ const now=()=>new Date().toISOString();
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const kinds=new Set(['text','code','practice','question','final','summary']);
 const practical=s=>s.type==='practice'||s.type==='final';
-export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion,modePolicyFor}){
+export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion,modePolicyFor,modesFor,groupManager}){
   const get=(sql,...args)=>db.prepare(sql).get(...args),all=(sql,...args)=>db.prepare(sql).all(...args),run=(sql,...args)=>db.prepare(sql).run(...args);
   const audit=(u,action,id,details={})=>run('INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)',randomUUID(),u.org_id,u.id,action,id,JSON.stringify(details),now());
   const field=(value,label,max=12000)=>{if(typeof value!=='string'||value.length>max)fail(400,`${label}: не более ${max} символов.`);return value};
@@ -71,8 +71,8 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
     return steps.map(s=>{
       if(practical(s)){
         const a=assignments.find(a=>a.step_id===s.id),passed=a&&get("SELECT id FROM attempts WHERE assignment_id=? AND user_id=? AND status='passed'",a.id,u.id);
-        const latest=a&&get('SELECT id,status,created_at FROM attempts WHERE assignment_id=? AND user_id=? ORDER BY created_at DESC LIMIT 1',a.id,u.id),draft=a&&get('SELECT updated_at FROM assignment_drafts WHERE assignment_id=? AND user_id=?',a.id,u.id);
-        return {step_id:s.id,status:passed?'completed':latest?.status||draft?'started':'available',assignment_id:a?.id,attempt_id:latest?.id,attempt_status:latest?.status,updated_at:latest?.created_at||draft?.updated_at};
+        const latest=a&&get('SELECT id,status,mode,created_at FROM attempts WHERE assignment_id=? AND user_id=? ORDER BY created_at DESC LIMIT 1',a.id,u.id),draft=a&&get('SELECT updated_at FROM assignment_drafts WHERE assignment_id=? AND user_id=? UNION ALL SELECT updated_at FROM assignment_block_drafts WHERE assignment_id=? AND user_id=? ORDER BY updated_at DESC LIMIT 1',a.id,u.id,a.id,u.id);
+        return {step_id:s.id,status:passed?'completed':latest?.status||draft?'started':'available',assignment_id:a?.id,attempt_id:latest?.id,attempt_status:latest?.status,mode:latest?.mode,updated_at:latest?.created_at||draft?.updated_at};
       }
       return saved.find(p=>p.step_id===s.id)||{step_id:s.id,status:'available'};
     });
@@ -82,10 +82,11 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
     const students=u.role==='student'?undefined:all('SELECT u.id,u.name,u.org_id,e.start_position FROM users u JOIN run_enrollments e ON e.user_id=u.id WHERE e.run_id=? AND u.org_id=?',program.id,u.org_id).filter(s=>s.start_position<=row.position).map(s=>({id:s.id,name:s.name,progress:progress(id,s,content.steps)}));
     return {id:row.id,run_id:row.run_id,state:row.state,state_revision:row.revision,group_title:own('groups_',program.group_id,u).title,due_at:program.due_at,lesson:u.role==='student'?publicLesson(content):content,progress:u.role==='student'?progress(id,u,content.steps):[],...(students?{students}:{}),assignments:assignments.map(a=>{
       const task=JSON.parse(own('task_versions',a.version_id,u).snapshot);
-      return {id:a.id,step_id:a.step_id,task:safeTask({...task,assignment_id:a.id,version_id:a.version_id,group_id:program.group_id,group_title:own('groups_',program.group_id,u).title,due_at:a.due_at,lesson_run_id:id,run_id:program.id,published:1},u)};
+      return {id:a.id,step_id:a.step_id,task:safeTask({...task,...(u.role==='student'?{modes:modesFor(a,u.id,task)}:{}),assignment_id:a.id,version_id:a.version_id,group_id:program.group_id,group_title:own('groups_',program.group_id,u).title,due_at:a.due_at,lesson_run_id:id,run_id:program.id,published:1},u)};
     })};
   }
   function plan(b,u){
+    if(b.scope==='course'&&get("SELECT 1 FROM course_imports WHERE course_id=? AND org_id=? AND status='building'",b.source_id,u.org_id))fail(409,'Стартовый курс ещё готовится. Дождитесь завершения подготовки или продолжите её из раздела «Курсы».');
     if(!['course','module','lesson','selection'].includes(b.scope))fail(400,'Выберите курс, модуль, урок или подборку.');
     let rows=[],title='',sourceId=b.source_id||'';
     if(b.scope==='selection'){
@@ -109,10 +110,10 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
     return {scope:b.scope,source_id:sourceId,title,lessons,tasks:[]};
   }
   function dueDate(value){if(!value)return null;if(typeof value!=='string'||!Number.isFinite(Date.parse(value)))fail(400,'Неверный срок.');return new Date(value).toISOString()}
-  function issuancePlan(b,u){return {...plan(b,u),participants:all("SELECT u.id FROM users u JOIN group_members gm ON gm.user_id=u.id WHERE gm.group_id=? AND u.org_id=? AND u.role='student' AND u.active=1 ORDER BY u.id",b.group_id,u.org_id).map(u=>u.id)}}
+  function issuancePlan(b,u){if(own('groups_',b.group_id,u).archived)fail(409,'Группа архивирована.');return {...plan(b,u),participants:all("SELECT u.id FROM users u JOIN group_members gm ON gm.user_id=u.id WHERE gm.group_id=? AND u.org_id=? AND u.role='student' AND u.active=1 ORDER BY u.id",b.group_id,u.org_id).map(u=>u.id)}}
   function programState(u){
     const programs=u.role==='student'?all('SELECT r.* FROM teaching_runs r JOIN run_enrollments e ON e.run_id=r.id JOIN group_members gm ON gm.group_id=r.group_id AND gm.user_id=e.user_id WHERE r.org_id=? AND e.user_id=? AND r.archived=0 ORDER BY r.created_at',u.org_id,u.id):all('SELECT * FROM teaching_runs WHERE org_id=? ORDER BY created_at DESC',u.org_id);
-    return programs.map(r=>{
+    return programs.filter(r=>u.role!=='teacher'||!!get('SELECT 1 FROM group_teachers WHERE group_id=? AND user_id=?',r.group_id,u.id)).map(r=>{
       const enrollment=u.role==='student'?enrolled(r.id,u):null;
       const lessons=all('SELECT * FROM lesson_runs WHERE run_id=? ORDER BY position',r.id).filter(l=>!enrollment||l.position>=enrollment.start_position).map(l=>{
         const content=JSON.parse(own('lesson_versions',l.version_id,u).snapshot),p=u.role==='student'?progress(l.id,u,content.steps):[];
@@ -144,6 +145,7 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
     if(path==='/api/programs/preview'&&method==='POST'){teacher(u);own('groups_',b.group_id,u);const snapshot=issuancePlan(b,u);return {snapshot,preview_hash:digest(snapshot),students:snapshot.participants.length}}
     if(path==='/api/programs'&&method==='POST'){
       teacher(u);if(typeof b.request_key!=='string'||!/^[a-zA-Z0-9_-]{10,100}$/.test(b.request_key))fail(400,'Укажите ключ выдачи программы.');
+      own('groups_',b.group_id,u);groupManager(u,b.group_id);
       const payload=JSON.stringify({group_id:b.group_id,scope:b.scope,source_id:b.source_id||'',task_ids:b.task_ids||[],due_at:dueDate(b.due_at),preview_hash:b.preview_hash,repeat_of:b.repeat_of||null});
       const old=get('SELECT * FROM teaching_runs WHERE org_id=? AND request_key=?',u.org_id,b.request_key);
       if(old){if(old.actor_id!==u.id||old.payload!==payload)fail(409,'Ключ выдачи использован для другой программы.');return {id:old.id,replayed:true}}
@@ -166,7 +168,7 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
       return {id};
     }
     if((match=/^\/api\/programs\/([^/]+)\/enroll$/.exec(path))&&method==='POST'){
-      teacher(u);const r=own('teaching_runs',match[1],u);if(r.archived)fail(409,'Прохождение архивировано.');
+      teacher(u);const r=own('teaching_runs',match[1],u);groupManager(u,r.group_id);if(r.archived)fail(409,'Прохождение архивировано.');
       if(!['from_start','current'].includes(b.mode)||!Array.isArray(b.user_ids)||!b.user_ids.length||b.user_ids.length>100||new Set(b.user_ids).size!==b.user_ids.length)fail(400,'Выберите участников и начало программы.');
       const start=b.mode==='from_start'?0:get("SELECT MIN(position) AS n FROM lesson_runs WHERE run_id=? AND state='open'",r.id)?.n;
       if(start===null||start===undefined)fail(409,'Сначала откройте текущее занятие.');
@@ -174,7 +176,7 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
       tx(()=>{for(const id of b.user_ids){const added=run('INSERT OR IGNORE INTO run_enrollments VALUES(?,?,?,?)',r.id,id,start,now());if(added.changes)audit(u,'program.enrolled',r.id,{user_id:id,start_position:start})}});return {ok:true};
     }
     if((match=/^\/api\/programs\/([^/]+)$/.exec(path))&&method==='DELETE'){
-      teacher(u);const r=own('teaching_runs',match[1],u);tx(()=>{run('UPDATE teaching_runs SET archived=1 WHERE id=?',r.id);audit(u,'program.archived',r.id)});return {ok:true};
+      teacher(u);const r=own('teaching_runs',match[1],u);groupManager(u,r.group_id);tx(()=>{run('UPDATE teaching_runs SET archived=1 WHERE id=?',r.id);audit(u,'program.archived',r.id)});return {ok:true};
     }
     if((match=/^\/api\/lesson-runs\/([^/]+)$/.exec(path))&&method==='GET')return details(match[1],u);
     if((match=/^\/api\/lesson-runs\/([^/]+)\/state$/.exec(path))&&method==='POST'){
@@ -205,5 +207,5 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
     const version=own('task_versions',versionId,u);if(version.task_id!==taskId)fail(409,'Ссылка на версию задания повреждена.');
     run('INSERT INTO assignments(id,org_id,group_id,task_id,due_at,version_id,created_at,order_snapshot,run_id,lesson_run_id,step_id,mode_policy) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',randomUUID(),u.org_id,groupId,taskId,due,versionId,at,JSON.stringify(order),runId,lessonRunId,stepId,modePolicyFor(version.snapshot));
   }
-  return {handle,state,canAccessAssignment};
+  return {handle,state,canAccessAssignment,details};
 }

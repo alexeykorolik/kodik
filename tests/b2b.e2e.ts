@@ -37,7 +37,7 @@ test("School → teacher → constructor → group → student → persisted res
     await expect(modal).toHaveCount(0);
   }
   await addUser("Анна", teacher, "teacher");
-  await addUser("Миша", student, "student");
+
   async function login(p: Page, login: string) {
     await p.getByLabel("Логин", { exact: true }).fill(login);
     await p.getByLabel("Пароль", { exact: true }).fill(password);
@@ -45,6 +45,8 @@ test("School → teacher → constructor → group → student → persisted res
   }
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await login(page, teacher);
+  await page.getByRole("link", { name: "Участники", exact: true }).click();
+  await addUser("Миша", student, "student");
   await page.getByRole("link", { name: "Курсы", exact: true }).click();
   await page.getByRole("button", { name: "Создать курс", exact: true }).click();
   await page
@@ -192,6 +194,7 @@ test("School → teacher → constructor → group → student → persisted res
   await expect(page.getByText("Попыток: 1", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await login(page, teacher);
+
   await page.getByRole("link", { name: "Результаты", exact: true }).click();
   await expect(
     page.getByRole("cell", { name: "1 / 1", exact: true }),

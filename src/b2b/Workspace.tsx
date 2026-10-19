@@ -8,6 +8,7 @@ import { learningRules } from './learningRules';
 import { BlockEditor } from "./BlockEditor";
 import { useSolvingModes, type SolvingModes } from "./useSolvingModes";
 import { MODE_LABEL, type Mode } from "../adaptive/modePolicy";
+import {HelpButton} from './PilotPanels';
 function useWorkspaceController({
   task,
   state,
@@ -115,6 +116,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
         <span className="overline">{previewMode?"ПРЕДПРОСМОТР УЧЕНИКА":"ПРАКТИКА PYTHON"}</span>
         <h1>{task.title}</h1>
         {lessonContext&&<button className="link" onClick={onLessonOverview}>{lessonContext} · шаги урока</button>}
+        {!previewMode&&<HelpButton assignmentId={task.assignment_id}/>}
         {task.due_at&&<p className="workspace-deadline">{Date.parse(task.due_at)<Date.now()?'Срок прошёл:':'Срок:'} {new Date(task.due_at).toLocaleDateString('ru')}</p>}
       </div>
       {studentDraft.error && (
@@ -324,7 +326,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               <BlockEditor
                 value={modes.blocks.workspace}
                 palette={modes.palette}
-                readOnly={readOnly || busy || submission.busy}
+                readOnly={readOnly}
                 onChange={(w) => modes.blocks.change(w)}
                 onSelect={(_, statement) => modes.setSelected(statement)}
               />
@@ -495,6 +497,7 @@ function ModeBar({ modes }: { modes: SolvingModes }) {
       {modes.offered && (
         <div className="mode-offer" role="status">
           <span>Учитель предлагает перейти в режим «{MODE_LABEL[modes.offered]}».</span>
+          {modes.recommendation&&<span>{modes.recommendation.basis.reason}</span>}
           <button className="primary small" onClick={() => void modes.switchTo(modes.offered!)}>Перейти</button>
           <button className="small" onClick={() => void modes.switchTo(modes.offered!, true)}>Позже</button>
         </div>

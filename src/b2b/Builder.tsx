@@ -4,6 +4,10 @@ import { MinimalCodeEditor } from "../MinimalCodeEditor";
 import { Badge, Glyph, Header } from "./App";
 import { useMaterialDraft } from "./useMaterialDraft";
 import { learningRules } from './learningRules';
+import { BlockEditor } from './BlockEditor';
+import { BLOCKS } from '../adaptive/blockProgram';
+import { EMPTY_CONFIG, SKILLS } from '../adaptive/learningConfig';
+import {analyzeReference,skillLabel} from '../adaptive/referenceAnalysis';
 const steps = [
   "Основная информация",
   "Содержимое",
@@ -12,7 +16,7 @@ const steps = [
   "Предпросмотр",
   "Публикация",
 ];
-const signature=(t:Row)=>JSON.stringify([t.lesson_id,t.title,t.description,t.goal,t.theory,t.instruction,t.difficulty,t.starter,t.hints,t.check_mode,t.tests,t.reference_solution,t.wrong_solutions,t.manual_criteria,t.preview_solution,t.template_id,t.learning_rules||[]]);
+const signature=(t:Row)=>JSON.stringify([t.lesson_id,t.title,t.description,t.goal,t.theory,t.instruction,t.difficulty,t.starter,t.hints,t.check_mode,t.tests,t.reference_solution,t.wrong_solutions,t.manual_criteria,t.preview_solution,t.template_id,t.learning_rules||[],t.learning_config,t.block_solution]);
 export function Builder({
   state: s,
   id,
@@ -42,7 +46,7 @@ export function Builder({
         check_mode: "output",
         tests: [{ inputs: [], expected: "", hidden: false }],
         reference_solution:"",wrong_solutions:[],manual_criteria:"",preview_solution:"",template_id:"",
-        learning_rules:[],
+        learning_rules:[],learning_config:EMPTY_CONFIG,block_solution:null,
       };
   const draft = useMaterialDraft(
     initial,
@@ -50,11 +54,15 @@ export function Builder({
     id,
   );
   const { task, change: set } = draft;
+  const config = task.learning_config || EMPTY_CONFIG;
+  const setConfig = (field:string,value:unknown) => set('learning_config',{...config,[field]:value});
+  const analysis=analyzeReference(task.reference_solution||'');
+  const [familySource,setFamilySource]=useState('');
   const [templates,setTemplates]=useState<Row[]>([]),[selectedTemplate,setSelectedTemplate]=useState(''),[verification,setVerification]=useState<Row|null>(initial.verification?{...initial.verification,signature:signature(initial)}:null);
   const [verificationHistory,setVerificationHistory]=useState<Row[]|null>(null);
   useEffect(()=>{let active=true;api('/task-templates').then(r=>{if(active)setTemplates(r.items)}).catch(e=>setError(e.message));return()=>{active=false}},[]);
   const requested=Number(new URLSearchParams(location.hash.split("?")[1]).get("step")||0);
-  const [step, setStep] = useState([0,1,2,3,5].includes(requested)?requested:3),
+  const [step, setStep] = useState([0,1,2,3,5].includes(requested)?requested:0),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const approved=verification?.status==='approved'&&verification.signature===signature(task)&&verification.revision===draft.serverRevision&&!draft.hasChanges;
@@ -139,33 +147,11 @@ export function Builder({
           <div className="form-columns">
             <div>
               <h3>Моя версия</h3>
-              <pre>
-                {JSON.stringify(
-                  {
-                    title: task.title,
-                    instruction: task.instruction,
-                    theory: task.theory,
-                    starter: task.starter,
-                  },
-                  null,
-                  2,
-                )}
-              </pre>
+              <MaterialSummary task={task}/>
             </div>
             <div>
               <h3>Последняя версия школы</h3>
-              <pre>
-                {JSON.stringify(
-                  {
-                    title: draft.conflict.current.title,
-                    instruction: draft.conflict.current.instruction,
-                    theory: draft.conflict.current.theory,
-                    starter: draft.conflict.current.starter,
-                  },
-                  null,
-                  2,
-                )}
-              </pre>
+              <MaterialSummary task={draft.conflict.current}/>
             </div>
           </div>
           <div className="actions">
@@ -315,16 +301,15 @@ export function Builder({
           )}
           {step === 2 && (
             <>
-              <div className="form-columns">
-                <label>
-                  Режим редактора
-                  <input value="Python · текстовый редактор" readOnly />
-                </label>
-                <div className="info-box">
-                  Blockly и переход к Python доступны в исходном курсе Kodik.
-                  Конструктор создаёт текстовые задания.
-                </div>
-              </div>
+              <section aria-label="Способы решения"><h3>Способы решения</h3><p>Python поддерживается платформой. При выдаче вы выберете, что разрешено группе.</p>
+              {(['blocks','mixed'] as const).map(mode=><label className="checkbox" key={mode}><input type="checkbox" disabled={task.check_mode==='manual'} checked={config.modes.includes(mode)} onChange={e=>set('learning_config',{...config,modes:e.target.checked?[...config.modes,mode]:config.modes.filter((m:string)=>m!==mode),palette:config.palette.length?config.palette:BLOCKS.map(b=>b.type)})}/>{mode==='blocks'?'Блоки':'Блоки + Python'}</label>)}</section>
+              <details><summary>Целевые навыки и набор блоков</summary><p>Отметьте цели сами: готовая конструкция в заготовке не доказывает навык ученика.</p>
+              <p>Копии и версии одного упражнения считаются одним семейством. Если создаёте похожий вариант заново, свяжите его с исходным упражнением до первой публикации.</p><label>Вариант существующего задания<select value={familySource} onChange={e=>setFamilySource(e.target.value)} disabled={!!task.published_version_id}><option value="">Отдельное упражнение</option>{s.tasks.filter(t=>t.id!==task.id).map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label><button type="button" disabled={!familySource||!!task.published_version_id} onClick={async()=>{try{const saved=await draft.persist();await api(`/tasks/${saved.id}/family`,{source_task_id:familySource},'PUT');setError('Вариант связан с семейством исходного задания.')}catch(e){setError((e as Error).message)}}}>Связать с исходным упражнением</button>
+              <p>В эталоне обнаружено: {analysis.skills.map(skillLabel).join(', ')||'пока ничего'}. Это предложения для автора.</p><button type="button" disabled={!analysis.skills.length} onClick={()=>setConfig('skills',analysis.skills)}>Подтвердить обнаруженное как цели задания</button><button type="button" disabled={!analysis.palette.length} onClick={()=>setConfig('palette',analysis.palette)}>Предложить палитру по эталону</button>{analysis.reasons.map(r=><p key={r}>{r} Можно подготовить другой эквивалентный блоковый образец.</p>)}
+              {SKILLS.map(skill=><label className="checkbox" key={skill.id}><input type="checkbox" checked={config.skills.includes(skill.id)} onChange={e=>setConfig('skills',e.target.checked?[...config.skills,skill.id]:config.skills.filter((s:string)=>s!==skill.id))}/>{skill.label}</label>)}
+              {config.modes.length>0&&<fieldset><legend>Блоки этого задания</legend>{BLOCKS.map(b=><label className="checkbox" key={b.type}><input type="checkbox" checked={config.palette.includes(b.type)} onChange={e=>setConfig('palette',e.target.checked?[...config.palette,b.type]:config.palette.filter((t:string)=>t!==b.type))}/>{b.label}</label>)}</fieldset>}</details>
+              {config.modes.length>0&&<><details open><summary>Стартовые блоки ученика</summary><p>Можно оставить незаполненные места. Закрытый образец ниже хранится отдельно.</p><div className="author-blocks"><BlockEditor value={config.starter_blocks} palette={config.palette} onChange={w=>setConfig('starter_blocks',w)}/></div></details>
+              <details><summary>Закрытый блоковый образец</summary><p>Соберите полное решение. Оно должно пройти те же тесты и учебные правила. Ученик его не увидит.</p><div className="author-blocks"><BlockEditor value={task.block_solution} palette={config.palette} onChange={w=>set('block_solution',w)} label="Закрытый блоковый образец"/></div></details></>}
               <label>Стартовый код</label>
               <MinimalCodeEditor
                 value={task.starter}
@@ -460,7 +445,7 @@ export function Builder({
             <h2>{task.title || "Ваше новое задание"}</h2>
             <p>{courseOf(task.lesson_id)}</p>
             <div className="summary-tags">
-              <Badge>Python</Badge>
+              <Badge>{['Python',...config.modes.map((m:string)=>m==='blocks'?'Блоки':'Блоки + Python')].join(' · ')}</Badge>
               <Badge>
                 {task.check_mode === "manual"
                   ? "Ручная проверка"
@@ -468,6 +453,7 @@ export function Builder({
               </Badge>
               <Badge>{task.hints.filter(Boolean).length} подсказок</Badge>
             </div>
+            <p>Набор: {config.palette.length} блоков. Цели: {config.skills.map((id:string)=>SKILLS.find(s=>s.id===id)?.label).join(', ')||'не выбраны'}. {original?.published?'Новая публикация сохранит прежние назначения без изменений.':''}</p>
             <p className="muted">
               После публикации назначьте задание группе в разделе «Учебные
               группы». Ученики других групп его не увидят.
@@ -524,3 +510,5 @@ export function Builder({
     </>
   );
 }
+
+function MaterialSummary({task}:{task:Row}){return <><h4>{task.title||'Без названия'}</h4><p>{task.instruction||'Условие пока пустое'}</p><details><summary>Теория и стартовое состояние</summary><p>{task.theory}</p><pre>{task.starter}</pre><p>Способы: {['Python',...(task.learning_config?.modes||[]).map((m:string)=>m==='blocks'?'Блоки':'Блоки + Python')].join(', ')}</p></details></>}

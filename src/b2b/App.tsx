@@ -14,6 +14,8 @@ import {LessonEditor} from './LessonEditor';
 import {LessonRun} from './LessonRun';
 import {ProgramCards,ProgramOverview,ProgramIssueDialog} from './Programs';
 import {TaskPreview} from './TaskPreview';
+import {ModeManagement,SchoolPanel,ClassroomPanel,Journal} from './PilotPanels';
+import {Owner} from './Owner';
 
 export function Glyph({ name = "grid" }: { name?: string }) {
   const paths: Record<string, string> = {
@@ -384,6 +386,14 @@ export default function B2BApp() {
     [refreshError, setRefreshError] = useState(""),
     [compactSidebar, setCompactSidebar] = useState(false);
   const refreshSequence = useRef(0);
+  useEffect(()=>{
+    if(!dialog&&!attempt&&!assignmentDialog&&!programGroup)return;
+    const previous=document.activeElement as HTMLElement|null;
+    const focusable=()=>Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"] button:not(:disabled),[role="dialog"] input:not(:disabled),[role="dialog"] select:not(:disabled),[role="dialog"] textarea:not(:disabled),[role="dialog"] [tabindex="0"]')).filter(e=>e.getClientRects().length);
+    const t=requestAnimationFrame(()=>focusable()[0]?.focus());
+    const keys=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();setDialog(null);setAttempt(null);setAssignmentDialog(null);setProgramGroup(null)}if(e.key==='Tab'){const nodes=focusable(),first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}};
+    document.addEventListener('keydown',keys);return()=>{cancelAnimationFrame(t);document.removeEventListener('keydown',keys);previous?.focus()};
+  },[!!dialog,!!attempt,!!assignmentDialog,!!programGroup]);
   const refresh = useCallback(async () => {
     const sequence = ++refreshSequence.current;
     try {
@@ -705,7 +715,7 @@ export default function B2BApp() {
                 ) : (
                   <div className="card-bottom">
                     <Badge>
-                      {tasks.filter((t) => t.published).length} опубликовано
+                      {c.import_status==='building'?'Готовим курс · пока нельзя выдать':`${tasks.filter((t) => t.published).length} опубликовано`}
                     </Badge>
                     <button
                       className="link"
@@ -723,7 +733,12 @@ export default function B2BApp() {
     );
   }
   let content: ReactNode;
-  if(page==='preview'&&!student){const task=s.tasks.find(t=>t.id===id);content=task?<TaskPreview key={id} task={task} state={s} refresh={refresh} onBack={()=>go(`builder/${id}?step=3`)} onPublish={()=>go(`builder/${id}?step=5`)}/>:<Empty title="Черновик недоступен" text="Откройте конструктор и сохраните задание."/>}
+  if(s.user.platform_owner)content=<Owner/>;
+  else if(page==='school'&&s.user.role==='admin')content=<SchoolPanel state={s} refresh={refresh}/>;
+  else if(page==='modes'&&!student)content=<ModeManagement state={s}/>;
+  else if(page==='classroom'&&!student)content=<ClassroomPanel/>;
+  else if(page==='journal'&&!student)content=<Journal state={s} onAttempt={openAttempt}/>;
+  else if(page==='preview'&&!student){const task=s.tasks.find(t=>t.id===id);content=task?<TaskPreview key={id} task={task} state={s} refresh={refresh} onBack={()=>go(`builder/${id}?step=3`)} onPublish={()=>go(`builder/${id}?step=5`)}/>:<Empty title="Черновик недоступен" text="Откройте конструктор и сохраните задание."/>}
   else if(page==='lesson-editor'&&!student&&s.lessons.some(l=>l.id===id))content=<LessonEditor key={id} state={s} lessonId={id} refresh={refresh} onBack={()=>{const lesson=s.lessons.find(l=>l.id===id),module=s.modules.find(m=>m.id===lesson?.module_id);go(`courses/${module?.course_id||''}`)}}/>;
   else if(page==='lesson-run')content=<LessonRun key={`${s.user.id}:${id}`} id={id} state={s} refresh={refresh} onBack={()=>go('courses')} onAttempt={openAttempt}/>;
   else if(page==='program') {const program=s.programs.find(r=>r.id===id);content=program?<ProgramOverview program={program} state={s} refresh={refresh} onGo={go}/>:<Empty title="Программа недоступна" text="Вернитесь к своим занятиям."/>}
@@ -940,6 +955,7 @@ export default function B2BApp() {
               Создать курс
             </button>
           )}
+          {!student&&<button onClick={()=>void act(async()=>{setNotice('Готовим шесть уроков и проверяем образцы. Это может занять около минуты.');const course=await mutate('/starter-course/install',{});setNotice('Стартовый курс готов к назначению группе.');go(`courses/${course.id}`)})}>Добавить стартовый курс · 6 уроков</button>}
         </Header>
         {s.courses.length||student&&s.programs.length ? (
           courseCards()
@@ -1515,7 +1531,7 @@ export default function B2BApp() {
       </>
     );
   }
-  const nav = student
+  const nav = s.user.platform_owner ? [['overview','users','Клиенты и лицензии']] : student
     ? [
         ["overview", "grid", "Обзор"],
         ["courses", "book", "Мои курсы"],
@@ -1528,6 +1544,10 @@ export default function B2BApp() {
         ["groups", "users", "Учебные группы"],
         ["users", "users", "Участники"],
         ["results", "chart", "Результаты"],
+        ["journal", "chart", "Журнал и проверка"],
+        ["classroom", "users", "Запросы помощи"],
+        ["modes", "code", "Способы решения"],
+        ...(s.user.role==='admin'?[["school","users","Управление школой"]]:[]),
       ];
   return (
     <div className={`b2b-shell ${compactSidebar ? "sidebar-collapsed" : ""}`}>
@@ -1675,7 +1695,7 @@ export default function B2BApp() {
           state={s}
           close={() => setAttempt(null)}
           onReview={async (b) => {
-            await mutate(`/attempts/${attempt.id}/review`, b);
+            await mutate(`/attempts/${attempt.id}/review`, {...b,revision:attempt.review_revision});
             setAttempt(null);
           }}
         />
@@ -1696,6 +1716,8 @@ function AttemptDialog({
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const [history,setHistory]=useState<Row[]>([]);
+  useEffect(()=>{api(`/attempts/${a.id}/reviews`).then(r=>setHistory(r.items)).catch(()=>{})},[a.id]);
   return (
     <div className="overlay">
       <section
@@ -1714,10 +1736,12 @@ function AttemptDialog({
           </button>
         </div>
         <Badge status={a.status} />
+        <p>Способ решения: {a.mode==='blocks'?'Блоки':a.mode==='mixed'?'Блоки + Python':'Python'}</p>
         <p className="muted">{a.context_origin==='legacy'?'Историческая попытка: назначение не восстановлено':`Версия задания ${a.snapshot?.revision||a.version_revision||''}`}</p>
         <p>{a.result.message}</p>
         <pre className="solution-code">{a.code}</pre>
         <p className="muted">{a.feedback}</p>
+        {history.length>0&&<details><summary>История оценок · {history.length}</summary>{history.map(h=><p key={h.id}>{new Date(h.created_at).toLocaleString('ru')} · {h.actor_name} · {statusNames[h.before_status]} → {statusNames[h.after_status]}: {h.after_feedback}</p>)}</details>}
         {s.user.role !== "student" && a.snapshot?.check_mode === "manual" && (
           <form
             onSubmit={async (e) => {

@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
-  testMatch: ["b2b.e2e.ts", "pilot.e2e.ts","curriculum.e2e.ts","task-quality.e2e.ts","modes.e2e.ts"],
+  testMatch: ["b2b.e2e.ts", "pilot.e2e.ts","curriculum.e2e.ts","task-quality.e2e.ts","modes.e2e.ts","pilot-operations.e2e.ts"],
   timeout: 120000,
   workers: 1,
   use: {
@@ -13,7 +13,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "node server/b2b/start.mjs",
+    command: "node tests/helpers/browser-server.mjs",
     url: "http://127.0.0.1:4186/api/health",
     reuseExistingServer: false,
     env: { PORT: "4186", KODIK_DB: "work/browser-test.sqlite" },

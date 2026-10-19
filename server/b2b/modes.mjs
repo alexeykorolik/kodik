@@ -6,7 +6,7 @@ import * as shared from "../../.runner/adaptive.mjs";
 export const adaptive = shared;
 const now = () => new Date().toISOString();
 
-export function createModes({ db, own, teacher, fail, tx }) {
+export function createModes({ db, own, teacher, fail, tx, onResponse }) {
   const get = (sql, ...a) => db.prepare(sql).get(...a);
   const run = (sql, ...a) => db.prepare(sql).run(...a);
 
@@ -79,13 +79,13 @@ export function createModes({ db, own, teacher, fail, tx }) {
       if (!shared.isMode(b.mode)) fail(400, "Укажите режим.");
       if (b.decline === true) {
         if (eff.offered !== b.mode) fail(409, "Предложение уже неактуально.");
-        tx(() => { writeState(assignment, u.id, u.id, { offered_mode: null }); event(u.org_id, assignment.id, u.id, u.id, "offer_declined", eff.current, b.mode); });
+        tx(() => { writeState(assignment, u.id, u.id, { offered_mode: null });const id=onResponse?.(assignment.id,u.id,b.mode,true); event(u.org_id, assignment.id, u.id, u.id, "offer_declined", eff.current, b.mode,'',id?{recommendation_id:id}:{}); });
         return { modes: publicModes(supported, effectiveFor(assignment, u.id).eff) };
       }
       if (b.mode === eff.current) return { modes: publicModes(supported, eff) };
       if (!shared.canSelfSwitch(eff, b.mode)) fail(409, eff.allowed.includes(b.mode) ? "Переход в этот режим открывает учитель." : "Учитель не открыл этот режим.", { code: "mode_switch_required", modes: publicModes(supported, eff) });
       const accepted = eff.offered === b.mode;
-      tx(() => { writeState(assignment, u.id, u.id, { mode: b.mode, offered_mode: null }); event(u.org_id, assignment.id, u.id, u.id, accepted ? "offer_accepted" : "switched", eff.current, b.mode); });
+      tx(() => { writeState(assignment, u.id, u.id, { mode: b.mode, offered_mode: null });const id=accepted?onResponse?.(assignment.id,u.id,b.mode,false):null; event(u.org_id, assignment.id, u.id, u.id, accepted ? "offer_accepted" : "switched", eff.current, b.mode,'',id?{recommendation_id:id}:{}); });
       void state;
       return { modes: publicModes(supported, effectiveFor(assignment, u.id).eff) };
     }
@@ -127,6 +127,7 @@ export function createModes({ db, own, teacher, fail, tx }) {
           writeState(assignment, learner.id, u.id, { override: null });
           event(u.org_id, assignment.id, learner.id, u.id, "override_changed", null, null, reason, { override: null });
         } else if (b.offer !== undefined) {
+          if(eff.switching==='locked')fail(409,'Режим закреплён. Сначала разрешите переход в индивидуальных настройках.');
           if (!shared.isMode(b.offer) || !eff.allowed.includes(b.offer)) fail(400, "Предложить можно только разрешённый режим.");
           if (b.offer === eff.current) fail(409, "Ученик уже в этом режиме.");
           writeState(assignment, learner.id, u.id, { offered_mode: b.offer });
@@ -158,5 +159,6 @@ export function createModes({ db, own, teacher, fail, tx }) {
     }
     return undefined;
   }
-  return { handle, supportedForSnapshot, policyForNewAssignment, effectiveFor, assertMode, publicModes, versionOf };
+  function offerRecommendation(a,student,u,mode,id,reason){learnerOf(a,student,u);const {eff}=effectiveFor(a,student);writeState(a,student,u.id,{offered_mode:mode});event(u.org_id,a.id,student,u.id,'offered',eff.current,mode,`Рекомендация ${id}: ${reason}`,{recommendation_id:id})}
+  return { handle, supportedForSnapshot, policyForNewAssignment, effectiveFor, assertMode, publicModes, versionOf, offerRecommendation };
 }
