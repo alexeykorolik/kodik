@@ -24,9 +24,9 @@
     "test:b2b": "npm run build:runner && node --test tests/b2b.integration.mjs",
     "test:b2b:ui": "npm run build && playwright test --config playwright.b2b.config.ts",
     "demo:b2b": "npm run build:runner && node scripts/seed-b2b.mjs",
-    "test:pilot": "npm run build:runner && tsx tests/python.compatibility.ts && npm run test:adaptive && node --test --test-concurrency=1 tests/b2b.integration.mjs tests/pilot-foundations.mjs tests/assignment-versions.mjs tests/assignment-operations.mjs tests/curriculum.integration.mjs tests/task-quality.mjs tests/learning-rules.mjs tests/solving-modes.mjs tests/starter-quality.mjs tests/conflict-routes.mjs tests/proxy-limits.mjs tests/runtime-compatibility.mjs tests/pilot-crash.mjs tests/pilot-load.mjs tests/pilot-operations.mjs tests/learning-evidence.mjs tests/start-change-evidence.mjs tests/multi-school-load.mjs",
+    "test:pilot": "npm run build:runner && tsx tests/python.compatibility.ts && npm run test:adaptive && node --test --test-concurrency=1 tests/b2b.integration.mjs tests/pilot-foundations.mjs tests/assignment-versions.mjs tests/assignment-operations.mjs tests/curriculum.integration.mjs tests/task-quality.mjs tests/learning-rules.mjs tests/solving-modes.mjs tests/starter-quality.mjs tests/conflict-routes.mjs tests/proxy-limits.mjs tests/runtime-compatibility.mjs tests/pilot-crash.mjs tests/pilot-load.mjs tests/pilot-operations.mjs tests/learning-evidence.mjs tests/start-change-evidence.mjs tests/python-tabs-api.mjs tests/help-requests.mjs tests/recommendation-lifecycle.mjs tests/multi-school-load.mjs",
     "check:critical": "npm run build && npm run test:smoke && npm run test:pilot && playwright test --config playwright.b2b.config.ts && playwright test tests/adaptive.spec.ts tests/novice.spec.ts --grep \"пустые и повторные|новичок.*1366\" --output=work/legacy-critical",
-    "test:adaptive": "tsx tests/adaptive-translator.ts && tsx tests/adaptive-blockly.poc.ts && tsx tests/evidence-normalize.ts",
+    "test:adaptive": "tsx tests/adaptive-translator.ts && tsx tests/adaptive-blockly.poc.ts && tsx tests/evidence-normalize.ts && tsx tests/python-tabs.ts",
     "rehearse:upgrade": "node scripts/rehearse-upgrade.mjs",
     "reverify:published": "npm run build:runner && node scripts/reverify-published.mjs"
   },

@@ -14,7 +14,8 @@ export async function rehearseUpgrade(source,target,password='Fill-pilot-data-32
   const old=new DatabaseSync(source,{readOnly:true});let before;
   try{
     const count=t=>{try{return old.prepare(`SELECT COUNT(*) n FROM ${t}`).get().n}catch{return null}};
-    before={schema:old.prepare('PRAGMA user_version').get().user_version,jobs:old.prepare('SELECT id,status,result,attempt_id FROM submission_jobs ORDER BY id').all().map(r=>({...r})),
+    const hasRuntime=old.prepare('PRAGMA table_info(attempts)').all().some(c=>c.name==='runtime');
+    before={schema:old.prepare('PRAGMA user_version').get().user_version,runtimes:JSON.stringify(old.prepare(`SELECT id,${hasRuntime?'runtime':'NULL runtime'} FROM attempts ORDER BY id`).all().map(r=>({...r}))),jobs:old.prepare('SELECT id,status,result,attempt_id FROM submission_jobs ORDER BY id').all().map(r=>({...r})),
       counts:Object.fromEntries(['licenses','companies','assignments','assignment_drafts','assignment_block_drafts','attempts','review_history','recommendations','help_requests','task_versions','users'].map(t=>[t,count(t)]))};
   }finally{old.close()}
   const restore=await verifyBackup(source,target);
@@ -24,7 +25,7 @@ export async function rehearseUpgrade(source,target,password='Fill-pilot-data-32
   try{
     check('submission jobs kept with status and result',JSON.stringify(db.prepare('SELECT id,status,result,attempt_id FROM submission_jobs ORDER BY id').all().map(r=>({...r})))===JSON.stringify(before.jobs));
     for(const [t,n] of Object.entries(before.counts))if(n!==null)check(`rows kept: ${t}`,db.prepare(`SELECT COUNT(*) n FROM ${t}`).get().n===n,String(n));
-    check('history keeps no invented environment',db.prepare('SELECT COUNT(*) n FROM attempts WHERE runtime IS NOT NULL').get().n===0);
+    check('history keeps the environment it was produced in',JSON.stringify(db.prepare('SELECT id,runtime FROM attempts ORDER BY id').all().map(r=>({...r})))===before.runtimes);
   }finally{db.close()}
   const {server}=createApp({dbPath:target,secure:false});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -47,6 +48,10 @@ export async function rehearseUpgrade(source,target,password='Fill-pilot-data-32
     const held=await submit();
     report.environment_before_confirmation=held.status===409?held.data.code:'accepted';
     if(held.status===409)check('unconfirmed environment refuses new grades, keeps drafts',held.data.code==='runtime_unconfirmed');
+    // A dry run reports and changes nothing.
+    const state=()=>{const d=new DatabaseSync(target,{readOnly:true});try{return JSON.stringify([d.prepare('SELECT id,status,updated_at FROM submission_jobs ORDER BY id').all(),d.prepare('SELECT COUNT(*) n FROM task_verifications').get(),d.prepare('SELECT COUNT(*) n FROM audit_log').get(),d.prepare('SELECT id,verification_id FROM task_versions ORDER BY id').all()])}finally{d.close()}};
+    const beforeDry=state();report.dry_run=JSON.parse(execFileSync(process.execPath,[join(root,'scripts/reverify-published.mjs'),'--db',target,'--dry-run'],{encoding:'utf8'}));
+    check('dry run leaves the database unchanged',state()===beforeDry&&report.dry_run.dry_run===true);
     report.reverify=JSON.parse(execFileSync(process.execPath,[join(root,'scripts/reverify-published.mjs'),'--db',target],{encoding:'utf8'}));
     let job=(await submit()).data;for(let i=0;i<300&&job.status!=='completed';i++){await new Promise(r=>setTimeout(r,30));job=(await call(borya,`/submissions/${job.id}`)).data}
     check('new check after confirmation',job.status==='completed'&&job.result?.status==='passed',JSON.stringify(job).slice(0,200));

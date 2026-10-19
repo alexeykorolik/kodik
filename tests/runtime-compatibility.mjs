@@ -118,3 +118,26 @@ test("accepted submission is recoverable after the licence ended; nothing new is
     await h.request(`/tasks/${task.id}/submissions`, body, kid, 401);
   } finally { await h.close(); }
 });
+
+test("a published version that cannot be re-confirmed is reported with its reason and stays stopped", async () => {
+  const h = await harness();
+  try {
+    const { group, kid, task, published, assignment, admin } = await setup(h, "compat-fail");
+    const first = await h.request(`/tasks/${task.id}/submit`, { assignment_id: assignment.id, mode: "python", code: CODE, request_key: randomUUID() }, kid);
+    assert.equal((await wait(h, kid, first.id)).result.status, "passed");
+    const proofId = h.db.prepare("SELECT verification_id FROM task_versions WHERE id=?").get(published.version_id).verification_id;
+    h.db.prepare("UPDATE task_verifications SET runtime_hash='py:previous-environment:node22' WHERE id=?").run(proofId);
+    // The recorded proof no longer matches any stored snapshot, so it cannot be replayed (versions themselves are immutable).
+    h.db.prepare("UPDATE task_verifications SET fingerprint='lost' WHERE id=?").run(proofId);
+    let out;
+    try { execFileSync(process.execPath, ["scripts/reverify-published.mjs", "--db", h.dbPath], { encoding: "utf8" }); assert.fail("must exit with an error"); }
+    catch (e) { out = JSON.parse(e.stdout); }
+    assert.equal(out.reverified, 0); assert.equal(out.failed.length, 1);
+    assert.equal(out.failed[0].version, published.version_id); assert.match(out.failed[0].message, /снимок/, "the reason is reported");
+    // New grades stay stopped for this version; history is untouched; the draft can still be saved.
+    assert.equal((await h.request(`/tasks/${task.id}/submit`, { assignment_id: assignment.id, mode: "python", code: CODE, request_key: randomUUID() }, kid, 409)).code, "runtime_unconfirmed");
+    assert.equal(h.db.prepare("SELECT status FROM attempts WHERE id=?").get(first.id).status, "passed");
+    await h.request(`/tasks/${task.id}/draft`, { assignment_id: assignment.id, mode: "python", code: "print(1)\n", revision: 0 }, kid, 200, "PUT");
+    void group; void admin;
+  } finally { await h.close(); }
+});

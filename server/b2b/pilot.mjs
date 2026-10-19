@@ -47,6 +47,26 @@ export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordT
     const from=`FROM attempts a LEFT JOIN assignments x ON x.id=a.assignment_id JOIN users u ON u.id=a.user_id WHERE ${q.join(' AND ')}`;
     return {total:get('SELECT COUNT(*) n '+from,...args).n,limit,offset,items:all(`SELECT a.id,a.user_id,u.name,a.assignment_id,a.version_id,a.status,a.mode,a.feedback,a.review_revision,a.created_at,json_extract(a.snapshot,'$.title') title,json_extract(a.snapshot,'$.revision') version_revision ${from} ORDER BY a.created_at DESC,a.id LIMIT ? OFFSET ?`,...args,limit,offset)};
   }
+  /**
+   * Help requests visible to this user, filtered by access BEFORE any limit: a teacher sees the groups
+   * they teach, an administrator the whole school, a learner only their own requests. Waiting requests
+   * and processed history are separate lists, each with its true total; history is paged.
+   */
+  function helpLists(u,params){
+    const where=['h.org_id=?'],args=[u.org_id];
+    if(u.role==='student'){where.push('h.user_id=?');args.push(u.id)}
+    else if(u.role==='teacher'){where.push('EXISTS(SELECT 1 FROM group_teachers gt WHERE gt.user_id=? AND gt.group_id=COALESCE(a.group_id,t.group_id))');args.push(u.id)}
+    for(const [key,column] of [['assignment_id','h.assignment_id'],['lesson_run_id','h.lesson_run_id'],['step_id','h.step_id']]){const v=params.get(key);if(v){where.push(column+'=?');args.push(v)}}
+    const from=`FROM help_requests h JOIN users u ON u.id=h.user_id LEFT JOIN assignments a ON a.id=h.assignment_id LEFT JOIN lesson_runs l ON l.id=h.lesson_run_id LEFT JOIN teaching_runs t ON t.id=l.run_id LEFT JOIN groups_ g ON g.id=COALESCE(a.group_id,t.group_id) LEFT JOIN task_versions tv ON tv.id=a.version_id LEFT JOIN lesson_versions lv ON lv.id=l.version_id WHERE ${where.join(' AND ')}`;
+    const fields="h.*,u.name,g.id group_id,g.title group_title,json_extract(tv.snapshot,'$.title') task_title,lv.snapshot lesson_snapshot";
+    const shape=r=>{const {lesson_snapshot,...row}=r;let lesson_title=null,step_title=null;if(lesson_snapshot){const l=JSON.parse(lesson_snapshot);lesson_title=l.title??null;step_title=(l.steps||[]).find(x=>x.id===r.step_id)?.title??null}return {...row,lesson_title,step_title}};
+    const openTotal=get(`SELECT COUNT(*) n ${from} AND h.status='open'`,...args).n;
+    const open=all(`SELECT ${fields} ${from} AND h.status='open' ORDER BY h.created_at,h.id LIMIT 200`,...args).map(shape);
+    const limit=Math.min(100,Math.max(1,Math.floor(Number(params.get('limit'))||20))),offset=Math.min(1000000,Math.max(0,Math.floor(Number(params.get('offset'))||0)));
+    const historyTotal=get(`SELECT COUNT(*) n ${from} AND h.status<>'open'`,...args).n;
+    const history=all(`SELECT ${fields} ${from} AND h.status<>'open' ORDER BY COALESCE(h.resolved_at,h.created_at) DESC,h.id LIMIT ? OFFSET ?`,...args,limit,offset).map(shape);
+    return {open:{items:open,total:openTotal},history:{items:history,total:historyTotal,limit,offset},items:[...open,...history]};
+  }
   async function handle(path,method,b,u,req,res){let m;
     if(path.startsWith('/api/owner/')){
       if(!u.platform_owner)fail(403,'Доступно владельцу платформы.');
@@ -115,7 +135,7 @@ export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordT
       const existing=assignment?get("SELECT id FROM help_requests WHERE user_id=? AND assignment_id=? AND status='open'",u.id,assignment.id):get("SELECT id FROM help_requests WHERE user_id=? AND lesson_run_id=? AND step_id=? AND status='open'",u.id,lesson,step);if(existing)return {id:existing.id};
       const id=randomUUID();run('INSERT INTO help_requests(id,org_id,user_id,assignment_id,lesson_run_id,step_id,message,created_at) VALUES(?,?,?,?,?,?,?,?)',id,u.org_id,u.id,assignment?.id??null,lesson,step,message,now());return {id};
     }
-    if(path==='/api/help'&&method==='GET')return {items:all('SELECT h.*,u.name FROM help_requests h JOIN users u ON u.id=h.user_id WHERE h.org_id=? ORDER BY h.created_at DESC LIMIT 200',u.org_id).filter(h=>u.role==='student'?h.user_id===u.id:h.assignment_id?groupAllowed(u,get('SELECT group_id FROM assignments WHERE id=?',h.assignment_id)?.group_id):groupAllowed(u,get('SELECT t.group_id FROM lesson_runs l JOIN teaching_runs t ON t.id=l.run_id WHERE l.id=?',h.lesson_run_id)?.group_id))};
+    if(path==='/api/help'&&method==='GET')return helpLists(u,new URL(req.url,'http://localhost').searchParams);
     if((m=/^\/api\/help\/([^/]+)$/.exec(path))&&method==='PUT'){teacher(u);const h=own('help_requests',m[1],u);if(h.assignment_id)own('assignments',h.assignment_id,u);else own('lesson_runs',h.lesson_run_id,u);if(h.status!=='open')return {ok:true};run("UPDATE help_requests SET status='resolved',answer=?,resolved_at=?,resolved_by=? WHERE id=?",field(b.answer,'Ответ',2000,true),now(),u.id,h.id);audit(u,'help.resolved',h.id);return {ok:true}}
     if((m=/^\/api\/attempts\/([^/]+)\/review$/.exec(path))&&method==='POST'){
       teacher(u);const a=own('attempts',m[1],u);if(JSON.parse(a.snapshot).check_mode!=='manual')fail(400,'Автоматическая проверка не пересматривается.');if((b.revision??0)!==a.review_revision)fail(409,'Другой преподаватель уже оценил работу. Откройте её заново.',{revision:a.review_revision});

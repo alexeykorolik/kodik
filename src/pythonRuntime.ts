@@ -146,7 +146,8 @@ function withoutComment(raw: string) {
 }
 export function parseCourseProgram(source: string): Statement[] {
   if (source.length > 12000) syntax('Программа слишком длинная для учебного запуска.')
-  const lines: SourceLine[] = source.replace(/\t/g, '    ').split(/\r?\n/).map((raw, index) => ({ number: index + 1, indent: /^ */.exec(raw)![0].length, text: withoutComment(raw).trim() })).filter(line => line.text)
+  // A tab counts as four spaces only in the leading indentation; inside the line (string values) it stays one character.
+  const lines: SourceLine[] = source.split(/\r?\n/).map(raw => raw.replace(/^[ \t]+/, lead => lead.replace(/\t/g, '    '))).map((raw, index) => ({ number: index + 1, indent: /^ */.exec(raw)![0].length, text: withoutComment(raw).trim() })).filter(line => line.text)
   if (!lines.length) syntax('Напиши решение или добавь команды, затем нажми «Проверить».')
   if (lines.length > 250) syntax('Оставь не больше 250 строк.')
   if (lines.some(line => line.indent % 4 !== 0)) syntax('Для вложенной команды используй отступ в 4 пробела.')

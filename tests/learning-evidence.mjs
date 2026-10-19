@@ -112,8 +112,8 @@ test('learning conclusions and recommendations use eligible, fresh, on-topic evi
       assert.deepEqual(failing(await check(la)),['no_current_difficulty']);
       const refused=await h.request(`/recommendations/${stale.id}/approve`,{},admin,409);
       assert.equal(refused.code,'recommendation_stale');assert.match(refused.error,/неуспешны/);assert.match(refused.error,/вручную/);
-      assert.equal(h.db.prepare('SELECT status FROM recommendations WHERE id=?').get(stale.id).status,'expired');
-      assert.equal(h.db.prepare("SELECT COUNT(*) n FROM recommendation_events WHERE recommendation_id=? AND kind='stale'").get(stale.id).n,1);
+      assert.equal(h.db.prepare('SELECT status FROM recommendations WHERE id=?').get(stale.id).status,'withdrawn');
+      assert.equal(h.db.prepare("SELECT COUNT(*) n FROM recommendation_events WHERE recommendation_id=? AND kind='withdrawn'").get(stale.id).n,1);
       const learner=(await h.request('/state',undefined,child)).tasks.find(x=>x.assignment_id===la.id);assert.equal(learner.modes.offered??null,null,'nothing is offered to the learner');
       await h.request(`/assignments/${la.id}/students/${user.id}/mode`,{offer:'mixed',reason:'Решение преподавателя'},admin,200,'PUT');
       assert.equal((await h.request('/state',undefined,child)).tasks.find(x=>x.assignment_id===la.id).modes.offered,'mixed');

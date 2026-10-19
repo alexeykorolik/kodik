@@ -55,15 +55,33 @@ export function createLearningEvidence({db,own,teacher,fail,tx,modes,adaptive,gr
     const ok=checks.every(c=>c.ok);
     return {ok,target,current,checks,basis:{attempts:proof.map(p=>p.attempt_id),families,checks,reason:ok?`Свежие успешные решения ${families.length} разных заданий с навыками ${skills.join(', ')} в режиме «${adaptive.MODE_LABEL[current]}», текущее задание не выполнено и без серии ошибок. Предложить следующий способ без автоматического перехода.`:''}};
   }
-  function expire(){for(const r of all("SELECT * FROM recommendations WHERE status IN ('proposed','offered') AND expires_at<?",now())){const event=get("SELECT reason FROM mode_events WHERE assignment_id=? AND user_id=? AND kind='offered' ORDER BY created_at DESC LIMIT 1",r.assignment_id,r.user_id);if(r.status==='offered'&&event?.reason.includes(r.id))run('UPDATE assignment_mode_state SET offered_mode=NULL,revision=revision+1 WHERE assignment_id=? AND user_id=? AND offered_mode=?',r.assignment_id,r.user_id,r.target_mode);run("UPDATE recommendations SET status='expired' WHERE id=?",r.id)}}
+  /** An offer that came from this recommendation (not a teacher's own manual offer) is cleared with it. */
+  function clearLinkedOffer(r){const event=get("SELECT reason FROM mode_events WHERE assignment_id=? AND user_id=? AND kind='offered' ORDER BY created_at DESC LIMIT 1",r.assignment_id,r.user_id);if(r.status==='offered'&&event?.reason.includes(r.id))run('UPDATE assignment_mode_state SET offered_mode=NULL,revision=revision+1 WHERE assignment_id=? AND user_id=? AND offered_mode=?',r.assignment_id,r.user_id,r.target_mode)}
+  /** Close an active recommendation once, with its reason and one history event. */
+  function close(r,status,reason,actor){const changed=run("UPDATE recommendations SET status=?,reason=?,teacher_id=COALESCE(?,teacher_id) WHERE id=? AND status IN ('proposed','offered')",status,reason,actor,r.id).changes;if(!changed)return false;clearLinkedOffer(r);run('INSERT INTO recommendation_events(id,recommendation_id,actor_id,kind,created_at,reason) VALUES(?,?,?,?,?,?)',randomUUID(),r.id,actor||r.user_id,status,now(),reason);return true}
+  function expire(){for(const r of all("SELECT * FROM recommendations WHERE status IN ('proposed','offered') AND expires_at<?",now()))close(r,'expired','Срок предложения истёк.',null)}
+  /** Why an active recommendation can no longer stand (settings, context, finished work), or null. */
+  function invalidReason(r){
+    const a=get('SELECT * FROM assignments WHERE id=?',r.assignment_id);if(!a||a.archived)return 'Назначение закрыто.';
+    if(!get('SELECT 1 FROM group_members WHERE group_id=? AND user_id=?',a.group_id,r.user_id))return 'Ученик больше не в группе этого назначения.';
+    const lessonRun=a.lesson_run_id?get('SELECT state FROM lesson_runs WHERE id=?',a.lesson_run_id):null;if(lessonRun&&lessonRun.state!=='open')return 'Занятие этого задания закрыто.';
+    const eff=modes.effectiveFor(a,r.user_id).eff;
+    if(eff.current===r.target_mode)return `Ученик уже работает в режиме «${adaptive.MODE_LABEL[r.target_mode]}».`;
+    if(r.status==='proposed'&&eff.switching==='locked')return 'Преподаватель закрепил режим ученика.';
+    if(r.status==='proposed'&&!eff.allowed.includes(r.target_mode))return `Режим «${adaptive.MODE_LABEL[r.target_mode]}» больше не разрешён в этом назначении.`;
+    if(r.status==='proposed'&&get("SELECT 1 FROM attempts WHERE assignment_id=? AND user_id=? AND status='passed'",a.id,r.user_id))return 'Задание уже выполнено — переход в нём не нужен.';
+    return null;
+  }
+  /** Bring every active recommendation of the school in line with current settings, then expiry. */
+  function reconcile(orgId){expire();for(const r of all("SELECT * FROM recommendations WHERE org_id=? AND status IN ('proposed','offered')",orgId)){const why=invalidReason(r);if(why)close(r,'withdrawn',why,null)}}
   function propose(a,student,u){
     if(get("SELECT 1 FROM recommendations WHERE user_id=? AND status IN ('proposed','offered')",student))return;
     const r=evaluate(a,student,u);if(!r.ok)return;
-    run("INSERT OR IGNORE INTO recommendations VALUES(?,?,?,?,?,?,?,'proposed',?,?,NULL)",randomUUID(),u.org_id,a.id,student,r.target,RULE_VERSION,JSON.stringify(r.basis),new Date(Date.now()+7*86400000).toISOString(),now());
+    run("INSERT OR IGNORE INTO recommendations(id,org_id,assignment_id,user_id,target_mode,rule_version,basis,status,expires_at,created_at,teacher_id) VALUES(?,?,?,?,?,?,?,'proposed',?,?,NULL)",randomUUID(),u.org_id,a.id,student,r.target,RULE_VERSION,JSON.stringify(r.basis),new Date(Date.now()+7*86400000).toISOString(),now());
   }
   function respond(assignmentId,userId,mode,declined){
     expire();const rec=get("SELECT * FROM recommendations WHERE assignment_id=? AND user_id=? AND target_mode=? AND status='offered'",assignmentId,userId,mode);if(!rec)return;
-    const status=declined?'declined':'accepted';run('UPDATE recommendations SET status=? WHERE id=?',status,rec.id);run('INSERT INTO recommendation_events VALUES(?,?,?,?,?)',randomUUID(),rec.id,userId,status,now());
+    const status=declined?'declined':'accepted';run('UPDATE recommendations SET status=? WHERE id=?',status,rec.id);run('INSERT INTO recommendation_events(id,recommendation_id,actor_id,kind,created_at) VALUES(?,?,?,?,?)',randomUUID(),rec.id,userId,status,now());
     return rec.id;
   }
   async function handle(path,method,b,u){let m;
@@ -79,29 +97,34 @@ export function createLearningEvidence({db,own,teacher,fail,tx,modes,adaptive,gr
       teacher(u);const a=own('assignments',m[1],u);if(!groupAllowed(u,a.group_id))fail(404,'Объект не найден.');own('users',m[2],u);const r=evaluate(a,m[2],u);return {rule_version:RULE_VERSION,rules:RULES,ok:r.ok,current:r.current,target:r.target,checks:r.checks};
     }
     if(path==='/api/recommendations'&&method==='GET'){
-      expire();if(u.role!=='student'){
+      reconcile(u.org_id);if(u.role!=='student'){
         teacher(u);const assignments=all('SELECT * FROM assignments WHERE org_id=? AND archived=0',u.org_id).filter(a=>groupAllowed(u,a.group_id));
         for(const a of assignments)for(const student of all("SELECT u.id FROM users u JOIN group_members gm ON gm.user_id=u.id WHERE gm.group_id=? AND u.active=1 AND u.role='student'",a.group_id))propose(a,student.id,u);
       }
       return {items:all('SELECT r.*,u.name student_name FROM recommendations r JOIN users u ON u.id=r.user_id WHERE r.org_id=? ORDER BY r.created_at DESC LIMIT 200',u.org_id).filter(r=>u.role==='student'?r.user_id===u.id:groupAllowed(u,get('SELECT group_id FROM assignments WHERE id=?',r.assignment_id)?.group_id)).map(r=>{const {families,checks,...basis}=JSON.parse(r.basis);return {...r,basis:u.role==='student'?basis:{...basis,families,checks}}})};
     }
     if((m=/^\/api\/recommendations\/([^/]+)\/(approve|dismiss)$/.exec(path))&&method==='POST'){
-      teacher(u);expire();const r=own('recommendations',m[1],u),a=own('assignments',r.assignment_id,u);
-      if(r.status===(m[2]==='approve'?'offered':'dismissed'))return {ok:true};if(r.status!=='proposed')fail(409,'Рекомендация уже обработана или истекла.');
-      const effective=modes.effectiveFor(a,r.user_id).eff;if(a.archived||effective.switching==='locked'||!effective.allowed.includes(r.target_mode)||effective.current===r.target_mode)fail(409,'Настройки задания изменились. Рекомендация больше не подходит.');
-      // The teacher confirms today's grounds, not the ones from when the proposal was made. If they no
-      // longer hold, the proposal is withdrawn; a deliberate manual transfer stays a separate action.
-      if(m[2]==='approve'){
-        const fresh=evaluate(a,r.user_id,u);
-        if(!fresh.ok||fresh.target!==r.target_mode){
-          const failed=fresh.checks.filter(c=>!c.ok);
-          tx(()=>{run("UPDATE recommendations SET status='expired',teacher_id=? WHERE id=?",u.id,r.id);run('INSERT INTO recommendation_events VALUES(?,?,?,?,?)',randomUUID(),r.id,u.id,'stale',now())});
-          fail(409,`Основания изменились, предложение снято: ${failed.map(c=>c.detail).join(' ')||'следующий режим уже другой.'} Если переход всё же нужен, разрешите его вручную в разделе ученика («Разрешить переход»).`,{code:'recommendation_stale',checks:fresh.checks});
-        }
+      teacher(u);const r0=own('recommendations',m[1],u);own('assignments',r0.assignment_id,u);reconcile(u.org_id);
+      const r=get('SELECT * FROM recommendations WHERE id=?',r0.id),a=get('SELECT * FROM assignments WHERE id=?',r.assignment_id);
+      const why=r.reason||({expired:'Срок предложения истёк.',dismissed:'Предложение уже отклонено преподавателем.',accepted:'Ученик уже принял предложение.',declined:'Ученик уже отказался от предложения.'})[r.status]||'Предложение уже обработано.';
+      if(m[2]==='dismiss'){
+        // Removing a proposal is always possible, whatever the settings are now; a repeat changes nothing.
+        if(r.status==='proposed'){const reason='Преподаватель отклонил предложение.';tx(()=>{run("UPDATE recommendations SET status='dismissed',reason=?,teacher_id=? WHERE id=? AND status='proposed'",reason,u.id,r.id);run('INSERT INTO recommendation_events(id,recommendation_id,actor_id,kind,created_at,reason) VALUES(?,?,?,?,?,?)',randomUUID(),r.id,u.id,'dismissed',now(),reason)});return {ok:true,status:'dismissed'}}
+        if(r.status==='offered'){tx(()=>close(r,'withdrawn','Преподаватель отозвал предложение.',u.id));return {ok:true,status:'withdrawn'}}
+        return {ok:true,status:r.status,reason:why};
       }
-      tx(()=>{if(m[2]==='approve')modes.offerRecommendation(a,r.user_id,u,r.target_mode,r.id,JSON.parse(r.basis).reason);run('UPDATE recommendations SET status=?,teacher_id=? WHERE id=?',m[2]==='approve'?'offered':'dismissed',u.id,r.id);run('INSERT INTO recommendation_events VALUES(?,?,?,?,?)',randomUUID(),r.id,u.id,m[2],now())});return {ok:true};
+      if(r.status==='offered')return {ok:true,status:'offered'};
+      if(r.status!=='proposed')fail(409,`Предложение уже не действует: ${why} Если переход нужен, разрешите его вручную в карточке ученика («Разрешить переход»).`,{code:'recommendation_closed',status:r.status,reason:why});
+      // The teacher confirms today's grounds, not the ones from when the proposal was made.
+      const fresh=evaluate(a,r.user_id,u);
+      if(!fresh.ok||fresh.target!==r.target_mode){
+        const reason='Основания изменились: '+(fresh.checks.filter(c=>!c.ok).map(c=>c.detail).join(' ')||'следующий режим уже другой.');
+        tx(()=>close(r,'withdrawn',reason,u.id));
+        fail(409,`${reason} Предложение снято. Если переход всё же нужен, разрешите его вручную в карточке ученика («Разрешить переход»).`,{code:'recommendation_stale',status:'withdrawn',reason,checks:fresh.checks});
+      }
+      tx(()=>{modes.offerRecommendation(a,r.user_id,u,r.target_mode,r.id,JSON.parse(r.basis).reason);run("UPDATE recommendations SET status='offered',teacher_id=? WHERE id=? AND status='proposed'",u.id,r.id);run('INSERT INTO recommendation_events(id,recommendation_id,actor_id,kind,created_at,reason) VALUES(?,?,?,?,?,?)',randomUUID(),r.id,u.id,'approve',now(),null)});return {ok:true,status:'offered'};
     }
     return undefined;
   }
-  return {handle,evidence,respond,family,expire,evaluate};
+  return {handle,evidence,respond,family,expire,reconcile,evaluate};
 }

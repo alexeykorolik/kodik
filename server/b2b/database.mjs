@@ -223,6 +223,23 @@ const migrations = [
     if(constrained)for(const sql of indexes)db.exec(sql);
     db.exec(`ALTER TABLE submission_jobs ADD COLUMN runtime TEXT;
       ALTER TABLE attempts ADD COLUMN runtime TEXT;`);
+  }},
+  // Recommendation lifecycle: proposed → offered → accepted/declined, or dismissed by the teacher,
+  // withdrawn when its grounds or settings no longer hold, expired by time. The reason is kept.
+  // Rebuilding a referenced table needs foreign keys off (SQLite's documented procedure).
+  {version:16,name:'recommendation_withdrawal',foreignKeysOff:true,up(db){
+    const table=db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='recommendations'").get().sql;
+    const old="CHECK(status IN ('proposed','offered','accepted','declined','dismissed','expired'))";
+    if(!table.includes(old))throw new Error('Unexpected recommendations schema; migration 16 refused.');
+    const indexes=db.prepare("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='recommendations' AND sql IS NOT NULL").all().map(r=>r.sql);
+    const columns=db.prepare("PRAGMA table_info(recommendations)").all().map(c=>c.name).join(',');
+    db.exec(`${table.replace(old,"CHECK(status IN ('proposed','offered','accepted','declined','dismissed','withdrawn','expired'))").replace(/^CREATE TABLE "?recommendations"?/,'CREATE TABLE recommendations_new')};
+      INSERT INTO recommendations_new(${columns}) SELECT ${columns} FROM recommendations;
+      DROP TABLE recommendations;ALTER TABLE recommendations_new RENAME TO recommendations;`);
+    for(const sql of indexes)db.exec(sql);
+    db.exec(`ALTER TABLE recommendations ADD COLUMN reason TEXT;
+      ALTER TABLE recommendation_events ADD COLUMN reason TEXT;`);
+    if(db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Foreign keys broken; migration 16 refused.');
   }}
 ];
 export const schemaVersion = migrations.at(-1).version;
@@ -240,6 +257,8 @@ export function openDatabase(path) {
       );
     for (const migration of migrations) {
       if (migration.version <= current) continue;
+      // Only outside a transaction can foreign keys be switched; the migration checks them itself.
+      if (migration.foreignKeysOff) db.exec("PRAGMA foreign_keys=OFF");
       db.exec("BEGIN IMMEDIATE");
       try {
         migration.up(db);
@@ -254,6 +273,8 @@ export function openDatabase(path) {
       } catch (error) {
         db.exec("ROLLBACK");
         throw error;
+      } finally {
+        if (migration.foreignKeysOff) db.exec("PRAGMA foreign_keys=ON");
       }
     }
     if (db.prepare("PRAGMA foreign_key_check").all().length)

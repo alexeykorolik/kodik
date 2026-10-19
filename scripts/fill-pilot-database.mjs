@@ -59,6 +59,6 @@ try{
   await call(teacherClient,`/attempts/${manualAttempt.id}/review`,{revision:manualAttempt.review_revision??0,status:'passed',feedback:'Хорошее объяснение.'});
   await call(borya,'/help',{assignment_id:a1.id,message:'Не получается удвоить'});
   // A pending recommendation in the shape this release stores (normally produced by the evidence rule).
-  db.prepare("INSERT INTO recommendations VALUES(?,?,?,?,?,?,?,'proposed',?,?,NULL)").run(randomUUID(),school.org_id,a1.id,kids[2].id,'python','pilot-transition/1',JSON.stringify({reason:'Свежие успешные решения двух заданий',families:2}),new Date(Date.now()+7*86400000).toISOString(),new Date().toISOString());
+  db.prepare("INSERT INTO recommendations(id,org_id,assignment_id,user_id,target_mode,rule_version,basis,status,expires_at,created_at,teacher_id) VALUES(?,?,?,?,?,?,?,'proposed',?,?,NULL)").run(randomUUID(),school.org_id,a1.id,kids[2].id,'python','pilot-transition/1',JSON.stringify({reason:'Свежие успешные решения двух заданий',families:2}),new Date(Date.now()+7*86400000).toISOString(),new Date().toISOString());
   console.log(JSON.stringify({filled:resolve(target),schema:db.prepare('PRAGMA user_version').get().user_version,org:school.org_id,task:task.id,assignment:a1.id}));
 }finally{await new Promise(r=>server.close(r))}

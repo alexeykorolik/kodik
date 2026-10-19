@@ -14,7 +14,13 @@ assert.equal(
   "3.11.9",
   "Use the pinned CPython reference, not an unrecorded version.",
 );
+// Real tab characters (not the two-character escape) inside strings and as indentation.
+const TAB = String.fromCharCode(9), BS = String.fromCharCode(92);
 const cases = [
+  `print(len("a${TAB}b"))`,
+  `print("a${TAB}b" == "a${BS}tb", "a${TAB}b" == "a    b")`,
+  `for i in range(2):
+${TAB}print("i${TAB}", i)`,
   'print(1.0 // .1, -1.0 // .1, 1.0 // -.1, -0.0 // 3.0)',
   'print(5.5 % 2, -5.5 % 2, 5.5 % -2, -5.5 % -2, .3 % .1, 0.0 % -3.0)',
   'a = [1]\ndef f():\n    a[0] = 2\n    a = [3]\nf()',
