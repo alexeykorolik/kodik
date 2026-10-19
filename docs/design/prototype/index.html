@@ -1,0 +1,1125 @@
+<meta charset="utf-8">
+<title>Kodik B2B Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Kodik B2B Design System — токены (предложение, ещё не подключены к src/b2b).
+   Основа — Kodik Brand Kit 2026, слайд 03 «Палитра интерфейса». Контраст проверен (см. DESIGN_SYSTEM.md). */
+:root {
+  /* Бренд */
+  --k-ink: #17352e;          /* основной текст, 13,1:1 на surface */
+  --k-cta: #17463a;          /* основная кнопка, белый 10,6:1 */
+  --k-cta-hover: #0f362c;    /* белый 13,3:1 */
+  --k-green: #235e51;        /* знак K., ссылки, активная навигация, 7,5:1 */
+  --k-green-soft: #e7ede4;   /* фон акцента, выбранный пункт */
+  --k-sage: #b7cfca;         /* графика, не текст */
+  --k-accent: #c77c5d;       /* terracotta: иконки и крупные элементы, 3,2:1 */
+  --k-accent-text: #974f36;  /* текст акцента, 6,0:1 */
+  --k-accent-soft: #f6e9e2;
+
+  /* Нейтральные */
+  --k-canvas: #f8f7f2;
+  --k-surface: #fffefa;
+  --k-surface-alt: #edf0e8;
+  --k-muted: #5f6e67;        /* вторичный текст, 5,3:1 — минимальный уровень текста */
+  --k-line: #e2e5dd;         /* декоративные разделители */
+  --k-line-strong: #7f8b84;  /* границы полей и чекбоксов, 3,5:1 */
+
+  /* Статусы: текст ≥ 4,8:1 на своём мягком фоне */
+  --k-success: #24694c;  --k-success-soft: #e8f1e9;
+  --k-warning: #9a5b12;  --k-warning-soft: #fbf1e2;
+  --k-danger:  #b3412f;  --k-danger-soft:  #fbefea;
+  --k-info:    #1f6f8b;  --k-info-soft:    #e6f0f3;
+
+  /* Код */
+  --k-code-bg: #fbfbf7;
+  --k-code-gutter: #8a968f;
+  --k-code-keyword: #8a3f8f;
+  --k-code-string: #24694c;
+  --k-code-number: #9a5b12;
+  --k-code-func: #1f6f8b;
+  --k-code-comment: #66756d;
+
+  /* Типографика */
+  --k-font: "Nunito", "Kodik Sans", "Segoe UI", system-ui, sans-serif;
+  --k-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  /* Отступы, шаг 8 (4 — половинный шаг внутри компонентов) */
+  --k-space-1: 4px;  --k-space-2: 8px;  --k-space-3: 12px; --k-space-4: 16px;
+  --k-space-5: 24px; --k-space-6: 32px; --k-space-7: 40px; --k-space-8: 48px; --k-space-9: 64px;
+
+  /* Размеры */
+  --k-control-sm: 32px; --k-control: 40px; --k-control-lg: 44px; --k-control-xl: 48px;
+  --k-sidebar: 240px; --k-topbar: 56px; --k-row: 44px;
+
+  /* Радиусы */
+  --k-radius-xs: 6px;  /* теги */
+  --k-radius-sm: 8px;  /* кнопки, поля */
+  --k-radius-md: 12px; /* карточки и таблицы преподавателя */
+  --k-radius-lg: 16px; /* модальные окна, карточки ученика */
+  --k-radius-xl: 20px; /* главная карточка ученика */
+  --k-radius-full: 999px;
+
+  /* Тени — только для слоёв поверх контента */
+  --k-shadow-1: 0 1px 2px rgba(23, 53, 46, 0.06);
+  --k-shadow-2: 0 8px 24px rgba(23, 53, 46, 0.12);
+  --k-shadow-3: 0 24px 64px rgba(23, 53, 46, 0.2);
+
+  /* Фокус: двойное кольцо видно и на светлом фоне, и на зелёной кнопке */
+  --k-focus: 0 0 0 2px var(--k-surface), 0 0 0 4px var(--k-info);
+
+  --k-ease: cubic-bezier(0.2, 0, 0, 1);
+  --k-fast: 120ms;
+  --k-base: 200ms;
+}
+
+/* Прототип только для десктопа: рабочая область 1280+ px, на узком окне прокручивается внутри .stage, а не всей страницей. */
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--k-canvas); color: var(--k-ink); font: 400 15px/24px var(--k-font); padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus { outline: none; }
+:focus-visible { box-shadow: var(--k-focus); border-radius: var(--k-radius-sm); }
+h1, h2, h3, h4, p { margin: 0; }
+h1 { font-size: 24px; line-height: 32px; font-weight: 800; text-wrap: balance; }
+h2 { font-size: 20px; line-height: 28px; font-weight: 700; }
+h3 { font-size: 16px; line-height: 24px; font-weight: 700; }
+.muted { color: var(--k-muted); }
+.small { font-size: 14px; line-height: 20px; }
+.caption { font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: .02em; }
+.overline { font-size: 12px; line-height: 16px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--k-accent-text); }
+.num { font-variant-numeric: tabular-nums; }
+code, .mono { font-family: var(--k-mono); font-size: 14px; }
+svg.i { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+svg.i.sm { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Переключатель экранов прототипа */
+.proto-bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; align-items: center; gap: 16px; padding: 8px 16px; background: var(--k-ink); color: #fffefa; overflow-x: auto; }
+.proto-bar b { font-size: 13px; white-space: nowrap; }
+.proto-bar nav { display: flex; gap: 4px; }
+.proto-bar nav button { border: 0; background: transparent; color: #d7e2dc; padding: 6px 12px; border-radius: var(--k-radius-sm); font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.proto-bar nav button:hover { background: #24493f; color: #fff; }
+.proto-bar nav button[aria-current="page"] { background: #fffefa; color: var(--k-ink); }
+.proto-bar .note { margin-left: auto; font-size: 12px; color: #c4d2cb; white-space: nowrap; }
+.stage { overflow-x: auto; }
+.screen { min-width: 1280px; height: calc(100vh - 46px); min-height: 720px; display: none; }
+.screen.on { display: flex; }
+
+/* Логотип */
+.logo { display: flex; align-items: center; gap: 10px; color: #223c3a; }
+.logo .wm { height: 26px; width: auto; }
+.logo .mk { height: 22px; width: auto; color: var(--k-green); }
+
+/* Кнопки */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--k-control); padding: 0 16px; border-radius: var(--k-radius-sm); border: 1px solid var(--k-line-strong); background: var(--k-surface); font-size: 14px; font-weight: 700; line-height: 20px; white-space: nowrap; cursor: pointer; transition: background var(--k-fast) var(--k-ease), border-color var(--k-fast) var(--k-ease); }
+.btn:hover { background: var(--k-surface-alt); }
+.btn.primary { background: var(--k-cta); border-color: var(--k-cta); color: #fff; }
+.btn.primary:hover { background: var(--k-cta-hover); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--k-green); }
+.btn.ghost:hover { background: var(--k-green-soft); }
+.btn.danger { background: var(--k-danger); border-color: var(--k-danger); color: #fff; }
+.btn.sm { height: var(--k-control-sm); padding: 0 12px; font-size: 14px; }
+.btn.lg { height: var(--k-control-lg); padding: 0 20px; font-size: 15px; }
+.btn.xl { height: var(--k-control-xl); padding: 0 24px; font-size: 16px; }
+.btn.icon { width: var(--k-control); padding: 0; }
+.btn.sm.icon { width: var(--k-control-sm); }
+.btn:disabled, .btn[aria-disabled="true"] { background: var(--k-surface-alt); border-color: var(--k-line); color: var(--k-muted); cursor: not-allowed; }
+.btn.loading .spin { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.link { border: 0; background: none; padding: 0; color: var(--k-green); font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--k-sage); }
+.link:hover { text-decoration-color: currentColor; }
+
+/* Поля */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > span { font-size: 14px; line-height: 20px; font-weight: 700; }
+.field > small { font-size: 14px; line-height: 20px; color: var(--k-muted); }
+.field.err > small { color: var(--k-danger); font-weight: 600; }
+.input, .select, .textarea { width: 100%; min-height: var(--k-control); padding: 8px 12px; border: 1px solid var(--k-line-strong); border-radius: var(--k-radius-sm); background: var(--k-surface); font-size: 15px; line-height: 22px; }
+.textarea { resize: vertical; min-height: 88px; }
+.input:hover, .select:hover, .textarea:hover { border-color: var(--k-ink); }
+.input:focus-visible, .select:focus-visible, .textarea:focus-visible { border-color: var(--k-info); }
+.field.err .input, .field.err .textarea { border-color: var(--k-danger); }
+.input:disabled { background: var(--k-surface-alt); color: var(--k-muted); }
+.search { position: relative; }
+.search svg { position: absolute; left: 12px; top: 10px; color: var(--k-muted); }
+.search .input { padding-left: 40px; }
+.check { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--k-cta); margin: 0; }
+.switch { position: relative; width: 40px; height: 24px; flex: none; appearance: none; margin: 0; border-radius: 12px; background: var(--k-surface); border: 1px solid var(--k-line-strong); cursor: pointer; transition: background var(--k-fast); }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--k-line-strong); transition: transform var(--k-fast) var(--k-ease); }
+.switch:checked { background: var(--k-cta); border-color: var(--k-cta); }
+.switch:checked::after { transform: translateX(16px); background: #fff; }
+.seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--k-surface-alt); border-radius: var(--k-radius-sm); }
+.seg button { border: 0; background: transparent; height: 32px; padding: 0 14px; border-radius: 6px; font-size: 14px; font-weight: 700; color: var(--k-muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--k-surface); color: var(--k-ink); box-shadow: var(--k-shadow-1); }
+
+/* Теги и статусы */
+.tag { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: var(--k-radius-xs); font-size: 12px; line-height: 16px; font-weight: 700; white-space: nowrap; background: var(--k-surface-alt); color: var(--k-ink); }
+.tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tag.plain::before { display: none; }
+.tag.ok { background: var(--k-success-soft); color: var(--k-success); }
+.tag.warn { background: var(--k-warning-soft); color: var(--k-warning); }
+.tag.bad { background: var(--k-danger-soft); color: var(--k-danger); }
+.tag.info { background: var(--k-info-soft); color: var(--k-info); }
+.tag.task { background: var(--k-accent-soft); color: var(--k-accent-text); }
+.tag.soon { background: transparent; border: 1px dashed var(--k-line-strong); color: var(--k-muted); }
+.tag.soon::before { display: none; }
+
+/* Карточки, таблицы */
+.card { background: var(--k-surface); border: 1px solid var(--k-line); border-radius: var(--k-radius-md); }
+.card-h { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--k-line); }
+.card-b { padding: 16px 20px; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.table th { text-align: left; font-size: 12px; line-height: 16px; font-weight: 800; color: var(--k-muted); padding: 10px 16px; background: var(--k-surface-alt); }
+.table td { padding: 12px 16px; border-top: 1px solid var(--k-line); height: var(--k-row); vertical-align: middle; }
+.table tr.click { cursor: pointer; }
+.table tr.click:hover td { background: #f6f7f1; }
+.bar { height: 8px; border-radius: 4px; background: var(--k-surface-alt); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--k-green); border-radius: 4px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--k-green-soft); color: var(--k-green); font-size: 13px; font-weight: 800; flex: none; }
+
+/* Оболочка преподавателя */
+.side { width: var(--k-sidebar); flex: none; display: flex; flex-direction: column; gap: 8px; padding: 20px 12px 12px; background: var(--k-surface); border-right: 1px solid var(--k-line); }
+.side .logo { padding: 0 12px 16px; }
+.school { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 8px; border-radius: var(--k-radius-sm); background: var(--k-canvas); font-size: 14px; line-height: 18px; font-weight: 700; }
+.school small { display: block; font-weight: 600; color: var(--k-muted); font-size: 12px; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav button { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border: 0; background: transparent; border-radius: var(--k-radius-sm); font-size: 15px; font-weight: 700; color: var(--k-muted); cursor: pointer; text-align: left; }
+.nav button:hover { background: var(--k-canvas); color: var(--k-ink); }
+.nav button[aria-current="page"] { background: var(--k-green-soft); color: var(--k-green); }
+.nav .count { margin-left: auto; min-width: 24px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--k-accent-soft); color: var(--k-accent-text); font-size: 12px; line-height: 20px; text-align: center; }
+.nav-sep { margin: 12px 12px 4px; }
+.side.rail { width: 64px; padding: 20px 8px 12px; }
+.side.rail .logo { padding: 0 0 16px; justify-content: center; }
+.side.rail .lbl, .side.rail .school, .side.rail .nav-sep, .side.rail .me div, .side.rail .count { display: none; }
+.side.rail .nav button { justify-content: center; padding: 0; }
+.side.rail .me { justify-content: center; padding: 10px 0; }
+.me { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--k-line); font-size: 14px; line-height: 18px; font-weight: 700; }
+.me small { display: block; color: var(--k-muted); font-weight: 600; font-size: 12px; }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar { height: var(--k-topbar); flex: none; display: flex; align-items: center; gap: 16px; padding: 0 32px; border-bottom: 1px solid var(--k-line); background: var(--k-surface); }
+.crumbs { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--k-muted); font-weight: 600; }
+.crumbs b { color: var(--k-ink); }
+.topbar .spacer { flex: 1; }
+.content { flex: 1; overflow: auto; padding: 32px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+.page-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.page-h p { margin-top: 4px; }
+.row { display: flex; gap: 12px; align-items: center; }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.list-row { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--k-line); font-size: 14px; line-height: 20px; }
+.list-row:first-child { border-top: 0; }
+.list-row .grow { flex: 1; min-width: 0; }
+.list-row .grow b { display: block; font-size: 15px; }
+.group-card { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; text-align: left; border: 1px solid var(--k-line); background: var(--k-surface); border-radius: var(--k-radius-md); }
+.group-card:hover { border-color: var(--k-line-strong); }
+.kv { display: flex; justify-content: space-between; font-size: 14px; line-height: 20px; color: var(--k-muted); }
+.kv b { color: var(--k-ink); }
+.state-switch { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--k-muted); }
+.skel { background: linear-gradient(90deg, var(--k-surface-alt), #f5f6f1, var(--k-surface-alt)); background-size: 200% 100%; animation: sk 1.4s ease infinite; border-radius: 6px; height: 14px; }
+@keyframes sk { to { background-position: -200% 0; } }
+.empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 24px 20px; }
+.banner { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: var(--k-radius-md); font-size: 14px; line-height: 20px; }
+.banner.bad { background: var(--k-danger-soft); color: var(--k-danger); }
+.banner.info { background: var(--k-info-soft); color: var(--k-info); }
+.banner.warn { background: var(--k-warning-soft); color: var(--k-warning); }
+.banner p { color: var(--k-ink); }
+.onb { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.onb-step { display: flex; gap: 12px; align-items: center; padding: 14px 20px; border-top: 1px solid var(--k-line); }
+.onb-step .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--k-line-strong); font-size: 13px; font-weight: 800; flex: none; }
+.onb-step.done .n { background: var(--k-success); border-color: var(--k-success); color: #fff; }
+.onb-step.done b { text-decoration: line-through; color: var(--k-muted); }
+
+/* Конструктор */
+.b-shell { flex: 1; min-height: 0; display: grid; grid-template-columns: 220px minmax(520px, 1fr) var(--preview-w, clamp(400px, 32vw, 600px)); }
+.b-shell.nopreview { grid-template-columns: 220px minmax(520px, 1fr) 0; }
+.steps { padding: 20px 12px; border-right: 1px solid var(--k-line); background: var(--k-surface); overflow: auto; }
+.steps ol { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.steps li button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; min-height: 44px; border: 0; background: transparent; border-radius: var(--k-radius-sm); cursor: pointer; text-align: left; font-size: 14px; line-height: 18px; font-weight: 700; color: var(--k-muted); }
+.steps li button:hover { background: var(--k-canvas); color: var(--k-ink); }
+.steps li button[aria-current="step"] { background: var(--k-green-soft); color: var(--k-ink); }
+.steps .dot { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; border: 1.5px solid var(--k-line-strong); flex: none; background: var(--k-surface); }
+.steps .done .dot { background: var(--k-green); border-color: var(--k-green); color: #fff; }
+.steps .error .dot { background: var(--k-danger); border-color: var(--k-danger); color: #fff; }
+.steps li small { display: block; font-weight: 600; font-size: 12px; line-height: 16px; }
+.steps .error small { color: var(--k-danger); }
+.b-form { overflow: auto; padding: 28px 32px 96px; }
+.b-form .inner { max-width: 760px; display: flex; flex-direction: column; gap: 24px; }
+.b-preview { border-left: 1px solid var(--k-line); background: var(--k-canvas); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.b-preview .ph { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--k-line); background: var(--k-surface); }
+.b-preview .pb { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.b-foot { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 -32px; padding: 12px 32px; background: var(--k-canvas); border-top: 1px solid var(--k-line); }
+.type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.type-card { position: relative; display: flex; gap: 14px; padding: 16px; border: 1.5px solid var(--k-line); border-radius: var(--k-radius-md); background: var(--k-surface); cursor: pointer; text-align: left; }
+.type-card:hover { border-color: var(--k-line-strong); }
+.type-card[aria-checked="true"] { border-color: var(--k-green); background: #f7faf5; box-shadow: inset 0 0 0 1px var(--k-green); }
+.type-card[aria-disabled="true"] { cursor: not-allowed; background: var(--k-canvas); }
+.type-card[aria-disabled="true"] h3, .type-card[aria-disabled="true"] .ico { color: var(--k-muted); }
+.type-card .ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--k-green-soft); color: var(--k-green); flex: none; }
+.type-card p { font-size: 14px; line-height: 20px; color: var(--k-muted); margin-top: 2px; }
+.save { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; padding: 0 10px; height: 32px; border-radius: var(--k-radius-sm); }
+.save.ok { color: var(--k-success); }
+.save.busy { color: var(--k-muted); }
+.save.bad { color: var(--k-danger); background: var(--k-danger-soft); }
+.tests { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.tests th { text-align: left; font-size: 12px; font-weight: 800; color: var(--k-muted); padding: 0 8px 8px; }
+.tests td { padding: 6px 8px; vertical-align: top; border-top: 1px solid var(--k-line); }
+.tests textarea { width: 100%; min-height: 40px; height: 40px; resize: vertical; padding: 8px 10px; border: 1px solid var(--k-line-strong); border-radius: var(--k-radius-sm); font: 14px/20px var(--k-mono); background: var(--k-surface); }
+.tests td.st { width: 140px; padding-top: 14px; }
+.verify { border-radius: var(--k-radius-md); border: 1px solid var(--k-line); background: var(--k-surface); }
+.verify li { display: flex; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--k-line); font-size: 14px; line-height: 20px; align-items: flex-start; }
+.verify ul { list-style: none; margin: 0; padding: 0; }
+.verify li:first-child { border-top: 0; }
+.verify .ok { color: var(--k-success); } .verify .bad { color: var(--k-danger); }
+.rte { border: 1px solid var(--k-line-strong); border-radius: var(--k-radius-sm); background: var(--k-surface); }
+.rte .tb { display: flex; gap: 2px; padding: 4px; border-bottom: 1px solid var(--k-line); }
+.rte .tb button { height: 32px; min-width: 32px; padding: 0 8px; border: 0; background: transparent; border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer; }
+.rte .tb button:hover { background: var(--k-surface-alt); }
+.rte .tb button:disabled { color: var(--k-muted); cursor: not-allowed; }
+.rte .body { padding: 12px 14px; min-height: 140px; font-size: 15px; line-height: 24px; }
+.rte .body:focus-visible { box-shadow: none; outline: 2px solid var(--k-info); outline-offset: -2px; }
+.rte pre { margin: 8px 0; }
+.hint-edit { display: flex; gap: 12px; align-items: flex-start; }
+.hint-edit .lvl { width: 120px; flex: none; padding-top: 8px; font-size: 14px; font-weight: 700; }
+.info-note { display: flex; gap: 12px; padding: 12px 16px; border-radius: var(--k-radius-md); background: var(--k-info-soft); font-size: 14px; line-height: 20px; }
+.info-note svg { color: var(--k-info); }
+
+/* Код */
+.code { display: flex; border: 1px solid var(--k-line); border-radius: var(--k-radius-md); background: var(--k-code-bg); overflow: hidden; font: 15px/24px var(--k-mono); }
+.code .gut { padding: 12px 0; min-width: 44px; text-align: right; color: var(--k-code-gutter); user-select: none; background: var(--k-code-bg); border-right: 1px solid var(--k-line); }
+.code .gut div { padding-right: 10px; }
+.code textarea, .code pre { flex: 1; margin: 0; padding: 12px 14px; border: 0; background: transparent; resize: none; font: inherit; color: var(--k-ink); white-space: pre; overflow: auto; tab-size: 4; min-height: 100%; }
+.code textarea:focus-visible { box-shadow: none; }
+.code:focus-within { border-color: var(--k-info); box-shadow: 0 0 0 1px var(--k-info); }
+.code.sm { font-size: 14px; line-height: 22px; }
+.kw { color: var(--k-code-keyword); } .st { color: var(--k-code-string); } .nm { color: var(--k-code-number); } .fn { color: var(--k-code-func); } .cm { color: var(--k-code-comment); font-style: italic; }
+.ex { background: var(--k-surface-alt); border-radius: var(--k-radius-sm); padding: 10px 14px; font: 14px/22px var(--k-mono); white-space: pre; overflow-x: auto; }
+
+/* Ученик */
+.s-top { height: 64px; flex: none; display: flex; align-items: center; gap: 24px; padding: 0 40px; background: var(--k-surface); border-bottom: 1px solid var(--k-line); }
+.s-nav { display: flex; gap: 4px; }
+.s-nav button { height: 40px; padding: 0 16px; border: 0; background: transparent; border-radius: var(--k-radius-full); font-size: 15px; font-weight: 700; color: var(--k-muted); cursor: pointer; }
+.s-nav button[aria-current="page"] { background: var(--k-green-soft); color: var(--k-green); }
+.s-content { flex: 1; overflow: auto; padding: 40px; }
+.s-wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; align-items: start; }
+.display { font-size: 32px; line-height: 40px; font-weight: 800; text-wrap: balance; }
+.hero { padding: 28px; border-radius: var(--k-radius-xl); background: var(--k-surface); border: 1px solid var(--k-line); display: flex; flex-direction: column; gap: 20px; }
+.path { display: flex; gap: 6px; }
+.path i { flex: 1; height: 10px; border-radius: 5px; background: var(--k-surface-alt); }
+.path i.done { background: var(--k-green); }
+.path i.cur { background: var(--k-accent); }
+.stage-ladder { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 700; flex-wrap: wrap; }
+.stage-ladder span { padding: 6px 12px; border-radius: var(--k-radius-sm); background: var(--k-surface-alt); color: var(--k-muted); }
+.stage-ladder span.on { background: var(--k-cta); color: #fff; }
+.stage-ladder span.done { background: var(--k-green-soft); color: var(--k-green); }
+.s-card { background: var(--k-surface); border: 1px solid var(--k-line); border-radius: var(--k-radius-lg); padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.task-row { display: flex; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--k-line); }
+.task-row:first-of-type { border-top: 0; }
+.task-row .n { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--k-accent-soft); color: var(--k-accent-text); font-weight: 800; flex: none; }
+.skill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--k-radius-full); background: var(--k-green-soft); color: var(--k-green); font-size: 14px; font-weight: 700; }
+.skill.next { background: var(--k-surface); border: 1.5px dashed var(--k-line-strong); color: var(--k-muted); }
+
+/* Среда выполнения */
+.ws { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--left-w, 420px) 6px minmax(0, 1fr); }
+.ws.focus { grid-template-columns: 0 0 minmax(0, 1fr); }
+.ws.focus .ws-left { visibility: hidden; }
+.ws-left { display: flex; flex-direction: column; min-width: 0; background: var(--k-surface); border-right: 1px solid var(--k-line); overflow: hidden; }
+.tabs { display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid var(--k-line); }
+.tabs button { white-space: nowrap; height: 44px; padding: 0 12px; border: 0; background: none; border-bottom: 2px solid transparent; font-size: 15px; font-weight: 700; color: var(--k-muted); cursor: pointer; border-radius: 0; }
+.tabs button[aria-selected="true"] { color: var(--k-ink); border-bottom-color: var(--k-green); }
+.tabs .cnt { margin-left: 6px; font-size: 12px; color: var(--k-muted); }
+.ws-scroll { flex: 1; overflow: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; font-size: 16px; line-height: 26px; }
+.split { background: var(--k-canvas); cursor: col-resize; position: relative; }
+.split::after { content: ""; position: absolute; inset: 0 2px; border-radius: 2px; }
+.split:hover::after, .split:focus-visible::after { background: var(--k-sage); }
+.split.h { cursor: row-resize; height: 6px; }
+.split.h::after { inset: 2px 0; }
+.ws-right { display: grid; grid-template-rows: auto minmax(120px, 1fr) 6px var(--console-h, 260px); min-width: 0; min-height: 0; }
+.ed-bar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--k-surface); border-bottom: 1px solid var(--k-line); }
+.ed-bar .file { display: flex; gap: 8px; align-items: center; font: 600 14px var(--k-mono); }
+.ws-right .code { border-radius: 0; border: 0; min-height: 0; }
+.ws-right .code textarea { height: 100%; }
+.run { display: flex; flex-direction: column; min-height: 0; background: var(--k-surface); border-top: 1px solid var(--k-line); }
+.run-bar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--k-line); }
+.run-bar .tabs { border: 0; padding: 0; }
+.run-bar .tabs button { height: 40px; }
+.out { flex: 1; overflow: auto; padding: 12px 16px; font: 14px/22px var(--k-mono); white-space: pre-wrap; }
+.out .in { color: var(--k-info); }
+.feedback { margin: 0 16px 12px; padding: 12px 16px; border-radius: var(--k-radius-md); font: 15px/22px var(--k-font); white-space: normal; display: flex; flex-direction: column; gap: 6px; }
+.feedback.bad { background: var(--k-danger-soft); }
+.feedback.ok { background: var(--k-success-soft); }
+.feedback b { color: var(--k-ink); }
+details summary { cursor: pointer; font-weight: 700; color: var(--k-green); font-size: 14px; }
+.diff { display: grid; grid-template-columns: 110px 1fr; gap: 2px 12px; font: 14px/22px var(--k-mono); }
+.diff span:nth-child(odd) { font-family: var(--k-font); font-weight: 700; color: var(--k-muted); }
+.hint { border: 1px solid var(--k-line); border-radius: var(--k-radius-md); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.hint.locked { background: var(--k-canvas); }
+.hint h4 { display: flex; gap: 8px; align-items: center; font-size: 15px; }
+.kbd { font: 600 12px var(--k-mono); padding: 1px 6px; border: 1px solid var(--k-line-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--k-surface); }
+
+/* Матрица */
+.matrix { border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.matrix th, .matrix td { padding: 0; border-top: 1px solid var(--k-line); }
+.matrix thead th { font-size: 12px; font-weight: 800; color: var(--k-muted); text-align: center; padding: 8px 4px; vertical-align: bottom; border-top: 0; }
+.matrix thead tr:first-child th { color: var(--k-ink); text-align: left; padding-left: 8px; border-left: 1px solid var(--k-line); }
+.matrix td.name { padding: 8px 16px; white-space: nowrap; font-weight: 700; min-width: 200px; }
+.cell { width: 52px; height: 36px; margin: 4px; display: grid; place-items: center; border: 0; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 800; }
+.cell.p { background: var(--k-success-soft); color: var(--k-success); }
+.cell.f { background: var(--k-danger-soft); color: var(--k-danger); }
+.cell.r { background: var(--k-warning-soft); color: var(--k-warning); }
+.cell.n { background: transparent; color: var(--k-muted); border: 1px dashed var(--k-line); }
+.drawer { position: fixed; top: 46px; right: 0; bottom: 0; width: 520px; background: var(--k-surface); box-shadow: var(--k-shadow-3); display: flex; flex-direction: column; z-index: 40; }
+.drawer[hidden] { display: none; }
+.drawer .dh { display: flex; gap: 12px; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--k-line); }
+.drawer .db { flex: 1; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.drawer .df { display: flex; gap: 12px; padding: 16px 20px; border-top: 1px solid var(--k-line); }
+
+/* Модальные окна и уведомления */
+.scrim { position: fixed; inset: 0; background: rgba(23, 53, 46, .4); display: grid; place-items: center; z-index: 60; padding: 16px; }
+.scrim[hidden] { display: none; }
+.modal { width: min(560px, 100%); background: var(--k-surface); border-radius: var(--k-radius-lg); box-shadow: var(--k-shadow-3); display: flex; flex-direction: column; max-height: 90vh; }
+.modal .mh { padding: 20px 24px 8px; display: flex; flex-direction: column; gap: 4px; }
+.modal .mb { padding: 12px 24px; overflow: auto; display: flex; flex-direction: column; gap: 16px; }
+.modal .mf { padding: 16px 24px 20px; display: flex; justify-content: flex-end; gap: 12px; }
+.toasts { position: fixed; right: 24px; bottom: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 70; }
+.toast { display: flex; gap: 12px; align-items: center; min-width: 320px; padding: 12px 16px; border-radius: var(--k-radius-md); background: var(--k-ink); color: #fffefa; box-shadow: var(--k-shadow-2); font-size: 14px; font-weight: 600; }
+.toast svg { color: #9fd1b7; }
+
+/* Галерея компонентов */
+.gal { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.gal .card-b { display: flex; flex-direction: column; gap: 16px; }
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.sw { border: 1px solid var(--k-line); border-radius: var(--k-radius-sm); overflow: hidden; font-size: 12px; line-height: 16px; }
+.sw i { display: block; height: 44px; }
+.sw div { padding: 6px 8px; }
+.sw b { display: block; }
+.typo div { display: flex; align-items: baseline; gap: 16px; padding: 6px 0; border-top: 1px solid var(--k-line); }
+.typo small { width: 140px; flex: none; color: var(--k-muted); font-size: 12px; font-weight: 700; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h6a3 3 0 0 1 2 2 3 3 0 0 1 2-2h6v15h-6a3 3 0 0 0-2 1 3 3 0 0 0-2-1H4zM12 6v14"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M20 20v-1.5a3.5 3.5 0 0 0-2.5-3.3M15.5 4.2a3.5 3.5 0 0 1 0 6.6"/></symbol>
+  <symbol id="i-task" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20h16M7 16v-5M12 16V6M17 16v-8"/></symbol>
+  <symbol id="i-school" viewBox="0 0 24 24"><path d="M3 9 12 4l9 5-9 5zM7 11.5V16c0 1.5 2.2 3 5 3s5-1.5 5-3v-4.5M21 9v6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19zM12 10v4M12 17.2v.1"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A9 9 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.9 3.6M6.4 7.4A16 16 0 0 0 2.5 12S6 18 12 18a9 9 0 0 0 4.1-1M9.9 10a3 3 0 0 0 4.1 4.1"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-focus" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-blocks" viewBox="0 0 24 24"><rect x="3" y="4" width="11" height="6" rx="1.5"/><rect x="8" y="14" width="13" height="6" rx="1.5"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-tpl" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M9 9v10"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18" cy="12" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 9.5a4 4 0 0 1-.5 8.5z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+</svg>
+
+<header class="proto-bar">
+  <b>Kodik B2B · прототип на согласование</b>
+  <nav aria-label="Экраны прототипа">
+    <button data-go="overview" aria-current="page">Обзор преподавателя</button>
+    <button data-go="builder">Конструктор задания</button>
+    <button data-go="group">Группа и результаты</button>
+    <button data-go="student">Главная ученика</button>
+    <button data-go="workspace">Задание ученика</button>
+    <button data-go="school">Школа</button>
+    <button data-go="components">Компоненты</button>
+  </nav>
+  <span class="note">Данные — пример прототипа</span>
+</header>
+
+<div class="stage">
+<!-- ===================== ОБЗОР ПРЕПОДАВАТЕЛЯ ===================== -->
+<section class="screen on" id="overview" aria-label="Обзор преподавателя">
+  <aside class="side" data-side="overview"></aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs"><b>Обзор</b></div>
+      <div class="spacer"></div>
+      <div class="state-switch" role="group" aria-label="Состояние экрана (прототип)">
+        Состояние:
+        <div class="seg" id="ov-state">
+          <button aria-pressed="true" data-s="data">Данные</button>
+          <button aria-pressed="false" data-s="onb">Новая школа</button>
+          <button aria-pressed="false" data-s="load">Загрузка</button>
+          <button aria-pressed="false" data-s="err">Ошибка</button>
+        </div>
+      </div>
+    </div>
+    <div class="content"><div class="wrap">
+      <div class="page-h">
+        <div><h1>Добрый день, Анна</h1><p class="muted">Понедельник, 19 октября · 2 занятия сегодня</p></div>
+        <div class="row">
+          <button class="btn" data-modal="m-group"><svg class="i"><use href="#i-users"/></svg>Создать группу</button>
+          <button class="btn primary" data-go="builder"><svg class="i"><use href="#i-plus"/></svg>Создать задание</button>
+        </div>
+      </div>
+
+      <div id="ov-data" class="grid-2">
+        <div style="display:flex;flex-direction:column;gap:24px;min-width:0">
+          <section class="card" aria-labelledby="att-h">
+            <div class="card-h"><div class="row"><h2 id="att-h">Требуют внимания</h2><span class="tag task plain num">5</span></div><button class="link" data-go="group">Все результаты</button></div>
+            <div>
+              <div class="list-row"><span class="avatar">МК</span><div class="grow"><b>Миша Ковалёв · «Моя программа»</b><span class="muted">Ручная проверка · отправлено 25 минут назад</span></div><span class="tag warn">На проверке</span><button class="btn sm" data-drawer>Проверить</button></div>
+              <div class="list-row"><span class="avatar">ЕС</span><div class="grow"><b>Ева Смирнова · «Удвоим число»</b><span class="muted">4 попытки, тест 2 не пройден</span></div><span class="tag bad">Не пройдено</span><button class="btn sm" data-drawer>Открыть</button></div>
+              <div class="list-row"><span class="avatar">ДП</span><div class="grow"><b>Даня Петров · «Чётное или нечётное»</b><span class="muted">Ошибка выполнения в 3 попытках подряд</span></div><span class="tag bad">Ошибка</span><button class="btn sm" data-drawer>Открыть</button></div>
+              <div class="list-row"><span class="avatar">АЛ</span><div class="grow"><b>Алиса Лебедева · «Моя программа»</b><span class="muted">Ручная проверка · вчера, 18:40</span></div><span class="tag warn">На проверке</span><button class="btn sm" data-drawer>Проверить</button></div>
+            </div>
+          </section>
+          <section class="card" aria-labelledby="act-h">
+            <div class="card-h"><h2 id="act-h">Последняя активность</h2><span class="muted small">Все группы</span></div>
+            <table class="table">
+              <thead><tr><th>Ученик</th><th>Задание</th><th>Результат</th><th>Когда</th></tr></thead>
+              <tbody>
+                <tr class="click" data-drawer><td>Миша Ковалёв</td><td>Привет, мир!</td><td><span class="tag ok">Принято</span></td><td class="muted num">10:42</td></tr>
+                <tr class="click" data-drawer><td>Ева Смирнова</td><td>Удвоим число</td><td><span class="tag bad">Тест 2 из 3</span></td><td class="muted num">10:39</td></tr>
+                <tr class="click" data-drawer><td>Тимур Алиев</td><td>Удвоим число</td><td><span class="tag ok">Принято</span></td><td class="muted num">10:31</td></tr>
+                <tr class="click" data-drawer><td>Даня Петров</td><td>Чётное или нечётное</td><td><span class="tag bad">Ошибка выполнения</span></td><td class="muted num">10:28</td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:24px;min-width:0">
+          <section aria-labelledby="gr-h" style="display:flex;flex-direction:column;gap:12px">
+            <div class="row" style="justify-content:space-between"><h2 id="gr-h">Мои группы</h2><button class="link" data-go="group">Все группы</button></div>
+            <button class="group-card" data-go="group">
+              <div class="row" style="justify-content:space-between;width:100%"><h3>Python · Старт 7А</h3><span class="tag info">Сегодня 15:00</span></div>
+              <div class="kv"><span>14 учеников · урок 3 «Ввод и вычисления»</span><b class="num">9/14</b></div>
+              <div class="bar" aria-label="Выполнили текущий урок: 9 из 14"><i style="width:64%"></i></div>
+            </button>
+            <button class="group-card" data-go="group">
+              <div class="row" style="justify-content:space-between;width:100%"><h3>Python · Старт 7Б</h3><span class="tag plain">Ср 16:30</span></div>
+              <div class="kv"><span>12 учеников · урок 2 «Первая программа»</span><b class="num">12/12</b></div>
+              <div class="bar" aria-label="Выполнили текущий урок: 12 из 12"><i style="width:100%"></i></div>
+            </button>
+            <button class="group-card" data-go="group">
+              <div class="row" style="justify-content:space-between;width:100%"><h3>Олимпиадный кружок</h3><span class="tag plain">Пт 17:00</span></div>
+              <div class="kv"><span>8 учеников · урок 6 «Функции»</span><b class="num">3/8</b></div>
+              <div class="bar" aria-label="Выполнили текущий урок: 3 из 8"><i style="width:37%"></i></div>
+            </button>
+          </section>
+          <section class="card" aria-labelledby="cont-h">
+            <div class="card-h"><h2 id="cont-h">Продолжить работу</h2></div>
+            <div>
+              <div class="list-row"><svg class="i" style="color:var(--k-accent)"><use href="#i-task"/></svg><div class="grow"><b>Сумма двух чисел</b><span class="muted">Черновик · шаг «Проверка» · 12 минут назад</span></div><button class="btn sm" data-go="builder">Открыть</button></div>
+              <div class="list-row"><svg class="i" style="color:var(--k-green)"><use href="#i-book"/></svg><div class="grow"><b>Python: первые открытия</b><span class="muted">Курс · модуль 2 изменён вчера</span></div><button class="btn sm">Открыть</button></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="ov-onb" hidden>
+        <section class="card" aria-labelledby="onb-h">
+          <div class="card-h"><div><h2 id="onb-h">Настройте школу за пять шагов</h2><p class="muted small">Примерно 15 минут. Порядок можно менять, шаги отмечаются сами.</p></div><div class="row"><span class="muted small num">1 из 5</span><button class="btn ghost sm">Скрыть</button></div></div>
+          <div class="onb">
+            <div class="onb-step done"><span class="n"><svg class="i sm"><use href="#i-check"/></svg></span><div class="grow"><b>Создать курс</b><div class="muted small">«Python: первые открытия»</div></div></div>
+            <div class="onb-step"><span class="n">2</span><div style="flex:1"><b>Добавить урок</b><div class="muted small">Модуль и урок внутри курса</div></div><button class="btn sm primary">Добавить</button></div>
+            <div class="onb-step"><span class="n">3</span><div style="flex:1"><b>Создать задание</b><div class="muted small">С шаблоном — около 5 минут</div></div><button class="btn sm" data-go="builder">Создать</button></div>
+            <div class="onb-step"><span class="n">4</span><div style="flex:1"><b>Создать группу</b><div class="muted small">Например, «7А · Python»</div></div><button class="btn sm" data-modal="m-group">Создать</button></div>
+            <div class="onb-step"><span class="n">5</span><div style="flex:1"><b>Пригласить учеников</b><div class="muted small">Списком: логины и пароли создаются сразу</div></div><button class="btn sm" data-modal="m-invite">Пригласить</button></div>
+          </div>
+        </section>
+      </div>
+
+      <div id="ov-load" hidden aria-busy="true" class="grid-2">
+        <div class="card"><div class="card-h"><div class="skel" style="width:160px"></div></div><div class="card-b" style="display:flex;flex-direction:column;gap:18px"><div class="skel"></div><div class="skel" style="width:80%"></div><div class="skel" style="width:90%"></div><div class="skel" style="width:70%"></div></div></div>
+        <div class="card"><div class="card-b" style="display:flex;flex-direction:column;gap:18px"><div class="skel" style="width:50%"></div><div class="skel"></div><div class="skel" style="width:60%"></div></div></div>
+      </div>
+
+      <div id="ov-err" hidden>
+        <div class="banner bad" role="alert"><svg class="i"><use href="#i-alert"/></svg><div style="flex:1"><b>Не удалось загрузить обзор</b><p>Сервер не ответил за 10 секунд. Данные учеников не изменились.</p></div><button class="btn sm">Повторить</button></div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ===================== КОНСТРУКТОР ===================== -->
+<section class="screen" id="builder" aria-label="Конструктор задания">
+  <aside class="side rail" data-side="tasks" aria-label="Меню, свёрнуто в конструкторе"></aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="btn ghost sm" data-go="overview"><svg class="i sm"><use href="#i-back"/></svg>Задания</button>
+      <div class="crumbs">/ <b>Удвоим число</b><span class="tag info">Черновик</span></div>
+      <div class="spacer"></div>
+      <span id="save" class="save ok" role="status"><svg class="i sm"><use href="#i-cloud"/></svg>Сохранено · 10:41</span>
+      <div class="seg" role="group" aria-label="Состояние сохранения (прототип)" id="save-sim">
+        <button aria-pressed="true" data-s="ok">ок</button><button aria-pressed="false" data-s="busy">…</button><button aria-pressed="false" data-s="bad">ошибка</button>
+      </div>
+      <button class="btn" id="toggle-preview"><svg class="i"><use href="#i-eye"/></svg><span>Скрыть предпросмотр</span></button>
+      <button class="btn primary" id="publish-top" aria-disabled="true" title="Сначала проверьте задание на шаге «Проверка»">Опубликовать</button>
+    </div>
+    <div class="b-shell" id="b-shell">
+      <nav class="steps" aria-label="Шаги конструктора">
+        <span class="caption muted" style="padding:0 10px">7 ШАГОВ · ~5 МИНУТ</span>
+        <ol id="steps"></ol>
+      </nav>
+      <div class="b-form" id="b-form"><div class="inner" id="b-inner"></div></div>
+      <aside class="b-preview" id="b-preview" aria-label="Предпросмотр глазами ученика">
+        <div class="ph"><svg class="i" style="color:var(--k-green)"><use href="#i-eye"/></svg><b class="small">Так увидит ученик</b><div class="spacer" style="flex:1"></div><button class="btn sm" data-go="workspace">Открыть целиком</button></div>
+        <div class="pb">
+          <span class="tag task plain" style="align-self:flex-start">ЗАДАНИЕ · НАЧАЛЬНЫЙ</span>
+          <h2 id="pv-title">Удвоим число</h2>
+          <p id="pv-text" style="font-size:16px;line-height:26px">Программа получает целое число. Выведи число, которое в два раза больше.</p>
+          <div class="ex">Ввод:   21
+Вывод:  42</div>
+          <div class="code sm" style="min-height:120px"><div class="gut"><div>1</div><div>2</div></div><pre><span class="cm"># Прочитай число и выведи удвоенное</span>
+n = <span class="fn">int</span>(<span class="fn">input</span>())</pre></div>
+          <div class="row"><button class="btn sm" id="pv-run"><svg class="i sm"><use href="#i-play"/></svg>Запустить</button><button class="btn sm primary" id="pv-check">Проверить</button><span class="muted small" id="pv-vis">Ученик видит 1 тест из 2</span></div>
+          <div class="out card" id="pv-out" style="min-height:64px;flex:none">Здесь появится результат запуска.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ГРУППА И РЕЗУЛЬТАТЫ ===================== -->
+<section class="screen" id="group" aria-label="Группа и результаты">
+  <aside class="side" data-side="groups"></aside>
+  <div class="main">
+    <div class="topbar"><div class="crumbs">Группы / <b>Python · Старт 7А</b></div><div class="spacer"></div><button class="btn" data-modal="m-invite"><svg class="i"><use href="#i-plus"/></svg>Добавить учеников</button><button class="btn primary" data-modal="m-assign">Выдать задание или урок</button></div>
+    <div class="content"><div class="wrap">
+      <div class="page-h"><div><h1>Python · Старт 7А</h1><p class="muted">14 учеников · курс «Python: первые открытия» · открыт урок 3 из 8</p></div></div>
+      <div class="tabs" role="tablist" style="padding:0" id="g-tabs">
+        <button role="tab" aria-selected="false" data-t="g-students">Ученики<span class="cnt">14</span></button>
+        <button role="tab" aria-selected="false" data-t="g-program">Программа</button>
+        <button role="tab" aria-selected="true" data-t="g-results">Результаты<span class="cnt">5 требуют внимания</span></button>
+      </div>
+      <div id="g-results">
+        <div class="row" style="justify-content:space-between;margin-bottom:16px">
+          <div class="row"><div class="seg" id="mx-filter"><button aria-pressed="true" data-f="all">Все ученики</button><button aria-pressed="false" data-f="att">Требуют внимания</button></div><div class="search" style="width:260px"><svg class="i"><use href="#i-search"/></svg><input class="input" placeholder="Найти ученика" aria-label="Найти ученика"></div></div>
+          <div class="row small muted"><span class="tag ok">Принято</span><span class="tag bad">Не пройдено</span><span class="tag warn">На проверке</span><span class="tag plain" style="background:transparent;border:1px dashed var(--k-line)">Не начато</span></div>
+        </div>
+        <div class="card" style="overflow-x:auto">
+          <table class="matrix" id="matrix"></table>
+        </div>
+      </div>
+      <div id="g-students" hidden>
+        <div class="card"><table class="table"><thead><tr><th>Ученик</th><th>Логин</th><th>Прогресс курса</th><th>Последняя активность</th><th></th></tr></thead><tbody id="st-rows"></tbody></table></div>
+      </div>
+      <div id="g-program" hidden>
+        <div class="card">
+          <div class="list-row"><span class="tag ok">Завершён</span><div class="grow"><b>Урок 1 · Первая программа</b><span class="muted">2 шага, 1 задание</span></div><span class="muted small num">14/14</span></div>
+          <div class="list-row"><span class="tag ok">Завершён</span><div class="grow"><b>Урок 2 · Переменные</b><span class="muted">4 шага, 2 задания</span></div><span class="muted small num">13/14</span></div>
+          <div class="list-row"><span class="tag info">Открыт</span><div class="grow"><b>Урок 3 · Ввод и вычисления</b><span class="muted">5 шагов, 3 задания · срок 24 октября</span></div><span class="muted small num">9/14</span><button class="btn sm">Завершить занятие</button></div>
+          <div class="list-row"><span class="tag plain">Закрыт</span><div class="grow"><b>Урок 4 · Условия</b><span class="muted">Откроется преподавателем</span></div><button class="btn sm primary">Открыть занятие</button></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <aside class="drawer" id="drawer" hidden aria-label="Решение ученика" role="dialog" aria-modal="false">
+    <div class="dh"><span class="avatar">ЕС</span><div style="flex:1"><b>Ева Смирнова</b><div class="muted small">Удвоим число · попытка 4 из 4 · 10:39</div></div><button class="btn icon sm" id="drawer-close" aria-label="Закрыть"><svg class="i sm"><use href="#i-x"/></svg></button></div>
+    <div class="db">
+      <span class="tag bad" style="align-self:flex-start">Не пройдено · 1 из 3 тестов</span>
+      <div class="code sm"><div class="gut"><div>1</div><div>2</div></div><pre>n = <span class="fn">int</span>(<span class="fn">input</span>())
+<span class="fn">print</span>(n + <span class="nm">2</span>)</pre></div>
+      <table class="table"><thead><tr><th>Тест</th><th>Ввод</th><th>Ожидалось</th><th>Получено</th></tr></thead><tbody>
+        <tr><td><span class="tag ok">1</span></td><td class="mono">2</td><td class="mono">4</td><td class="mono">4</td></tr>
+        <tr><td><span class="tag bad">2</span></td><td class="mono">21</td><td class="mono">42</td><td class="mono">23</td></tr>
+        <tr><td><span class="tag bad">3 · скрытый</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">2</td></tr>
+      </tbody></table>
+      <label class="field"><span>Комментарий ученику</span><textarea class="textarea" placeholder="Например: сравни сложение и умножение на 2"></textarea></label>
+      <details><summary>История попыток (4)</summary><p class="muted small" style="margin-top:8px">10:12 ошибка выполнения · 10:20 1/3 · 10:31 1/3 · 10:39 1/3</p></details>
+    </div>
+    <div class="df"><button class="btn primary">Отправить комментарий</button><button class="btn">Засчитать вручную</button></div>
+  </aside>
+</section>
+
+<!-- ===================== ГЛАВНАЯ УЧЕНИКА ===================== -->
+<section class="screen" id="student" aria-label="Главная ученика" style="flex-direction:column">
+  <header class="s-top">
+    <div class="logo" data-logo></div>
+    <nav class="s-nav" aria-label="Разделы ученика"><button aria-current="page">Главная</button><button>Мои курсы</button><button>Прогресс</button></nav>
+    <div style="flex:1"></div>
+    <span class="muted small">Python · Старт 7А</span><span class="avatar">МК</span>
+  </header>
+  <div class="s-content">
+    <div class="s-wrap">
+      <div style="display:flex;flex-direction:column;gap:24px;min-width:0">
+        <div><p class="overline">Твой путь в Python</p><h1 class="display">Привет, Миша! Продолжим?</h1></div>
+        <section class="hero" aria-labelledby="cont">
+          <div class="row" style="justify-content:space-between"><span class="tag task plain">ЗАДАНИЕ 2 ИЗ 3 · УРОК 3</span><span class="muted small">Срок — пятница, 24 октября</span></div>
+          <div><h2 id="cont" style="font-size:24px;line-height:32px">Удвоим число</h2><p class="muted" style="font-size:16px;margin-top:4px">Получи число через input и выведи его, умноженное на два.</p></div>
+          <div class="row"><button class="btn xl primary" data-go="workspace">Продолжить обучение<svg class="i"><use href="#i-arrow"/></svg></button><span class="muted small">Черновик сохранён вчера в 18:20</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="row" style="justify-content:space-between"><b class="small">Python: первые открытия</b><span class="muted small num">урок 3 из 8</span></div>
+            <div class="path" aria-label="Пройдено 2 урока из 8, сейчас урок 3"><i class="done"></i><i class="done"></i><i class="cur"></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </section>
+        <section class="s-card" aria-labelledby="as-h">
+          <h3 id="as-h">Задания от учителя</h3>
+          <div class="task-row"><span class="n">1</span><div style="flex:1"><b>Привет, мир!</b><div class="muted small">Урок 1 · выполнено</div></div><span class="tag ok">Готово</span></div>
+          <div class="task-row"><span class="n">2</span><div style="flex:1"><b>Удвоим число</b><div class="muted small">Урок 3 · до 24 октября</div></div><button class="btn sm primary" data-go="workspace">Решать</button></div>
+          <div class="task-row"><span class="n">3</span><div style="flex:1"><b>Моя программа</b><div class="muted small">Урок 3 · творческая работа · до 24 октября</div></div><button class="btn sm">Открыть</button></div>
+        </section>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <section class="s-card" aria-labelledby="sk-h">
+          <h3 id="sk-h">Что ты уже умеешь</h3>
+          <div class="row" style="flex-wrap:wrap;gap:8px"><span class="skill"><svg class="i sm"><use href="#i-check"/></svg>print</span><span class="skill"><svg class="i sm"><use href="#i-check"/></svg>Переменные</span><span class="skill"><svg class="i sm"><use href="#i-check"/></svg>Строки</span><span class="skill next">input — изучаешь</span></div>
+        </section>
+        <section class="s-card" aria-labelledby="st-h">
+          <h3 id="st-h">Путь Kodik</h3>
+          <div class="stage-ladder"><span class="done">Блоки</span><span class="done">Блоки + Python</span><span class="on">Код с подсказкой</span><span>Сборка кода</span><span>Свой Python</span></div>
+          <p class="muted small">Сейчас ты пишешь код сам, а подсказки открываются по шагам.</p>
+        </section>
+        <section class="s-card"><h3>Следующее после этого</h3><p class="small">Урок 4 · Условия <span class="muted">— откроет учитель</span></p></section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== СРЕДА ВЫПОЛНЕНИЯ ===================== -->
+<section class="screen" id="workspace" aria-label="Задание ученика" style="flex-direction:column">
+  <header class="s-top" style="height:56px;padding:0 16px;gap:16px">
+    <button class="btn ghost sm" data-go="student"><svg class="i sm"><use href="#i-back"/></svg>К курсу</button>
+    <div class="crumbs">Урок 3 · Ввод и вычисления / <b>Удвоим число</b></div>
+    <div class="path" style="width:160px" aria-label="Задание 2 из 3"><i class="done"></i><i class="cur"></i><i></i></div>
+    <div style="flex:1"></div>
+    <span class="save ok small" role="status"><svg class="i sm"><use href="#i-cloud"/></svg>Черновик сохранён</span>
+    <button class="btn sm" id="focus-btn" aria-pressed="false"><svg class="i sm"><use href="#i-focus"/></svg>Фокус</button>
+  </header>
+  <div class="ws" id="ws">
+    <div class="ws-left">
+      <div class="tabs" role="tablist" id="ws-tabs">
+        <button role="tab" aria-selected="true" data-t="w-task">Условие</button>
+        <button role="tab" aria-selected="false" data-t="w-theory">Теория</button>
+        <button role="tab" aria-selected="false" data-t="w-hints">Подсказки<span class="cnt">0/3</span></button>
+        <button role="tab" aria-selected="false" data-t="w-tries">Попытки<span class="cnt">2</span></button>
+      </div>
+      <div class="ws-scroll" id="w-task">
+        <span class="tag task plain" style="align-self:flex-start">ЗАДАНИЕ · НАЧАЛЬНЫЙ</span>
+        <h2 style="font-size:24px;line-height:32px">Удвоим число</h2>
+        <p>Программа получает одно целое число. Выведи число, которое в два раза больше.</p>
+        <div class="info-note"><svg class="i"><use href="#i-info"/></svg><div><b>Нужно использовать:</b> input и переменную. Это проверят автоматически.</div></div>
+        <h3>Пример</h3>
+        <div class="ex">Ввод:   21
+Вывод:  42</div>
+        <p class="muted small">Ещё один тест учитель оставил скрытым — проверь программу и на других числах.</p>
+      </div>
+      <div class="ws-scroll" id="w-theory" hidden>
+        <h3>Числа из input</h3>
+        <p><code>input()</code> всегда возвращает строку. Чтобы считать, преврати её в число: <code>int(input())</code>.</p>
+        <div class="ex">age = int(input())
+print(age + 1)</div>
+      </div>
+      <div class="ws-scroll" id="w-hints" hidden>
+        <p class="muted small">Подсказки открываются по очереди. Учитель видит, сколько ты открыл, — это нормально и не снижает оценку.</p>
+        <div class="hint" id="h1"><h4><svg class="i sm" style="color:var(--k-warning)"><use href="#i-bulb"/></svg>Подсказка 1 · Куда смотреть</h4><button class="btn sm" data-hint="1">Открыть подсказку</button></div>
+        <div class="hint locked" id="h2"><h4><svg class="i sm"><use href="#i-lock"/></svg>Подсказка 2 · Похожий пример</h4><p class="muted small">Откроется после первой</p></div>
+        <div class="hint locked" id="h3"><h4><svg class="i sm"><use href="#i-lock"/></svg>Подсказка 3 · Почти решение</h4><p class="muted small">Откроется после второй</p></div>
+      </div>
+      <div class="ws-scroll" id="w-tries" hidden>
+        <div class="list-row" style="padding:8px 0"><span class="tag bad">1 из 3</span><div class="grow">Вчера, 18:12</div><button class="link">Показать код</button></div>
+        <div class="list-row" style="padding:8px 0"><span class="tag bad">Ошибка</span><div class="grow">Вчера, 18:05</div><button class="link">Показать код</button></div>
+      </div>
+    </div>
+    <div class="split" id="split-v" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Ширина панели условия. Стрелки влево и вправо меняют размер"></div>
+    <div class="ws-right" id="ws-right">
+      <div class="ed-bar">
+        <span class="file"><svg class="i sm" style="color:var(--k-green)"><use href="#i-task"/></svg>main.py</span>
+        <span class="muted small">Python · учебный интерпретатор</span>
+        <div style="flex:1"></div>
+        <div class="seg" aria-label="Размер шрифта"><button aria-pressed="false" data-fs="-1" aria-label="Уменьшить шрифт">A−</button><button aria-pressed="false" data-fs="1" aria-label="Увеличить шрифт">A+</button></div>
+        <button class="btn sm" id="reset-code">Сбросить код</button>
+      </div>
+      <div class="code" id="editor"><div class="gut" id="gut"></div><textarea id="code" spellcheck="false" aria-label="Редактор Python. Tab — отступ, Esc затем Tab — выйти из редактора">n = int(input())
+print(n + 2)</textarea></div>
+      <div class="split h" id="split-h" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Высота консоли. Стрелки вверх и вниз меняют размер"></div>
+      <div class="run">
+        <div class="run-bar">
+          <button class="btn primary" id="run"><svg class="i"><use href="#i-play"/></svg>Запустить<span class="kbd" style="background:transparent;color:#fff;border-color:#ffffff88">Ctrl ↵</span></button>
+          <button class="btn" id="check">Проверить решение</button>
+          <div class="tabs" role="tablist" id="run-tabs"><button role="tab" aria-selected="true" data-t="r-console">Консоль</button><button role="tab" aria-selected="false" data-t="r-tests">Тесты</button></div>
+          <div style="flex:1"></div>
+          <label class="small muted row" style="gap:8px">Ввод <input class="input" id="stdin" value="21" style="width:96px;min-height:32px;height:32px" aria-label="Ввод для пробного запуска"></label>
+        </div>
+        <div class="out" id="r-console" aria-live="polite"><span class="muted">Нажми «Запустить», чтобы увидеть, что выведет программа.</span></div>
+        <div class="out" id="r-tests" hidden aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ШКОЛА ===================== -->
+<section class="screen" id="school" aria-label="Школа">
+  <aside class="side" data-side="school"></aside>
+  <div class="main">
+    <div class="topbar"><div class="crumbs"><b>Школа</b></div><div class="spacer"></div><button class="btn primary" data-modal="m-invite"><svg class="i"><use href="#i-plus"/></svg>Добавить преподавателя</button></div>
+    <div class="content"><div class="wrap">
+      <div class="page-h"><div><h1>IT-школа «Код будущего»</h1><p class="muted">Администратор: Алексей Орлов</p></div></div>
+      <div class="banner info"><svg class="i"><use href="#i-info"/></svg><p><b>Спроектировано, не подключено.</b> Данных о тарифе и местах в базе пока нет; ниже — макет. В рабочем интерфейсе без данных будет показано «Сведения о подписке появятся после заключения договора».</p></div>
+      <div class="grid-3">
+        <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">ТАРИФ</span><h2>Школа · годовой</h2><div class="kv"><span>Доступ до</span><b class="num">31 августа 2027</b></div><div class="kv"><span>Осталось</span><b class="num">316 дней</b></div></section>
+        <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">УЧЕНИЧЕСКИЕ МЕСТА</span><h2 class="num">87 из 120</h2><div class="bar" aria-label="Занято 87 мест из 120"><i style="width:72.5%"></i></div><div class="kv"><span>Свободно</span><b class="num">33</b></div></section>
+        <section class="card card-b" style="display:flex;flex-direction:column;gap:12px"><span class="caption muted">АКТИВНОСТЬ ЗА 7 ДНЕЙ</span><h2 class="num">412 решений</h2><div class="kv"><span>Активных учеников</span><b class="num">71 из 87</b></div><div class="kv"><span>Групп</span><b class="num">9</b></div></section>
+      </div>
+      <section class="card">
+        <div class="card-h"><h2>Преподаватели</h2><div class="search" style="width:260px"><svg class="i"><use href="#i-search"/></svg><input class="input" placeholder="Найти преподавателя" aria-label="Найти преподавателя"></div></div>
+        <table class="table"><thead><tr><th>Имя</th><th>Логин</th><th>Группы</th><th>Учеников</th><th>Статус</th><th></th></tr></thead><tbody>
+          <tr><td>Анна Белова</td><td class="mono">a.belova</td><td>3</td><td class="num">34</td><td><span class="tag ok">Активен</span></td><td><button class="btn sm icon" aria-label="Действия: Анна Белова"><svg class="i sm"><use href="#i-more"/></svg></button></td></tr>
+          <tr><td>Игорь Ким</td><td class="mono">i.kim</td><td>4</td><td class="num">41</td><td><span class="tag ok">Активен</span></td><td><button class="btn sm icon" aria-label="Действия: Игорь Ким"><svg class="i sm"><use href="#i-more"/></svg></button></td></tr>
+          <tr><td>Ольга Нестерова</td><td class="mono">o.nesterova</td><td>2</td><td class="num">12</td><td><span class="tag plain">Доступ отключён</span></td><td><button class="btn sm icon" aria-label="Действия: Ольга Нестерова"><svg class="i sm"><use href="#i-more"/></svg></button></td></tr>
+        </tbody></table>
+      </section>
+    </div></div>
+  </div>
+</section>
+
+<!-- ===================== КОМПОНЕНТЫ ===================== -->
+<section class="screen" id="components" aria-label="Компоненты" style="flex-direction:column">
+  <div class="content"><div class="wrap">
+    <div class="page-h"><div><p class="overline">Kodik B2B Design System</p><h1>Компоненты и токены</h1><p class="muted">Расширение Brand Kit 2026 для десктопа. Контраст всех текстовых пар ≥ 4,5:1.</p></div><div class="logo" data-logo></div></div>
+    <div class="gal">
+      <section class="card"><div class="card-h"><h2>Цвет</h2></div><div class="card-b">
+        <div class="swatches" id="swatches"></div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Типографика · Nunito / JetBrains Mono</h2></div><div class="card-b typo">
+        <div><small>Display 32/40 · 800</small><span class="display">Привет, Миша!</span></div>
+        <div><small>H1 24/32 · 800</small><h1>Группы</h1></div>
+        <div><small>H2 20/28 · 700</small><h2>Требуют внимания</h2></div>
+        <div><small>H3 16/24 · 700</small><h3>Python · Старт 7А</h3></div>
+        <div><small>Body 15/24</small><span>Программа получает целое число.</span></div>
+        <div><small>Body S 14/20</small><span class="small">14 учеников · урок 3</span></div>
+        <div><small>Caption 12/16 · 700</small><span class="caption">ШАГ 3 ИЗ 7</span></div>
+        <div><small>Code 14/22</small><code>print(n * 2)</code></div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Кнопки</h2></div><div class="card-b">
+        <div class="row" style="flex-wrap:wrap"><button class="btn primary">Опубликовать</button><button class="btn">Сохранить черновик</button><button class="btn ghost">Отмена</button><button class="btn danger">Удалить группу</button><button class="btn icon" aria-label="Ещё"><svg class="i"><use href="#i-more"/></svg></button></div>
+        <div class="row" style="flex-wrap:wrap"><button class="btn primary loading" aria-busy="true"><span class="spin"></span>Сохраняем…</button><button class="btn" disabled>Недоступно</button><button class="btn" style="color:var(--k-success);border-color:var(--k-success)"><svg class="i"><use href="#i-check"/></svg>Сохранено</button></div>
+        <div class="row" style="flex-wrap:wrap"><button class="btn sm">32 · таблицы</button><button class="btn">40 · преподаватель</button><button class="btn lg">44 · ученик</button><button class="btn xl primary">48 · главное</button></div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Поля</h2></div><div class="card-b">
+        <label class="field"><span>Название задания</span><input class="input" value="Удвоим число"><small>Ученик увидит его в списке заданий</small></label>
+        <label class="field err"><span>Ожидаемый вывод</span><input class="input" value="" aria-invalid="true"><small>Заполните ожидаемый вывод для теста 2</small></label>
+        <div class="row"><label class="field" style="flex:1"><span>Урок</span><select class="select"><option>Урок 3 · Ввод и вычисления</option></select></label><label class="field" style="flex:1"><span>Отключено</span><input class="input" disabled value="Только чтение"></label></div>
+        <div class="search"><svg class="i"><use href="#i-search"/></svg><input class="input" placeholder="Поиск по курсам" aria-label="Поиск по курсам"></div>
+        <div class="row" style="gap:24px"><label class="check"><input type="checkbox" checked>Виден ученику</label><label class="check"><input type="checkbox">Скрытый</label><label class="check"><input type="checkbox" class="switch" role="switch" checked>Автосохранение</label></div>
+        <div class="seg"><button aria-pressed="true">Тест-кейсы</button><button aria-pressed="false">Вывод</button><button aria-pressed="false">Ручная</button></div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Статусы</h2></div><div class="card-b">
+        <div class="row" style="flex-wrap:wrap"><span class="tag info">Черновик</span><span class="tag ok">Опубликовано</span><span class="tag warn">На проверке</span><span class="tag ok">Принято</span><span class="tag bad">Не пройдено</span><span class="tag bad">Ошибка выполнения</span><span class="tag task plain">ЗАДАНИЕ</span><span class="tag soon">Скоро</span></div>
+        <div class="row"><span class="save ok"><svg class="i sm"><use href="#i-cloud"/></svg>Сохранено · 10:41</span><span class="save busy"><span class="spin" style="width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>Сохраняем…</span><span class="save bad"><svg class="i sm"><use href="#i-alert"/></svg>Не сохранено</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><div class="kv"><span>Прогресс группы</span><b class="num">9/14</b></div><div class="bar"><i style="width:64%"></i></div><div class="path"><i class="done"></i><i class="done"></i><i class="cur"></i><i></i><i></i></div></div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Уведомления и диалоги</h2></div><div class="card-b">
+        <div class="banner bad" role="alert"><svg class="i"><use href="#i-alert"/></svg><div style="flex:1"><b>Не сохранено</b><p>Нет связи с сервером. Изменения хранятся в этом браузере.</p></div><button class="btn sm">Повторить</button></div>
+        <div class="banner warn"><svg class="i"><use href="#i-alert"/></svg><p>Неправильное решение 2 прошло все тесты. Добавьте тест, который его поймает.</p></div>
+        <div class="row"><button class="btn" data-modal="m-confirm">Опасное действие</button><button class="btn" id="toast-demo">Показать уведомление</button></div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Пустое состояние и загрузка</h2></div><div class="card-b">
+        <div class="empty card"><h3>Групп пока нет</h3><p class="muted small">Группа объединяет учеников и выданные им уроки.</p><button class="btn primary sm" data-modal="m-group">Создать группу</button></div>
+        <div aria-busy="true" style="display:flex;flex-direction:column;gap:12px"><div class="skel" style="width:60%"></div><div class="skel"></div><div class="skel" style="width:80%"></div></div>
+      </div></section>
+      <section class="card"><div class="card-h"><h2>Подсказки ученика</h2></div><div class="card-b">
+        <div class="hint"><h4><svg class="i sm" style="color:var(--k-warning)"><use href="#i-bulb"/></svg>Подсказка 1 · Куда смотреть</h4><p class="small">Посмотри, какую операцию ты делаешь с числом. «В два раза больше» — это сложение или умножение?</p></div>
+        <div class="hint locked"><h4><svg class="i sm"><use href="#i-lock"/></svg>Подсказка 2 · Похожий пример</h4><p class="muted small">Откроется после первой</p></div>
+      </div></section>
+    </div>
+  </div></div>
+</section>
+</div>
+
+<!-- Модальные окна -->
+<div class="scrim" id="m-group" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mg-h">
+  <div class="mh"><h2 id="mg-h">Новая группа</h2><p class="muted small">Учеников можно добавить сразу или позже.</p></div>
+  <div class="mb"><label class="field"><span>Название</span><input class="input" placeholder="Например, 7А · Python" id="mg-name"></label><label class="field"><span>Курс</span><select class="select"><option>Python: первые открытия</option><option>Без курса — выдам задания по одному</option></select></label></div>
+  <div class="mf"><button class="btn ghost" data-close>Отмена</button><button class="btn primary" data-close data-toast="Группа создана">Создать группу</button></div>
+</div></div>
+<div class="scrim" id="m-invite" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mi-h">
+  <div class="mh"><h2 id="mi-h">Добавить учеников в «Python · Старт 7А»</h2><p class="muted small">По одному имени в строке. Логины и временные пароли создадутся сразу — раздайте карточки входа на занятии.</p></div>
+  <div class="mb"><label class="field"><span>Имена учеников</span><textarea class="textarea mono" rows="6">Ковалёв Михаил
+Смирнова Ева
+Петров Даниил</textarea><small>3 ученика · свободно 33 места из 120</small></label><div class="info-note"><svg class="i"><use href="#i-info"/></svg><p>Электронная почта детей не нужна. Можно вводить псевдонимы.</p></div></div>
+  <div class="mf"><button class="btn ghost" data-close>Отмена</button><button class="btn primary" data-close data-toast="Создано 3 аккаунта. Карточки входа готовы к печати">Создать 3 аккаунта</button></div>
+</div></div>
+<div class="scrim" id="m-assign" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ma-h">
+  <div class="mh"><h2 id="ma-h">Назначить «Удвоим число»</h2><p class="muted small">Выданная версия не изменится, если вы отредактируете задание позже.</p></div>
+  <div class="mb"><fieldset style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:12px"><legend class="small" style="font-weight:700;margin-bottom:8px">Группы</legend><label class="check"><input type="checkbox" checked>Python · Старт 7А · 14 учеников</label><label class="check"><input type="checkbox">Python · Старт 7Б · 12 учеников</label><label class="check"><input type="checkbox">Олимпиадный кружок · 8 учеников</label></fieldset><label class="field"><span>Срок (необязательно)</span><input class="input" type="date" value="2026-10-24"></label></div>
+  <div class="mf"><button class="btn ghost" data-close>Позже</button><button class="btn primary" data-close data-toast="Назначено группе «Python · Старт 7А»">Назначить</button></div>
+</div></div>
+<div class="scrim" id="m-confirm" hidden><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="mc-h" aria-describedby="mc-d">
+  <div class="mh"><h2 id="mc-h">Снять задание с публикации?</h2></div>
+  <div class="mb" id="mc-d"><p>Ученики двух групп больше не смогут отправлять решения. Уже отправленные решения и результаты сохранятся.</p></div>
+  <div class="mf"><button class="btn" data-close>Оставить опубликованным</button><button class="btn danger" data-close data-toast="Задание снято с публикации">Снять с публикации</button></div>
+</div></div>
+<div class="scrim" id="m-leave" hidden><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="ml-h">
+  <div class="mh"><h2 id="ml-h">Изменения не сохранены на сервере</h2></div>
+  <div class="mb"><p>Последние правки хранятся только в этом браузере. Если уйти сейчас, они восстановятся при следующем открытии на этом компьютере.</p></div>
+  <div class="mf"><button class="btn" data-close>Остаться</button><button class="btn danger" data-close>Уйти</button></div>
+</div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+const MARK = `<svg class="mk" role="img" aria-label="Kodik" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 138.85 119.80" fill="currentColor" fill-rule="nonzero"><path d="M12.90 119.74C8.71 119.74 5.51 118.59 3.30 116.27C1.10 113.96 0.00 110.70 0.00 106.52L0.00 13.28C0.00 9.09 1.10 5.87 3.30 3.61C5.51 1.35 8.71 0.22 12.90 0.22C21.38 0.22 25.62 4.57 25.62 13.28L25.62 49.81L39.68 49.81L66.12 6.83C67.89 3.97 69.98 2.07 72.41 1.13C74.83 0.19 77.26 0.00 79.68 0.55C82.11 1.10 84.17 2.26 85.88 4.02C87.59 5.78 88.58 7.93 88.86 10.47C89.13 13.00 88.33 15.76 86.46 18.73L63.15 54.61C71.20 58.58 77.75 65.79 82.82 76.26L95.06 101.39C96.71 104.81 97.23 107.84 96.62 110.48C96.02 113.13 94.72 115.25 92.74 116.85C90.76 118.45 88.44 119.36 85.80 119.58C83.15 119.80 80.59 119.27 78.11 118.01C75.63 116.74 73.73 114.56 72.41 111.48L60.17 85.19C57.75 80.01 54.86 76.35 51.49 74.20C48.13 72.05 43.86 70.97 38.68 70.97L25.62 70.97L25.62 106.52C25.62 110.70 24.55 113.96 22.40 116.27C20.25 118.59 17.08 119.74 12.90 119.74"/><path d="M124.80 119.08C120.39 119.08 116.89 117.76 114.30 115.11C111.71 112.47 110.42 109.05 110.42 104.86C110.42 100.79 111.71 97.45 114.30 94.86C116.89 92.27 120.39 90.98 124.80 90.98C129.21 90.98 132.65 92.27 135.13 94.86C137.61 97.45 138.85 100.79 138.85 104.86C138.85 109.05 137.61 112.47 135.13 115.11C132.65 117.76 129.21 119.08 124.80 119.08"/></svg>`;
+const LOGO = `<svg class="wm" role="img" aria-label="Kodik" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 436.08 124.13" fill="currentColor" fill-rule="nonzero"><path d="M13.03 123.80C8.80 123.80 5.57 122.63 3.34 120.29C1.11 117.95 0.00 114.66 0.00 110.43L0.00 16.21C0.00 11.97 1.11 8.71 3.34 6.43C5.57 4.15 8.80 3.01 13.03 3.01C21.61 3.01 25.90 7.41 25.90 16.21L25.90 55.80L26.23 55.80L70.67 9.36C72.56 7.35 74.54 5.82 76.60 4.76C78.66 3.70 81.03 3.17 83.70 3.17C87.49 3.17 90.27 4.18 92.05 6.18C93.84 8.19 94.62 10.55 94.39 13.28C94.17 16.01 92.95 18.49 90.72 20.72L51.46 60.81L93.06 105.09C95.62 107.87 96.93 110.71 96.98 113.61C97.04 116.50 96.09 118.92 94.14 120.87C92.19 122.82 89.33 123.80 85.54 123.80C82.31 123.80 79.72 123.13 77.77 121.79C75.82 120.46 73.68 118.51 71.34 115.95L26.23 68.50L25.90 68.50L25.90 110.43C25.90 114.66 24.81 117.95 22.64 120.29C20.47 122.63 17.26 123.80 13.03 123.80"/><path d="M152.20 124.13C143.40 124.13 135.74 122.38 129.23 118.87C122.71 115.36 117.67 110.40 114.11 104.00C110.54 97.59 108.76 89.99 108.76 81.19C108.76 72.51 110.54 64.96 114.11 58.56C117.67 52.15 122.71 47.22 129.23 43.77C135.74 40.32 143.40 38.59 152.20 38.59C161.00 38.59 168.66 40.32 175.17 43.77C181.69 47.22 186.76 52.15 190.37 58.56C193.99 64.96 195.80 72.51 195.80 81.19C195.80 89.99 193.99 97.59 190.37 104.00C186.76 110.40 181.69 115.36 175.17 118.87C168.66 122.38 161.00 124.13 152.20 124.13M152.20 105.25C157.55 105.25 161.92 103.30 165.31 99.41C168.71 95.51 170.41 89.44 170.41 81.19C170.41 73.06 168.71 67.08 165.31 63.23C161.92 59.39 157.55 57.47 152.20 57.47C146.85 57.47 142.51 59.39 139.17 63.23C135.83 67.08 134.16 73.06 134.16 81.19C134.16 89.44 135.83 95.51 139.17 99.41C142.51 103.30 146.85 105.25 152.20 105.25"/><path d="M243.08 124.13C235.96 124.13 229.69 122.38 224.29 118.87C218.89 115.36 214.68 110.40 211.67 104.00C208.67 97.59 207.17 89.99 207.17 81.19C207.17 72.40 208.67 64.82 211.67 58.48C214.68 52.13 218.89 47.22 224.29 43.77C229.69 40.32 235.96 38.59 243.08 38.59C248.54 38.59 253.56 39.76 258.12 42.10C262.69 44.44 266.14 47.56 268.48 51.46L268.48 15.87C268.48 7.29 272.66 3.01 281.01 3.01C289.48 3.01 293.71 7.29 293.71 15.87L293.71 110.93C293.71 119.51 289.53 123.80 281.18 123.80C272.82 123.80 268.65 119.51 268.65 110.93L268.65 110.43C266.42 114.66 262.99 118.00 258.37 120.46C253.75 122.91 248.65 124.13 243.08 124.13M250.60 105.25C255.95 105.25 260.32 103.30 263.72 99.41C267.12 95.51 268.81 89.44 268.81 81.19C268.81 73.06 267.12 67.08 263.72 63.23C260.32 59.39 255.95 57.47 250.60 57.47C245.26 57.47 240.91 59.39 237.57 63.23C234.23 67.08 232.56 73.06 232.56 81.19C232.56 89.44 234.23 95.51 237.57 99.41C240.91 103.30 245.26 105.25 250.60 105.25"/><path d="M325.79 25.23C321.11 25.23 317.51 24.14 315.01 21.97C312.50 19.80 311.25 16.71 311.25 12.70C311.25 8.58 312.50 5.43 315.01 3.26C317.51 1.09 321.11 0.00 325.79 0.00C335.36 0.00 340.15 4.23 340.15 12.70C340.15 21.05 335.36 25.23 325.79 25.23M325.79 123.63C321.66 123.63 318.52 122.43 316.35 120.04C314.17 117.64 313.09 114.27 313.09 109.93L313.09 52.79C313.09 43.55 317.32 38.93 325.79 38.93C329.79 38.93 332.89 40.12 335.06 42.52C337.23 44.91 338.32 48.34 338.32 52.79L338.32 109.93C338.32 114.27 337.26 117.64 335.14 120.04C333.03 122.43 329.91 123.63 325.79 123.63"/><path d="M370.56 123.80C362.09 123.80 357.86 119.51 357.86 110.93L357.86 15.87C357.86 7.29 362.09 3.01 370.56 3.01C378.91 3.01 383.09 7.29 383.09 15.87L383.09 74.18L383.42 74.18L407.65 47.28C410.10 44.50 412.33 42.41 414.33 41.02C416.34 39.62 419.12 38.93 422.68 38.93C426.14 38.93 428.81 39.79 430.70 41.52C432.60 43.24 433.54 45.41 433.54 48.03C433.54 50.65 432.43 53.18 430.20 55.63L408.82 79.52L433.04 107.42C435.16 110.10 436.08 112.69 435.80 115.19C435.52 117.70 434.38 119.76 432.37 121.38C430.37 122.99 427.81 123.80 424.69 123.80C420.79 123.80 417.76 123.07 415.59 121.63C413.41 120.18 411.10 117.95 408.65 114.94L383.42 86.87L383.09 86.87L383.09 110.93C383.09 119.51 378.91 123.80 370.56 123.80"/></svg>`;
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const icon = (n, c = "i") => `<svg class="${c}"><use href="#i-${n}"/></svg>`;
+
+/* Логотип и сайдбар */
+$$("[data-logo]").forEach(el => el.innerHTML = LOGO);
+const navItems = [["overview","home","Обзор"],["courses","book","Курсы"],["groups","users","Группы"],["tasks","task","Задания"],["results","chart","Результаты"]];
+const target = { overview: "overview", tasks: "builder", groups: "group", results: "group", courses: "overview" };
+$$("[data-side]").forEach(side => {
+  const cur = side.dataset.side;
+  side.innerHTML = `<div class="logo">${side.classList.contains("rail") ? MARK : LOGO}</div>
+  <div class="school"><span class="avatar" style="border-radius:8px">КБ</span><div>IT-школа «Код будущего»<small>Преподаватель</small></div></div>
+  <nav class="nav" aria-label="Основное меню">${navItems.map(([k, i, l]) => `<button data-go="${target[k]}" aria-label="${l}" title="${l}" ${k === cur || (cur === "groups" && k === "groups") ? 'aria-current="page"' : ""}>${icon(i)}<span class="lbl">${l}</span>${k === "results" ? '<span class="count">5</span>' : ""}</button>`).join("")}</nav>
+  <span class="caption muted nav-sep">АДМИНИСТРАТОР</span>
+  <nav class="nav" aria-label="Школа"><button data-go="school" aria-label="Школа" title="Школа" ${cur === "school" ? 'aria-current="page"' : ""}>${icon("school")}<span class="lbl">Школа</span></button></nav>
+  <div class="me"><span class="avatar">АБ</span><div>Анна Белова<small>Преподаватель · администратор</small></div></div>`;
+});
+
+/* Навигация прототипа */
+function go(id) {
+  $$(".screen").forEach(s => s.classList.toggle("on", s.id === id));
+  $$(".proto-bar nav button").forEach(b => b.dataset.go === id ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  $("#drawer").hidden = true;
+  try { localStorage.setItem("kodik-proto-screen", id); } catch (e) {}
+  if (id === "workspace") renderGutter();
+}
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-go]"); if (g) { go(g.dataset.go); return; }
+  const m = e.target.closest("[data-modal]"); if (m) { openModal(m.dataset.modal); return; }
+  const c = e.target.closest("[data-close]"); if (c) { closeModal(c.closest(".scrim")); if (c.dataset.toast) toast(c.dataset.toast); return; }
+  if (e.target.classList.contains("scrim")) closeModal(e.target);
+  const d = e.target.closest("[data-drawer]"); if (d) { go("group"); $("#drawer").hidden = false; $("#drawer-close").focus(); }
+});
+let lastFocus = null;
+function openModal(id) { lastFocus = document.activeElement; const m = $("#" + id); m.hidden = false; const f = $("input,select,textarea,button", m); f && f.focus(); }
+function closeModal(m) { m.hidden = true; lastFocus && lastFocus.focus(); }
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { const open = $$(".scrim").find(s => !s.hidden); if (open) closeModal(open); else if (!$("#drawer").hidden) $("#drawer").hidden = true; }
+  if (e.key === "Tab") { const open = $$(".scrim").find(s => !s.hidden); if (open) { const f = $$("button,input,select,textarea", open); if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f.at(-1).focus(); } else if (!e.shiftKey && document.activeElement === f.at(-1)) { e.preventDefault(); f[0].focus(); } } }
+});
+$("#drawer-close").onclick = () => $("#drawer").hidden = true;
+function toast(text) { const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.innerHTML = icon("check") + text; $("#toasts").append(t); setTimeout(() => t.remove(), 4000); }
+$("#toast-demo").onclick = () => toast("Изменения сохранены");
+function segment(el, cb) { el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $$("button", el).forEach(x => x.setAttribute("aria-pressed", x === b)); cb(b); }); }
+function tabs(el) { el.addEventListener("click", e => { const b = e.target.closest("[role=tab]"); if (!b) return; $$("[role=tab]", el).forEach(x => { x.setAttribute("aria-selected", x === b); $("#" + x.dataset.t).hidden = x !== b; }); }); }
+
+/* Обзор: состояния */
+segment($("#ov-state"), b => ["data","onb","load","err"].forEach(s => $("#ov-" + s).hidden = s !== b.dataset.s));
+
+/* ============ Конструктор ============ */
+const steps = [
+  ["Тип задания", "Python с тест-кейсами"], ["Основное", "Название, цель, урок"], ["Содержимое", "Условие и подсказки"],
+  ["Редактор ученика", "Стартовый код"], ["Проверка", ""], ["Предпросмотр", "Пройти как ученик"], ["Публикация", "Назначить группе"]];
+let step = 4, verified = false, weak = true;
+const stepState = i => i === 4 ? (verified ? "done" : weak && checkedOnce ? "error" : "") : i < 4 ? "done" : "";
+let checkedOnce = false;
+function renderSteps() {
+  $("#steps").innerHTML = steps.map(([t, s], i) => {
+    const st = stepState(i), sub = i === 4 ? (verified ? "Подтверждено" : checkedOnce ? "Нужен ещё один тест" : "Не проверено") : s;
+    return `<li class="${st}"><button ${i === step ? 'aria-current="step"' : ""} data-step="${i}"><span class="dot">${st === "done" ? "✓" : st === "error" ? "!" : i + 1}</span><span>${t}<small>${sub}</small></span></button></li>`;
+  }).join("");
+}
+$("#steps").addEventListener("click", e => { const b = e.target.closest("[data-step]"); if (b) { step = +b.dataset.step; renderStep(); } });
+const types = [
+  ["task", "Python: написать код", "Ученик пишет программу с нуля. Проверка — тест-кейсы, ожидаемый вывод или вручную.", true],
+  ["tpl", "Python со стартовым кодом", "Готовая заготовка или шаблон: вывод, ввод, условие, цикл, функция, исправление ошибки, творческая.", true],
+  ["doc", "Теория и вопросы", "Шаг урока: объяснение, пример кода, вопрос с вариантами. Создаётся в сценарии урока.", true],
+  ["blocks", "Blockly", "Визуальные блоки. Пока доступны только в исходном курсе Kodik — создание в конструкторе появится позже.", false],
+  ["blocks", "Blockly → Python", "Переходный формат: блоки и код рядом. Появится вместе с Blockly-заданиями.", false]];
+const field = (label, input, help = "") => `<label class="field"><span>${label}</span>${input}${help ? `<small>${help}</small>` : ""}</label>`;
+const sectionH = (n, t, d) => `<div><p class="caption muted">ШАГ ${n} ИЗ 7</p><h1>${t}</h1>${d ? `<p class="muted" style="margin-top:4px">${d}</p>` : ""}</div>`;
+let tests = [{ i: "2", o: "4", v: true, s: "" }, { i: "0", o: "0", v: false, s: "" }];
+function renderStep() {
+  renderSteps();
+  const f = $("#b-inner");
+  const foot = `<div class="b-foot"><button class="btn" ${step === 0 ? "disabled" : ""} data-nav="-1">${icon("back")}Назад</button><span class="muted small">Сохраняется автоматически</span><button class="btn primary" data-nav="1" ${step === 6 ? "hidden" : ""}>Далее: ${steps[Math.min(step + 1, 6)][0]}${icon("arrow")}</button></div>`;
+  let h = "";
+  if (step === 0) h = sectionH(1, "Какое задание создаём?", "Доступны форматы, которые Kodik умеет проверять сейчас.") +
+    `<div class="type-grid" role="radiogroup" aria-label="Тип задания">${types.map(([ic, t, d, ok], i) => `<button class="type-card" role="radio" aria-checked="${i === 0}" ${ok ? "" : 'aria-disabled="true"'}><span class="ico">${icon(ic)}</span><span><h3>${t} ${ok ? "" : '<span class="tag soon">Скоро</span>'}</h3><p>${d}</p></span></button>`).join("")}</div>
+    <div class="card card-b" style="display:flex;flex-direction:column;gap:12px"><h3>Начать с шаблона <span class="muted small" style="font-weight:600">— необязательно</span></h3><div class="row" style="flex-wrap:wrap;gap:8px">${["Вывод текста","Ввод и вычисление","Условие","Цикл","Функция","Исправление ошибки","Творческая работа"].map((t, i) => `<button class="btn sm" aria-pressed="${i === 1}" style="${i === 1 ? "border-color:var(--k-green);background:var(--k-green-soft)" : ""}">${t}</button>`).join("")}</div><p class="muted small">Шаблон заполнит условие, тесты и эталон. Всё можно изменить.</p></div>`;
+  if (step === 1) h = sectionH(2, "Основная информация") +
+    field("Название", `<input class="input" id="f-title" value="Удвоим число">`, "Видно ученику в списке заданий") +
+    field("Учебная цель", `<input class="input" value="Научиться превращать ввод в число и считать с ним">`, "Ученик увидит цель над условием") +
+    `<div class="row" style="align-items:flex-start;gap:16px">${field("Урок", `<select class="select"><option>Python: первые открытия › Модуль 1 › Урок 3 · Ввод и вычисления</option><option>+ Создать новый урок…</option></select>`)}</div>
+    <div class="row" style="gap:24px;align-items:flex-start"><div class="field"><span>Сложность</span><div class="seg"><button aria-pressed="true">Начальный</button><button aria-pressed="false">Средний</button><button aria-pressed="false">Продвинутый</button></div></div>
+    ${field("Тема", `<input class="input" value="input, int, арифметика">`)}</div>` +
+    field("Краткое описание · для преподавателей", `<textarea class="textarea" rows="2">Первое задание на int(input()). Хорошо после разбора типов данных.</textarea>`);
+  if (step === 2) h = sectionH(3, "Содержимое", "Условие, теория и поэтапные подсказки. Изменения сразу видны в предпросмотре.") +
+    `<div class="field"><span>Условие</span><div class="rte"><div class="tb" role="toolbar" aria-label="Форматирование"><button aria-label="Заголовок">H</button><button aria-label="Жирный">B</button><button aria-label="Список">• —</button><button aria-label="Пример кода" class="mono">{ }</button><button disabled aria-label="Изображение — скоро" title="Изображения появятся позже">Изображение · скоро</button></div><div class="body" contenteditable="true" id="f-text" aria-label="Текст условия" role="textbox" aria-multiline="true">Программа получает целое число. Выведи число, которое в два раза больше.</div></div></div>
+    <div class="field"><span>Теория · вкладка «Теория» у ученика</span><div class="rte"><div class="body" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Теория"><p><code>input()</code> всегда возвращает строку. Чтобы считать, преврати её в число:</p><pre class="ex">age = int(input())
+print(age + 1)</pre></div></div></div>
+    <div class="field"><span>Подсказки · открываются по очереди</span><small>Начните с направления мысли, закончите почти готовым решением. Полное решение ученику не показывается.</small>
+    ${[["1 · Направление","Посмотри, какую операцию ты делаешь с числом. «В два раза больше» — это сложение или умножение?"],["2 · Пример","Умножение в Python записывается звёздочкой: 3 * 4 даёт 12."],["3 · Почти решение","Выведи n, умноженное на 2, через print."]].map(([l, t]) => `<div class="hint-edit"><span class="lvl">${l}</span><textarea class="textarea" rows="2" style="min-height:64px" aria-label="Подсказка ${l}">${t}</textarea></div>`).join("")}</div>`;
+  if (step === 3) h = sectionH(4, "Редактор ученика", "Что ученик увидит в редакторе при первом открытии.") +
+    `<div class="field"><span>Стартовый код</span><div class="code sm"><div class="gut"><div>1</div><div>2</div><div>3</div></div><textarea rows="3" aria-label="Стартовый код"># Прочитай число и выведи удвоенное
+n = int(input())
+</textarea></div></div>
+    <div class="field"><span>Обязательные приёмы</span><small>Проверяются автоматически: приём должен влиять на результат, комментарии не засчитываются.</small><div class="row" style="flex-wrap:wrap;gap:8px 24px;margin-top:4px">${["Сохранить значение в переменной","Получить данные через input","Использовать условие if","Использовать цикл for","Описать и вызвать функцию"].map((t, i) => `<label class="check"><input type="checkbox" ${i < 2 ? "checked" : ""}>${t}</label>`).join("")}</div></div>
+    <div class="field"><span>Возможности ученика</span><div style="display:flex;flex-direction:column;gap:10px;margin-top:4px"><label class="check"><input type="checkbox" class="switch" role="switch" checked>Пробный запуск со своим вводом</label><label class="check"><input type="checkbox" class="switch" role="switch" checked>Подсказки (3)</label><label class="check"><input type="checkbox" class="switch" role="switch" checked>Показать пример ввода и вывода</label></div></div>
+    <div class="info-note">${icon("info")}<p><b>Ограничения учебного Python.</b> Нет import, классов и сторонних библиотек; время выполнения и объём вывода ограничены. Ученик увидит это в подписи редактора.</p></div>`;
+  if (step === 4) h = sectionH(5, "Проверка", "Задайте ввод и ожидаемый вывод — Kodik сравнит их с выводом программы ученика.") +
+    `<div class="field"><span>Способ проверки</span><div class="seg" id="mode"><button aria-pressed="true">Тест-кейсы</button><button aria-pressed="false">Только вывод</button><button aria-pressed="false">Ручная проверка</button></div></div>
+    <div class="card" style="padding:16px"><table class="tests"><thead><tr><th style="width:28px">#</th><th>Ввод</th><th>Ожидаемый вывод</th><th style="width:104px">Видимость</th><th style="width:128px">Эталон</th><th style="width:40px"></th></tr></thead><tbody id="tests"></tbody></table>
+    <div class="row" style="justify-content:space-between;margin-top:12px"><button class="btn sm" id="add-test">${icon("plus", "i sm")}Добавить тест</button><span class="muted small">Каждая строка ввода — один вызов input()</span></div></div>
+    <div class="field"><span>Эталонное решение · ученик его не увидит</span><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><textarea rows="2" aria-label="Эталонное решение">n = int(input())
+print(n * 2)</textarea></div></div>
+    <details ${checkedOnce ? "open" : ""}><summary>Типичные ошибки учеников · ${weak ? 2 : 2} примера</summary><p class="muted small" style="margin:8px 0">Kodik убедится, что тесты их отклоняют. Так скрытые ошибки не пройдут проверку.</p>
+    <div class="field"><span>Ошибка 1 · сложение вместо умножения</span><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><textarea rows="2" aria-label="Ошибка 1">n = int(input())
+print(n + 2)</textarea></div></div>
+    <div class="field" style="margin-top:12px"><span>Ошибка 2 · возведение в квадрат</span><div class="code sm"><div class="gut"><div>1</div><div>2</div></div><textarea rows="2" aria-label="Ошибка 2">n = int(input())
+print(n * n)</textarea></div></div></details>
+    <div class="verify"><div class="card-h" style="padding:12px 16px"><h3>Проверка задания перед публикацией</h3><button class="btn primary" id="verify">${checkedOnce ? "Проверить снова" : "Проверить задание"}</button></div>
+    <div id="verify-out">${verifyOut()}</div></div>`;
+  if (step === 5) h = sectionH(6, "Предпросмотр", "Пройдите задание как ученик. Пробные запуски не попадают в результаты.") +
+    `<div class="info-note">${icon("eye")}<p>Панель справа — точная копия экрана ученика с теми же тестами. Попробуйте ошибочное решение, чтобы увидеть обратную связь.</p></div>
+    <button class="btn lg primary" style="align-self:flex-start" data-go="workspace">Открыть на весь экран как ученик ${icon("arrow")}</button>`;
+  if (step === 6) h = sectionH(7, "Публикация") +
+    `<div class="verify"><ul>
+      <li><span class="ok">${icon("check", "i sm")}</span>Условие, цель и урок заполнены</li>
+      <li><span class="ok">${icon("check", "i sm")}</span>Тестов: ${tests.length}, скрытых: ${tests.filter(t => !t.v).length}</li>
+      <li><span class="${verified ? "ok" : "bad"}">${icon(verified ? "check" : "x", "i sm")}</span>${verified ? "Проверка пройдена: эталон проходит, обе ошибки отклонены" : "Проверка не пройдена — вернитесь к шагу «Проверка»"}</li></ul></div>
+    <div class="row"><button class="btn lg primary" id="publish" ${verified ? "" : "disabled"}>Опубликовать</button><button class="btn lg">Оставить черновиком</button></div>
+    <p class="muted small">После публикации выдайте задание группе. Ученики получат ту версию, которая опубликована сейчас; следующие правки станут новой версией.</p>`;
+  f.innerHTML = h + foot;
+  if (step === 4) { renderTests(); segment($("#mode"), () => {}); $("#verify").onclick = runVerify; $("#add-test").onclick = () => { tests.push({ i: "", o: "", v: true, s: "" }); renderTests(); }; }
+  if (step === 6) { const p = $("#publish"); p && (p.onclick = () => { $(".crumbs .tag", $("#builder")).className = "tag ok"; $(".crumbs .tag", $("#builder")).textContent = "Опубликовано · версия 1"; openModal("m-assign"); }); }
+  $$("[data-nav]", f).forEach(b => b.onclick = () => { step = Math.max(0, Math.min(6, step + +b.dataset.nav)); renderStep(); $("#b-form").scrollTop = 0; });
+  $$(".type-card", f).forEach(c => c.onclick = () => { if (c.getAttribute("aria-disabled")) return; $$(".type-card", f).forEach(x => x.setAttribute("aria-checked", x === c)); });
+  const t = $("#f-title"); t && t.addEventListener("input", () => { $("#pv-title").textContent = t.value || "Без названия"; setSave("busy"); clearTimeout(window.st); window.st = setTimeout(() => setSave("ok"), 800); });
+  const tx = $("#f-text"); tx && tx.addEventListener("input", () => $("#pv-text").textContent = tx.textContent);
+  $("#publish-top").setAttribute("aria-disabled", !verified);
+}
+function renderTests() {
+  const pv = $("#pv-vis"); pv && (pv.textContent = `Ученик видит тестов: ${tests.filter(t => t.v).length} из ${tests.length}`);
+  $("#tests").innerHTML = tests.map((t, n) => `<tr><td class="num" style="padding-top:14px"><b>${n + 1}</b></td>
+    <td><textarea aria-label="Ввод теста ${n + 1}" data-k="i" data-n="${n}">${t.i}</textarea></td>
+    <td><textarea aria-label="Ожидаемый вывод теста ${n + 1}" data-k="o" data-n="${n}" style="${t.o === "" ? "border-color:var(--k-danger)" : ""}">${t.o}</textarea>${t.o === "" ? '<small style="color:var(--k-danger);font-weight:600">Заполните вывод</small>' : ""}</td>
+    <td style="padding-top:12px"><label class="check small"><input type="checkbox" class="switch" role="switch" data-v="${n}" ${t.v ? "checked" : ""} aria-label="Тест ${n + 1} виден ученику">${t.v ? "Да" : "Скрыт"}</label></td>
+    <td class="st">${t.s === "ok" ? '<span class="tag ok">Эталон: верно</span>' : t.s === "bad" ? '<span class="tag bad">Эталон: неверно</span>' : '<span class="tag plain">Не проверен</span>'}</td>
+    <td><button class="btn sm icon" aria-label="Удалить тест ${n + 1}" data-del="${n}">${icon("x", "i sm")}</button></td></tr>`).join("");
+  $$("#tests textarea").forEach(a => a.oninput = () => { tests[a.dataset.n][a.dataset.k] = a.value; tests[a.dataset.n].s = ""; verified = false; renderSteps(); });
+  $$("#tests [data-v]").forEach(a => a.onchange = () => { tests[a.dataset.v].v = a.checked; renderTests(); });
+  $$("#tests [data-del]").forEach(a => a.onclick = () => { tests.splice(+a.dataset.del, 1); renderTests(); });
+}
+function verifyOut() {
+  if (!checkedOnce) return `<p class="muted small" style="padding:12px 16px">Kodik запустит эталон на всех тестах и убедится, что типичные ошибки не проходят. Без этого публикация закрыта.</p>`;
+  return `<ul>
+    <li><span class="ok">${icon("check", "i sm")}</span><div>Эталон проходит все тесты (${tests.length})</div></li>
+    <li><span class="ok">${icon("check", "i sm")}</span><div>Ошибка 1 (сложение) отклонена тестом 2</div></li>
+    ${weak ? `<li><span class="bad">${icon("x", "i sm")}</span><div><b>Ошибка 2 (квадрат) проходит все тесты.</b> Для чисел 2 и 0 квадрат и удвоение совпадают. Добавьте тест с другим числом.<div style="margin-top:8px"><button class="btn sm" id="fix">Добавить тест 21 → 42</button></div></div></li>`
+    : `<li><span class="ok">${icon("check", "i sm")}</span><div>Ошибка 2 (квадрат) отклонена тестом 3</div></li>`}</ul>
+    ${verified ? `<div class="banner" style="background:var(--k-success-soft);color:var(--k-success);margin:0 16px 16px">${icon("check")}<p><b>Задание проверено.</b> Его можно публиковать.</p></div>` : ""}`;
+}
+function runVerify() {
+  const b = $("#verify"); b.classList.add("loading"); b.innerHTML = '<span class="spin"></span>Проверяем…'; b.disabled = true;
+  setTimeout(() => {
+    checkedOnce = true; verified = !weak;
+    if (weak) tests = tests.map(t => ({ ...t, s: "ok" }));
+    renderStep();
+    const fx = $("#fix"); fx && (fx.onclick = () => { tests.push({ i: "21", o: "42", v: true, s: "" }); weak = false; renderStep(); toast("Тест добавлен. Запустите проверку снова"); });
+  }, 900);
+}
+function setSave(s) {
+  const el = $("#save");
+  el.className = "save " + s;
+  el.innerHTML = s === "ok" ? icon("cloud", "i sm") + "Сохранено · " + new Date().toTimeString().slice(0, 5)
+    : s === "busy" ? '<span class="spin" style="width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>Сохраняем…'
+    : icon("alert", "i sm") + 'Не сохранено <button class="link" style="color:inherit">Повторить</button>';
+}
+segment($("#save-sim"), b => setSave(b.dataset.s));
+const setPreview = on => { const s = $("#b-shell"); s.classList.toggle("nopreview", !on); $("#b-preview").hidden = !on; $("#toggle-preview span").textContent = on ? "Скрыть предпросмотр" : "Показать предпросмотр"; };
+if (innerWidth < 1366) setPreview(false);
+$("#toggle-preview").onclick = e => { const s = $("#b-shell"); s.classList.toggle("nopreview"); $("#b-preview").hidden = s.classList.contains("nopreview"); $("span", e.currentTarget).textContent = s.classList.contains("nopreview") ? "Показать предпросмотр" : "Скрыть предпросмотр"; };
+$("#publish-top").onclick = () => { if (verified) { step = 6; renderStep(); } else { step = 4; renderStep(); toast("Сначала проверьте задание"); } };
+$("#pv-run").onclick = () => $("#pv-out").innerHTML = '<span class="mono"><span style="color:var(--k-info)">21</span>\n</span><span class="muted small">Программа завершилась без вывода. Добавь print.</span>';
+$("#pv-check").onclick = () => $("#pv-out").innerHTML = '<b style="color:var(--k-danger)">Тест 1 не пройден.</b> <span class="small">Ожидалось <code>4</code>, программа ничего не вывела.</span>';
+
+/* ============ Группа и результаты ============ */
+const students = ["Алиев Тимур","Ковалёв Миша","Лебедева Алиса","Петров Даня","Смирнова Ева","Орлова Соня","Захаров Кирилл","Иванова Маша"];
+const cols = [["Урок 1", ["Привет, мир!"]], ["Урок 2", ["Имя", "Возраст"]], ["Урок 3", ["Удвоим число", "Сумма", "Моя программа"]]];
+const status = (r, c) => ["p","f","r","n"][(r * 7 + c * 3 + (r === 4 && c === 3 ? 1 : 0)) % 9 > 6 ? 1 : (r * 3 + c) % 11 === 5 ? 2 : (c > 3 && (r + c) % 3 === 0) ? 3 : 0];
+function renderMatrix(attOnly) {
+  const flat = cols.flatMap(([, t]) => t);
+  const grid = students.map((_, r) => flat.map((__, c) => r === 4 && c === 3 ? "f" : r === 1 && c === 5 ? "r" : r === 2 && c === 5 ? "r" : r === 3 && c >= 3 ? (c === 3 ? "f" : "n") : status(r, c)));
+  const rows = students.map((n, r) => [n, grid[r]]).filter(([, g]) => !attOnly || g.some(s => s === "f" || s === "r"));
+  const label = { p: "✓", f: "✗", r: "?", n: "" }, word = { p: "принято", f: "не пройдено", r: "на проверке", n: "не начато" };
+  $("#matrix").innerHTML = `<thead><tr><th></th>${cols.map(([m, t]) => `<th colspan="${t.length}">${m}</th>`).join("")}</tr><tr><th></th>${flat.map(t => `<th style="max-width:60px;font-weight:700">${t}</th>`).join("")}</tr></thead>
+  <tbody>${rows.map(([n, g]) => `<tr><td class="name">${n}</td>${g.map((s, c) => `<td><button class="cell ${s}" aria-label="${n}, ${flat[c]}: ${word[s]}" data-drawer>${label[s]}</button></td>`).join("")}</tr>`).join("")}</tbody>`;
+  $("#st-rows").innerHTML = students.map((n, r) => { const done = grid[r].filter(s => s === "p").length; return `<tr class="click"><td><div class="row"><span class="avatar">${n.split(" ").map(w => w[0]).join("")}</span>${n}</div></td><td class="mono">7a-${(r + 1).toString().padStart(2, "0")}</td><td style="width:240px"><div class="row"><div class="bar" style="flex:1"><i style="width:${done / 6 * 100}%"></i></div><span class="num small">${done}/6</span></div></td><td class="muted">${["сегодня, 10:42","сегодня, 10:39","вчера","2 дня назад"][r % 4]}</td><td><button class="btn sm">Сбросить пароль</button></td></tr>`; }).join("");
+}
+renderMatrix(false);
+segment($("#mx-filter"), b => renderMatrix(b.dataset.f === "att"));
+tabs($("#g-tabs"));
+
+/* ============ Среда ученика ============ */
+const code = $("#code");
+function renderGutter() { const n = code.value.split("\n").length; $("#gut").innerHTML = Array.from({ length: Math.max(n, 12) }, (_, i) => `<div>${i + 1}</div>`).join(""); }
+code.addEventListener("input", renderGutter);
+code.addEventListener("scroll", () => $("#gut").scrollTop = code.scrollTop);
+let escaped = false;
+code.addEventListener("keydown", e => {
+  if (e.key === "Escape") { escaped = true; return; }
+  if (e.key === "Tab" && !escaped) { e.preventDefault(); const s = code.selectionStart; code.setRangeText("    ", s, code.selectionEnd, "end"); renderGutter(); }
+  if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); e.shiftKey ? $("#check").click() : $("#run").click(); }
+  if (e.key !== "Tab") escaped = false;
+});
+let fs = 15; $$("[data-fs]").forEach(b => b.onclick = () => { fs = Math.max(13, Math.min(20, fs + +b.dataset.fs)); $("#editor").style.fontSize = fs + "px"; $("#editor").style.lineHeight = Math.round(fs * 1.6) + "px"; });
+$("#reset-code").onclick = () => { code.value = "# Прочитай число и выведи удвоенное\nn = int(input())\n"; renderGutter(); };
+tabs($("#ws-tabs")); tabs($("#run-tabs"));
+const ok = () => /print\s*\(\s*n\s*\*\s*2\s*\)|print\s*\(\s*2\s*\*\s*n\s*\)|print\s*\(\s*n\s*\+\s*n\s*\)/.test(code.value);
+function showTab(id) { $$("#run-tabs [role=tab]").forEach(x => { x.setAttribute("aria-selected", x.dataset.t === id); $("#" + x.dataset.t).hidden = x.dataset.t !== id; }); }
+$("#run").onclick = () => {
+  showTab("r-console"); const v = $("#stdin").value || "0", n = parseInt(v, 10);
+  if (/print\s*\(\s*n\s*\)\s*\(/.test(code.value) || !/input/.test(code.value)) { $("#r-console").innerHTML = '<div class="feedback bad"><b>Программа не прочитала ввод.</b> Используй input(), чтобы получить число.</div>'; return; }
+  if (/print\(n\s*\+\s*"/.test(code.value)) { $("#r-console").innerHTML = `<div class="feedback bad"><b>Строка 2: нельзя сложить число и текст.</b><span>Python не знает, как сложить int и str. Преврати число в текст через str() или выведи их через запятую.</span><details><summary>Текст ошибки Python</summary><code>TypeError: unsupported operand type(s) for +: 'int' and 'str'</code></details></div>`; return; }
+  const m = code.value.match(/print\s*\(\s*n\s*([+*\-])\s*(\w+)\s*\)/); let out = "";
+  if (m) { const b = m[2] === "n" ? n : +m[2]; out = String(m[1] === "+" ? n + b : m[1] === "*" ? n * b : n - b); }
+  $("#r-console").innerHTML = `<span class="in">${v}</span>\n${out}\n<span class="muted">— программа завершилась за 0,01 с</span>`;
+};
+$("#check").onclick = () => {
+  showTab("r-tests"); const b = $("#check"); b.classList.add("loading"); b.innerHTML = '<span class="spin"></span>Проверяем…';
+  setTimeout(() => {
+    b.classList.remove("loading"); b.textContent = "Проверить решение";
+    $("#r-tests").innerHTML = ok()
+      ? `<div class="feedback ok"><b>Все 3 теста пройдены. Задание выполнено!</b><span>Ты использовал input и переменную — как и требовалось.</span><div><button class="btn sm primary" data-go="student">Следующее задание: «Моя программа» ${icon("arrow", "i sm")}</button></div></div>`
+      : `<div class="feedback bad"><b>Пройдено 1 из 3 тестов.</b><span>Проверь, какую операцию ты делаешь с числом.</span>
+        <div class="diff"><span>Тест 2 · ввод</span><span>21</span><span>Ожидалось</span><span>42</span><span>Получено</span><span style="color:var(--k-danger)">23</span></div>
+        <span class="small muted">Тест 3 скрытый — его данные не показываются. Подсказки помогут, если застрял.</span></div>`;
+  }, 700);
+};
+$$("[data-hint]").forEach(b => b.onclick = () => {
+  $("#h1").innerHTML = `<h4>${icon("bulb", "i sm")}Подсказка 1 · Куда смотреть</h4><p>Посмотри, какую операцию ты делаешь с числом. «В два раза больше» — это сложение или умножение?</p>`;
+  $("#h2").classList.remove("locked"); $("#h2").innerHTML = `<h4>${icon("bulb", "i sm")}Подсказка 2 · Похожий пример</h4><button class="btn sm" id="h2b">Открыть подсказку</button>`;
+  $("#ws-tabs [data-t=w-hints] .cnt").textContent = "1/3";
+  $("#h2b").onclick = () => { $("#h2").innerHTML = `<h4>${icon("bulb", "i sm")}Подсказка 2 · Похожий пример</h4><p>Умножение в Python записывается звёздочкой: <code>3 * 4</code> даёт 12.</p>`; $("#ws-tabs [data-t=w-hints] .cnt").textContent = "2/3"; };
+});
+$("#focus-btn").onclick = e => { const on = $("#ws").classList.toggle("focus"); e.currentTarget.setAttribute("aria-pressed", on); };
+function drag(handle, onMove) {
+  handle.addEventListener("pointerdown", e => { handle.setPointerCapture(e.pointerId); const mv = ev => onMove(ev); handle.addEventListener("pointermove", mv); handle.addEventListener("pointerup", () => handle.removeEventListener("pointermove", mv), { once: true }); });
+}
+let leftW = 420, consoleH = 260;
+const applySizes = () => { $("#ws").style.setProperty("--left-w", leftW + "px"); $("#ws-right").style.setProperty("--console-h", consoleH + "px"); };
+drag($("#split-v"), e => { leftW = Math.max(320, Math.min(640, e.clientX - $("#ws").getBoundingClientRect().left)); applySizes(); });
+drag($("#split-h"), e => { consoleH = Math.max(140, Math.min(480, $("#ws-right").getBoundingClientRect().bottom - e.clientY)); applySizes(); });
+$("#split-v").onkeydown = e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { leftW = Math.max(320, Math.min(640, leftW + (e.key === "ArrowRight" ? 24 : -24))); applySizes(); } };
+$("#split-h").onkeydown = e => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { consoleH = Math.max(140, Math.min(480, consoleH + (e.key === "ArrowUp" ? 24 : -24))); applySizes(); } };
+
+/* ============ Палитра ============ */
+$("#swatches").innerHTML = [["Ink","#17352E","текст 13,1:1"],["CTA","#17463A","белый 10,6:1"],["Green","#235E51","знак K. 7,5:1"],["Green Soft","#E7EDE4","выбор"],["Canvas","#F8F7F2","фон"],["Surface","#FFFEFA","карточки"],["Muted","#5F6E67","5,3:1"],["Line strong","#7F8B84","поля 3,5:1"],["Accent","#C77C5D","графика"],["Accent text","#974F36","6,0:1"],["Success","#24694C","6,5:1"],["Warning","#9A5B12","5,4:1"],["Danger","#B3412F","5,6:1"],["Info","#1F6F8B","фокус 5,6:1"],["Line","#E2E5DD","разделитель"],["Sage","#B7CFCA","графика"]]
+  .map(([n, h, d]) => `<div class="sw"><i style="background:${h}"></i><div><b>${n}</b><span class="mono" style="font-size:12px">${h}</span><br><span class="muted">${d}</span></div></div>`).join("");
+
+renderStep();
+try { const s = localStorage.getItem("kodik-proto-screen"); if (s && $("#" + s)) go(s); } catch (e) {}
+</script>
