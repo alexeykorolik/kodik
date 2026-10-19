@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
-  testMatch: ["b2b.e2e.ts", "pilot.e2e.ts","curriculum.e2e.ts","task-quality.e2e.ts","modes.e2e.ts","pilot-operations.e2e.ts","journal-refresh.e2e.ts","block-keyboard.e2e.ts","owner-conflicts.e2e.ts"],
+  testMatch: ["b2b.e2e.ts", "pilot.e2e.ts","curriculum.e2e.ts","task-quality.e2e.ts","modes.e2e.ts","pilot-operations.e2e.ts","journal-refresh.e2e.ts","block-keyboard.e2e.ts","owner-conflicts.e2e.ts","desktop-layout.e2e.ts"],
   timeout: 120000,
   workers: 1,
   use: {
