@@ -2358,3 +2358,8 @@ body {
 .b2b-shell .panel .actions label { flex:1; min-width:120px; }
 .b2b-shell .panel { min-width:0; }
 @media (max-height:800px) { .workspace-page .coding-panel > .console { flex-basis:125px; } .workspace-page .workspace-title h1 { font-size:25px; } }
+.starter-problem { margin-top: 12px; padding: 12px 16px; border-radius: 12px; background: var(--attention-soft); color: var(--attention); }
+.starter-problem h3 { margin: 0 0 6px; }
+.starter-problem p { color: #17352e; }
+.recommendation-check ul { list-style: none; padding: 0; margin: 6px 0; }
+.recommendation-check li.ok { color: #24694c; } .recommendation-check li.bad { color: #8a5300; }

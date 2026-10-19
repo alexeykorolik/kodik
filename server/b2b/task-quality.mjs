@@ -61,6 +61,14 @@ export function createTaskQuality({db,own,teacher,fail,tx,validateTask,limit}){
     if(starter?.translatable){const t=await translateBlocks(config.starter_blocks,config.palette,{tenant:u.org_id});if(t.ok){const r=await grade(task,t.python,{tenant:u.org_id});if(r.status==='passed')starterNote='Стартовые блоки уже проходят все тесты — ученику нечего делать.'}}
     return {status:'approved',python:translation.python,translator:translation.translator,used_blocks:translation.block_types,starter_note:starterNote};
   }
+  /** Does submitting the untouched start already pass? Python start always (Python is always supported), block start when block modes are on. */
+  async function starterProof(task,block,u){
+    const solved=[];
+    if(task.starter&&task.starter.trim()){const r=await grade(task,task.starter,{tenant:u.org_id});if(r.status==='checker_error')return {status:'checker_error'};if(r.status==='passed')solved.push({mode:'python',where:'стартовый код Python'})}
+    if(block.starter_note)solved.push({mode:'blocks',where:'стартовые блоки'});
+    if(!solved.length)return {status:'ok'};
+    return {status:'solved_starter',solved,message:`Заготовка уже решает задачу: ${solved.map(s=>s.where).join(' и ')}. Отправив её без изменений, ученик получит «Выполнено». Оставьте в заготовке пропуск или ошибку, которую нужно исправить. Готовую программу для разбора покажите шагом урока «Пример кода».`};
+  }
   async function handle(path,method,b,u){
     let match;
     if(path==='/api/task-templates'&&method==='GET'){teacher(u);return {items:taskTemplates}}
@@ -80,7 +88,7 @@ export function createTaskQuality({db,own,teacher,fail,tx,validateTask,limit}){
       }else if(b.revision!==task.revision)fail(409,'Ревизия изменилась. Сохраните актуальный черновик.');
       validateTask(parsed(task),u,true);
       const wrong=JSON.parse(task.wrong_solutions),runtime=runtimeFor(task);
-      let reference,results=[],status,block={status:'not_required'};
+      let reference,results=[],status,block={status:'not_required'},starter={status:'not_checked'};
       if(task.check_mode==='manual'){
         if(!task.manual_criteria.trim())fail(400,'Добавьте понятные критерии ручной проверки.');
         reference={status:'manual_configured',message:'Критерии ручной проверки сохранены. Качество работы оценивает преподаватель.'};status='approved';
@@ -95,16 +103,19 @@ export function createTaskQuality({db,own,teacher,fail,tx,validateTask,limit}){
           status=results.some(r=>r.status==='checker_error')?'checker_error':results.some(r=>r.status==='passed')?'weak_tests':'approved';
         }
         if(status==='approved'){block=await blockProof(task,u);if(block.status==='checker_error')status='checker_error';else if(block.status!=='approved'&&block.status!=='not_required')status='bad_block_solution'}
+        // Graded practice must leave work for the learner: a start that already passes every test and
+        // learning rule in any allowed way of solving cannot be published. Incomplete starts are fine.
+        if(status==='approved'){starter=await starterProof(task,block,u);if(starter.status==='checker_error')status='checker_error';else if(starter.status==='solved_starter')status='solved_starter'}
       }
       // No await inside the transaction; a second author can edit while checks run.
       const current=own('tasks',task.id,u);
       if((!replay&&(current.revision!==task.revision||fingerprint(current)!==fingerprint(task)))||runtimeFor(task)!==runtime)fail(409,'Задание или исполнитель изменились во время проверки. Результат не подтверждает новую ревизию.');
       const id=randomUUID(),at=new Date().toISOString();
       tx(()=>{
-        db.prepare('INSERT INTO task_verifications VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,u.org_id,task.id,u.id,task.revision,fingerprint(task),runtime,status,JSON.stringify(reference),JSON.stringify(results),at,JSON.stringify(block));
+        db.prepare('INSERT INTO task_verifications VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,u.org_id,task.id,u.id,task.revision,fingerprint(task),runtime,status,JSON.stringify(reference),JSON.stringify(results),at,JSON.stringify({...block,starter}));
         db.prepare('INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)').run(randomUUID(),u.org_id,u.id,replay?'task.verification_replayed':'task.verified',task.id,JSON.stringify({verification_id:id,revision:task.revision,status,runtime_hash:runtime}),at);
       });
-      return {id,revision:task.revision,status,replay,publication_eligible:current.revision===task.revision&&fingerprint(current)===fingerprint(task),reference,wrong:results,block,message:({approved:task.check_mode==='manual'?'Критерии ручной проверки подтверждены.':block.status==='approved'?'Эталон и блоковый образец проходят, неправильные примеры отклоняются.':'Эталон проходит, неправильные примеры отклоняются.',bad_reference:'Эталон не проходит проверку. Исправьте решение или тесты.',weak_tests:'Неправильное решение прошло. Усильте тесты перед публикацией.',bad_block_solution:block.message||'Блоковый образец не подтверждён.',checker_error:'Технический сбой проверки. Подтверждение не выдано.'})[status]};
+      return {id,revision:task.revision,status,starter,replay,publication_eligible:current.revision===task.revision&&fingerprint(current)===fingerprint(task),reference,wrong:results,block,message:({approved:task.check_mode==='manual'?'Критерии ручной проверки подтверждены.':block.status==='approved'?'Эталон и блоковый образец проходят, неправильные примеры отклоняются.':'Эталон проходит, неправильные примеры отклоняются.',bad_reference:'Эталон не проходит проверку. Исправьте решение или тесты.',weak_tests:'Неправильное решение прошло. Усильте тесты перед публикацией.',bad_block_solution:block.message||'Блоковый образец не подтверждён.',solved_starter:starter.message,checker_error:'Технический сбой проверки. Подтверждение не выдано.'})[status]};
     }
     return undefined;
   }

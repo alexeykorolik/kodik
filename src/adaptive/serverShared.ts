@@ -5,3 +5,4 @@
 export { MODES, MODE_LABEL, isMode, supportedModes, defaultPolicy, validatePolicy, storedPolicy, effectivePolicy, checkMode, canSelfSwitch } from './modePolicy'
 export { validateWorkspaceShape, BLOCKS, LIMITS, TRANSLATOR_VERSION, WORKSPACE_FORMAT } from './blockProgram'
 export { parseLearningConfig, validateLearningConfig, publicLearningConfig, SKILLS, EMPTY_CONFIG } from './learningConfig'
+export { normalizeProgram, isUnchangedStart } from './evidence'
