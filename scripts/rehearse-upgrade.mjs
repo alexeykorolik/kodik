@@ -17,7 +17,7 @@ export async function rehearseUpgrade(source,target,password='Fill-pilot-data-32
     const hasRuntime=old.prepare('PRAGMA table_info(attempts)').all().some(c=>c.name==='runtime');
     before={schema:old.prepare('PRAGMA user_version').get().user_version,runtimes:JSON.stringify(old.prepare(`SELECT id,${hasRuntime?'runtime':'NULL runtime'} FROM attempts ORDER BY id`).all().map(r=>({...r}))),jobs:old.prepare('SELECT id,status,result,attempt_id FROM submission_jobs ORDER BY id').all().map(r=>({...r})),
       counts:Object.fromEntries(['licenses','companies','assignments','assignment_drafts','assignment_block_drafts','attempts','review_history','recommendations','recommendation_events','mode_events','help_requests','task_versions','users','groups_'].map(t=>[t,count(t)])),
-      recommendations:JSON.stringify(old.prepare('SELECT id,assignment_id,user_id,target_mode,rule_version,basis,status,reason,created_at,teacher_id FROM recommendations ORDER BY id').all().map(r=>({...r}))),
+      recommendations:JSON.stringify(old.prepare(`SELECT id,assignment_id,user_id,target_mode,rule_version,basis,status,${old.prepare('PRAGMA table_info(recommendations)').all().some(c=>c.name==='reason')?'reason':'NULL reason'},created_at,teacher_id FROM recommendations ORDER BY id`).all().map(r=>({...r}))),
       offers:JSON.stringify(old.prepare('SELECT assignment_id,user_id,mode,offered_mode,override FROM assignment_mode_state ORDER BY assignment_id,user_id').all().map(r=>({...r}))),
       archived:JSON.stringify(old.prepare('SELECT id,archived FROM groups_ ORDER BY id').all().map(r=>({...r})))};
   }finally{old.close()}
