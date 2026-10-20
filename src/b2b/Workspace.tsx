@@ -74,7 +74,7 @@ function useWorkspaceController({
         ...(blocks ?? { mode: "python", code }),
         inputs: inputs === "" ? [] : inputs.split("\n"),
         assignment_id:task.assignment_id,
-      });
+      }, "POST", undefined, { owner: state.user as { id: string; org_id: string } });
       // The mirror must match what actually ran; a mismatch means an outdated page.
       if (blocks && response.python !== undefined && modes.mirror.ok && response.python !== modes.mirror.python)
         setError("Код на экране отличается от проверенного сервером. Обновите страницу — работа сохранена.");
@@ -337,7 +337,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               {modes.mode === "mixed" && <PythonMirror modes={modes} />}
             </div>
           ) : (
-          <fieldset disabled={readOnly || busy || submission.busy}>
+          <fieldset disabled={readOnly || busy || submission.busy || submission.phase === "paused"}>
             <MinimalCodeEditor
               value={code}
               onChange={(v) => {
@@ -364,17 +364,17 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
             </small>
             <div className="actions">
               <button
-                disabled={readOnly || busy || submission.busy}
+                disabled={readOnly || busy || submission.busy || submission.phase === "paused"}
                 onClick={() => run(false)}
               >
                 ▷ Запустить
               </button>
               <button
                 className="primary"
-                disabled={readOnly || busy || submission.busy || submission.phase === "held" || submission.phase === "reconnecting"}
+                disabled={readOnly || busy || submission.busy || submission.phase === "held" || submission.phase === "reconnecting" || submission.phase === "paused"}
                 onClick={() => run(true)}
               >
-                {submission.busy || submission.phase === "held" || submission.phase === "reconnecting"
+                {submission.busy || submission.phase === "held" || submission.phase === "reconnecting" || submission.phase === "paused"
                   ? submission.label
                   : submission.phase === "unconfirmed"
                     ? "Отправить то же решение ещё раз"
@@ -407,6 +407,11 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
             {(submission.busy || submission.waiting) && (
               <div className="submission-state" role="status" data-testid="submission-state" data-phase={submission.phase}>
                 {submission.label}
+                {(submission.phase === "reconnecting" || submission.phase === "held") && (
+                  <button onClick={() => submission.retry()}>
+                    Узнать результат сейчас
+                  </button>
+                )}
                 {submission.canCancel && (
                   <button onClick={() => void submission.cancel()}>
                     Отменить ожидание

@@ -13,7 +13,7 @@ const SCREENS = [
   { name: "1920x1080@150%", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1.5 },
 ];
 async function call(r: APIRequestContext, path: string, body?: unknown, method = "POST", expected = 200) {
-  const res = await r.fetch("http://127.0.0.1:4186/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: "http://127.0.0.1:4186" }, data: body });
+  const res = await r.fetch("http://127.0.0.1:4186/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: "http://127.0.0.1:4186", "X-Kodik-Client": "2" }, data: body });
   const data = await res.json();
   expect(res.status(), JSON.stringify(data)).toBe(expected);
   return data;
@@ -83,7 +83,9 @@ for (const screen of SCREENS) test(`desktop ${screen.name}: lesson screens fit, 
 
     // Learner workspace: the check button is reachable at this size.
     await call(context.request, "/auth/login", { login: student, password });
+    // Another account in this browser: open the page anew (the teacher's tab would show the switch).
     await page.goto(`/#assignment/${assignmentId}`);
+    await page.reload();
     await expect(page.locator("#python-answer")).toBeVisible();
     await fits(page, `${screen.name} learner`);
     await reachable(page, page.getByRole("button", { name: /Проверить решение/ }), `${screen.name} learner check`);
@@ -96,6 +98,7 @@ for (const screen of SCREENS) test(`desktop ${screen.name}: lesson screens fit, 
     // Owner cabinet.
     await call(context.request, "/auth/login", { login: owner, password });
     await page.goto("/");
+    await page.reload();
     await expect(page.getByRole("heading", { name: "Клиенты и лицензии", exact: true })).toBeVisible();
     await fits(page, `${screen.name} owner`);
     await reachable(page, page.getByRole("button", { name: "Добавить компанию" }), `${screen.name} owner add`);

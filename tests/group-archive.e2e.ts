@@ -6,7 +6,7 @@ import { taskFixture } from "./helpers/task-fixture.mjs";
 const password = "Archive-browser-test-321!";
 async function call(r: APIRequestContext, path: string, body?: unknown, method = "POST", expected = 200) {
   if (path === "/tasks" && body) body = taskFixture(body as object);
-  const res = await r.fetch("http://127.0.0.1:4186/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: "http://127.0.0.1:4186" }, data: body });
+  const res = await r.fetch("http://127.0.0.1:4186/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: "http://127.0.0.1:4186", "X-Kodik-Client": "2" }, data: body });
   const data = await res.json();
   expect(res.status(), `${path}: ${JSON.stringify(data)}`).toBe(expected);
   return data;

@@ -12,6 +12,7 @@ async function call(path, body) {
     method: "POST",
     headers: {
       Origin: origin,
+      "X-Kodik-Client": "2",
       "Content-Type": "application/json",
       Cookie: cookie,
     },

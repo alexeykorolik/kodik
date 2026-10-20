@@ -1,6 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 const password='Quality-browser-test-321!';
-async function call(page:Page,path:string,body?:unknown){const r=await page.request.fetch('/api'+path,{method:body===undefined?'GET':'POST',headers:{Origin:'http://127.0.0.1:4186'},data:body});const data=await r.json();expect(r.status(),JSON.stringify(data)).toBe(200);return data}
+async function call(page:Page,path:string,body?:unknown){const r=await page.request.fetch('/api'+path,{method:body===undefined?'GET':'POST',headers:{Origin:'http://127.0.0.1:4186','X-Kodik-Client':'2'},data:body});const data=await r.json();expect(r.status(),JSON.stringify(data)).toBe(200);return data}
 async function setup(page:Page){const tag=crypto.randomUUID().slice(0,8);await call(page,'/auth/register',{school:'Quality '+tag,name:'Author',login:'quality-'+tag,password});const course=await call(page,'/courses',{title:'Course'}),module=await call(page,'/modules',{title:'Module',course_id:course.id}),lesson=await call(page,'/lessons',{title:'Lesson',module_id:module.id});await page.goto(`/#builder/new?lesson=${lesson.id}`);return {lesson}}
 
 async function checkFunctionTemplate(page:Page,lessonId:string){

@@ -2,7 +2,7 @@ import { test, expect, type Page, type APIRequestContext } from "@playwright/tes
 const password = "Journal-browser-pass-321!";
 const ORIGIN = "http://127.0.0.1:4186";
 async function call(r: APIRequestContext, path: string, body?: unknown, method = "POST") {
-  const res = await r.fetch("/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: ORIGIN }, data: body });
+  const res = await r.fetch("/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: ORIGIN, "X-Kodik-Client": "2" }, data: body });
   const value = await res.json();
   expect(res.status(), `${path}: ${JSON.stringify(value)}`).toBe(200);
   return value;

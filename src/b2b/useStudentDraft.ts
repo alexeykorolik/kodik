@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ApiError, type Row } from "./api";
+import { api, ApiError, isOwnerMismatch, type Row } from "./api";
 export function useStudentDraft(
-  owner: { id: string; org_id: string },
+  learner: { id: string; org_id: string },
   task: Row,
   serverDraft?: Row,
 ) {
+  // The learner is fixed for the life of this editor: its saves always name that learner, so after
+  // another child signs in elsewhere the server refuses them and the copy stays under this learner's key.
+  const [owner] = useState(() => ({ id: learner.id, org_id: learner.org_id }));
   const key = `kodik:student-draft:${owner.org_id}:${owner.id}:${task.assignment_id||task.id}`;
   const [backup] = useState(() => {
     try {
@@ -72,6 +75,8 @@ export function useStudentDraft(
             `/tasks/${task.id}/draft`,
             { code: value, revision: serverRevision.current,assignment_id:task.assignment_id },
             "PUT",
+            undefined,
+            { owner },
           );
           serverRevision.current = result.revision;
           lastSaved.current = value;
@@ -87,6 +92,7 @@ export function useStudentDraft(
           return true;
         } catch (e) {
           cache();
+          if (isOwnerMismatch(e)) { blocked.current = true; return false; }
           if (e instanceof ApiError && e.status === 409 && e.details.current) {
             blocked.current = true;
             if (mounted.current) setConflict(e.details.current as Row);

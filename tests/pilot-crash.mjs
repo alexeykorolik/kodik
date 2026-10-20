@@ -35,6 +35,7 @@ test("accepted checks survive a real server crash and produce one result per req
       method: body === undefined ? "GET" : "POST",
       headers: {
         Origin: origin,
+        "X-Kodik-Client": "2",
         "Content-Type": "application/json",
         Cookie: client.cookie || "",
       },

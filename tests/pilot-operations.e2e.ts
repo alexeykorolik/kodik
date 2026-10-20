@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 // @ts-expect-error untyped server module with the reviewed course data
 import {starterLessons} from '../server/b2b/starter-course.mjs';
 const password='Pilot-browser-pass-321!';
-async function call(page:Page,path:string,body?:unknown,method='POST'){const r=await page.request.fetch('/api'+path,{method:body===undefined?'GET':method,headers:{Origin:'http://127.0.0.1:4186'},data:body});const value=await r.json();expect(r.status(),JSON.stringify(value)).toBe(200);return value}
+async function call(page:Page,path:string,body?:unknown,method='POST'){const r=await page.request.fetch('/api'+path,{method:body===undefined?'GET':method,headers:{Origin:'http://127.0.0.1:4186','X-Kodik-Client':'2'},data:body});const value=await r.json();expect(r.status(),JSON.stringify(value)).toBe(200);return value}
 test('owner connects school and license; admin imports class; child completes all six starter lessons in the UI',async({page,browser})=>{
   test.setTimeout(180000);await page.setViewportSize({width:1366,height:768});const tag=crypto.randomUUID().slice(0,8);
   const owner=await call(page,'/auth/register',{school:`Owner ${tag}`,name:'Owner',login:`pilot-owner-${tag}`,password});

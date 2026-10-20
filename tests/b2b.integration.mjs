@@ -37,6 +37,7 @@ test("B2B: real HTTP, roles, tenant isolation, grading and persistence", async (
         ...(body === undefined
           ? {}
           : { "Content-Type": "application/json", Origin: customOrigin }),
+        "X-Kodik-Client": "2",
         ...(client.cookie ? { Cookie: client.cookie } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),

@@ -7,7 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 const password = "Submission-recovery-321!";
 const origin = "http://127.0.0.1:4186";
 async function call(r: APIRequestContext, path: string, body?: unknown, method = "POST", expected = 200) {
-  const res = await r.fetch(origin + "/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: origin }, data: body });
+  const res = await r.fetch(origin + "/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: origin, "X-Kodik-Client": "2" }, data: body });
   const data = await res.json();
   expect(res.status(), `${path}: ${JSON.stringify(data)}`).toBe(expected);
   return data;

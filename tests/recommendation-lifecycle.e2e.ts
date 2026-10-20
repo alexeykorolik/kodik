@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 // live offer stays reachable whatever the volume of other groups' history.
 const password = "Rec-lifecycle-test-321!";
 async function call(r: APIRequestContext, path: string, body?: unknown, method = "POST", expected = 200) {
-  const res = await r.fetch("http://127.0.0.1:4186/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: "http://127.0.0.1:4186" }, data: body });
+  const res = await r.fetch("http://127.0.0.1:4186/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: "http://127.0.0.1:4186", "X-Kodik-Client": "2" }, data: body });
   const data = await res.json();
   expect(res.status(), JSON.stringify(data)).toBe(expected);
   return data;

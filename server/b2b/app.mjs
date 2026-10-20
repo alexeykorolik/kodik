@@ -271,6 +271,21 @@ export function createApp({
     if (!taskQuality.versionCompatible(task.version_id, user.org_id).ok)
       fail(409, "Проверка этого задания временно недоступна: Kodik обновил проверяющую среду, и совместимость задания ещё не подтверждена. Черновик сохраняется — продолжайте работу и проверьте решение позже.", { code: "runtime_unconfirmed" });
   }
+  /**
+   * A learner's tab from an earlier release sends no X-Kodik-Client and no expected owner, so it cannot
+   * tell whose stored operation it repeats. It may still recover the signed-in learner's own accepted
+   * check; an operation of another learner ends this tab's sign-in view (401 keeps its local record);
+   * any other learner data request asks for a reload. Nothing is written for it.
+   */
+  function outdatedTab(user, path, method, b) {
+    const job = /^\/api\/submissions\/([^/]+)$/.exec(path)?.[1];
+    if (!(path === "/api/state" || job || (path.startsWith("/api/tasks/") && method !== "GET"))) return;
+    const owner = job ? get("SELECT user_id FROM submission_jobs WHERE id=? AND org_id=?", job, user.org_id)?.user_id
+      : method === "POST" && typeof b.request_key === "string" ? (get("SELECT user_id FROM submission_jobs WHERE org_id=? AND request_key=? ORDER BY user_id=? DESC", user.org_id, b.request_key, user.id)?.user_id) : undefined;
+    if (owner === user.id && (!job || method === "GET")) return;
+    if (owner && owner !== user.id) fail(401, "Эта вкладка открыта для другого ученика. Его работа сохранена — обновите страницу и войдите снова.", { code: "owner_mismatch" });
+    fail(409, "Kodik обновился. Обновите страницу (F5): черновик сохранён на этом компьютере.", { code: "client_outdated" });
+  }
   async function acceptSubmission(user, task, b) {
     if (user.role !== "student") fail(403, "Отправка доступна ученику.");
     const replay=submissions.replay(user,task,b);
@@ -450,6 +465,13 @@ export function createApp({
         Date.now(),
       );
     if (!user) fail(401, "Войдите в аккаунт.");
+    // A tab names whose work it acts for (X-Kodik-User / X-Kodik-Org). On a shared computer another child
+    // may have signed in from a neighbouring tab since: nothing is done under that child's session, before
+    // any lookup, replay or write. The header only checks the session; the author is always the session user.
+    const expectedUser = req.headers["x-kodik-user"], expectedOrg = req.headers["x-kodik-org"];
+    if ((expectedUser !== undefined && expectedUser !== user.id) || (expectedOrg !== undefined && expectedOrg !== user.org_id))
+      fail(409, "В этом браузере уже открыт другой аккаунт. Работа прежнего ученика сохранена за ним.", { code: "owner_mismatch", session_user: { id: user.id, name: user.name } });
+    if (user.role === "student" && req.headers["x-kodik-client"] === undefined) outdatedTab(user, path, method, b);
     if (path === "/api/auth/logout" && method === "POST") {
       run("DELETE FROM sessions WHERE token=?", hash(token));
       res.setHeader(

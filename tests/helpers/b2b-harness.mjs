@@ -34,6 +34,7 @@ export async function harness({verifyPublications=true}={}) {
       headers: {
         Origin: origin,
         "Content-Type": "application/json",
+        "X-Kodik-Client": "2",
         ...(client.cookie ? { Cookie: client.cookie } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -104,6 +105,9 @@ export async function harness({verifyPublications=true}={}) {
     password,
     dir,
     dbPath,
+    get origin() {
+      return origin;
+    },
     get db() {
       return app.db;
     },

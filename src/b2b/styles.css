@@ -296,6 +296,26 @@ button.dark {
   padding: 100px;
   text-align: center;
 }
+.account-switched {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+.account-switched section {
+  max-width: 640px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 32px;
+}
+.account-switched h1 {
+  font-size: 28px;
+  margin: 8px 0 16px;
+}
+.account-switched p {
+  line-height: 1.5;
+}
 .connection-error {
   background: #ffebe1;
   padding: 10px;

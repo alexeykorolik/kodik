@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ApiError, type Row } from "./api";
+import { api, ApiError, isOwnerMismatch, type Row } from "./api";
 
 /**
  * Learner's block workspace draft for one assignment: one draft shared by «Блоки» and
  * «Блоки + Python». Safe to save while incomplete. The local copy is keyed by school,
  * learner and assignment, so a shared school computer never mixes two children's work.
  */
-export function useBlockDraft(owner: { id: string; org_id: string }, task: Row, serverDraft?: Row, enabled = true) {
+export function useBlockDraft(learner: { id: string; org_id: string }, task: Row, serverDraft?: Row, enabled = true) {
+  // Fixed for the life of this editor (see useStudentDraft): saves name this learner only.
+  const [owner] = useState(() => ({ id: learner.id, org_id: learner.org_id }));
   const key = `kodik:block-draft:${owner.org_id}:${owner.id}:${task.assignment_id || task.id}`;
   const [backup] = useState(() => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } });
   const initial = backup?.workspace ?? serverDraft?.workspace ?? task.learning?.starter_blocks ?? null;
@@ -33,13 +35,14 @@ export function useBlockDraft(owner: { id: string; org_id: string }, task: Row, 
       cache();
       if (mounted.current) setSaved("Сохраняем блоки…");
       try {
-        const result = await api(`/tasks/${task.id}/draft`, { mode: "blocks", workspace: JSON.parse(value), revision: serverRevision.current, assignment_id: task.assignment_id }, "PUT");
+        const result = await api(`/tasks/${task.id}/draft`, { mode: "blocks", workspace: JSON.parse(value), revision: serverRevision.current, assignment_id: task.assignment_id }, "PUT", undefined, { owner });
         serverRevision.current = result.revision; lastSaved.current = value;
         if (value === latest.current) { try { localStorage.removeItem(key); } catch { /* storage unavailable */ } } else cache();
         if (mounted.current && gen === generation.current) { setSaved("Блоки сохранены на сервере"); setError(""); }
         return true;
       } catch (e) {
         cache();
+        if (isOwnerMismatch(e)) { blocked.current = true; return false; }
         if (e instanceof ApiError && e.status === 409 && e.details.current) { blocked.current = true; if (mounted.current) setConflict(e.details.current as Row); }
         if (mounted.current) {
           setSaved(blocked.current ? "Конфликт двух вкладок" : "Сохранено на компьютере");

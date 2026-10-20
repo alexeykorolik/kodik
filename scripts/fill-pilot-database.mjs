@@ -15,7 +15,7 @@ const {server,db}=createApp({dbPath:resolve(target),secure:false,registrationBud
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const origin=`http://127.0.0.1:${server.address().port}`,password='Fill-pilot-data-321!';
 async function call(client,path,body,method='POST',expected=200){
-  const r=await fetch(origin+'/api'+path,{method:body===undefined?'GET':method,headers:{Origin:origin,'Content-Type':'application/json',...(client.cookie?{Cookie:client.cookie}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+  const r=await fetch(origin+'/api'+path,{method:body===undefined?'GET':method,headers:{Origin:origin,'X-Kodik-Client':'2','Content-Type':'application/json',...(client.cookie?{Cookie:client.cookie}:{})},body:body===undefined?undefined:JSON.stringify(body)});
   const data=await r.json();if(r.status!==expected)throw new Error(`${path}: ${r.status} ${JSON.stringify(data)}`);
   if(r.headers.get('set-cookie'))client.cookie=r.headers.get('set-cookie').split(';')[0];return data;
 }

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 const password = "Modes-browser-test-321!";
 async function call(page: Page, path: string, body?: unknown, method = "POST", expected = 200) {
-  const r = await page.request.fetch("/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: "http://127.0.0.1:4186" }, data: body });
+  const r = await page.request.fetch("/api" + path, { method: body === undefined ? "GET" : method, headers: { Origin: "http://127.0.0.1:4186", "X-Kodik-Client": "2" }, data: body });
   const data = await r.json();
   expect(r.status(), JSON.stringify(data)).toBe(expected);
   return data;

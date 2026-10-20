@@ -6,7 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { api, statusNames, type Row, type State } from "./api";
+import { api, isOwnerMismatch, setSessionUser, statusNames, type Row, type State } from "./api";
 import { Builder } from "./Builder";
 import { Workspace } from "./Workspace";
 import {AssignmentDialog} from './AssignmentDialog';
@@ -371,6 +371,14 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
     </main>
   );
 }
+/** Which account this browser has signed in last; other tabs compare it with the child they show. */
+const SESSION_KEY = "kodik:session-user";
+function announce(user: Row | null) {
+  try {
+    const value = user ? JSON.stringify({ id: user.id, name: user.name }) : "null";
+    if (localStorage.getItem(SESSION_KEY) !== value) localStorage.setItem(SESSION_KEY, value);
+  } catch { /* storage unavailable: the server still refuses another child's requests */ }
+}
 export default function B2BApp() {
   const [state, setState] = useState<State | null>(null),
     [loading, setLoading] = useState(true),
@@ -384,8 +392,11 @@ export default function B2BApp() {
     [attempt, setAttempt] = useState<Row | null>(null),
     [refreshedAt, setRefreshedAt] = useState(""),
     [refreshError, setRefreshError] = useState(""),
-    [compactSidebar, setCompactSidebar] = useState(false);
-  const refreshSequence = useRef(0);
+    [compactSidebar, setCompactSidebar] = useState(false),
+    [switched, setSwitched] = useState<{ from: Row; to?: Row; signedOut?: boolean } | null>(null);
+  const refreshSequence = useRef(0), shown = useRef<Row | null>(null), switchedRef = useRef(false);
+  shown.current = state?.user ?? null;
+  switchedRef.current = !!switched;
   useEffect(()=>{
     if(!dialog&&!attempt&&!assignmentDialog&&!programGroup)return;
     const previous=document.activeElement as HTMLElement|null;
@@ -399,12 +410,14 @@ export default function B2BApp() {
     try {
       const next = await api("/state");
       if (sequence === refreshSequence.current) {
+        setSessionUser(next.user);
+        announce(next.user);
         setState(next);
         setRefreshedAt(new Date().toISOString());
         setRefreshError("");
       }
     } catch (e) {
-      if (sequence === refreshSequence.current)
+      if (sequence === refreshSequence.current && !isOwnerMismatch(e))
         setRefreshError((e as Error).message);
       throw e;
     }
@@ -412,7 +425,7 @@ export default function B2BApp() {
   useEffect(() => {
     if (!state?.user.id) return;
     const update = () => {
-      if (document.visibilityState === "visible")
+      if (document.visibilityState === "visible" && !switchedRef.current)
         void refresh().catch(() => {});
     };
     update();
@@ -444,13 +457,45 @@ export default function B2BApp() {
   useEffect(() => {
     const expired = () => {
       refreshSequence.current++;
+      setSwitched(null);
       setState(null);
       setRecovery("");
       setAssignmentDialog(null);setProgramGroup(null);setDialog(null);setAttempt(null);
     };
     window.addEventListener("kodik-auth-expired", expired);
-    return () => window.removeEventListener("kodik-auth-expired", expired);
+    // Another child signed in from a neighbouring tab: this tab stops acting for the child it shows.
+    // The server refuses such requests anyway (owner_mismatch); this only makes the switch visible early.
+    const mismatch = (e: Event) => {
+      const from = shown.current, detail = (e as CustomEvent).detail;
+      // A late answer to a request made for an earlier account of this tab changes nothing.
+      if (!from || (detail?.expected && detail.expected !== from.id)) return;
+      setSwitched({ from, to: (e as CustomEvent).detail?.session });
+    };
+    const storage = (e: StorageEvent) => {
+      if (e.key !== SESSION_KEY || !shown.current) return;
+      let next: Row | null = null;
+      try { next = JSON.parse(e.newValue || "null"); } catch { /* unreadable: the server decides */ }
+      if (!next) setSwitched({ from: shown.current, signedOut: true });
+      else if (next.id !== shown.current.id) setSwitched({ from: shown.current, to: next });
+      // The same child signed in again: this tab goes on with their work (and their stored operations).
+      else setSwitched(null);
+    };
+    window.addEventListener("kodik-owner-mismatch", mismatch);
+    window.addEventListener("storage", storage);
+    return () => {
+      window.removeEventListener("kodik-auth-expired", expired);
+      window.removeEventListener("kodik-owner-mismatch", mismatch);
+      window.removeEventListener("storage", storage);
+    };
   }, []);
+  async function openCurrentAccount() {
+    refreshSequence.current++;
+    if (switched?.signedOut) { setSwitched(null); setState(null); return; }
+    setSessionUser(null);
+    setDialog(null);setAttempt(null);setAssignmentDialog(null);setProgramGroup(null);
+    try { await refresh(); setSwitched(null); go("overview"); }
+    catch (e) { if (!isOwnerMismatch(e)) { setSwitched(null); setState(null); } }
+  }
   const go = (path: string) => {
     setRoute(path);
     location.hash = path;
@@ -469,6 +514,23 @@ export default function B2BApp() {
   };
   if (loading)
     return <main className="fatal">Открываем рабочее пространство…</main>;
+  if (switched)
+    return (
+      <main className="account-switched" data-testid="account-switched">
+        <section role="alert">
+          <div className="eyebrow">ДРУГОЙ АККАУНТ</div>
+          <h1>{switched.signedOut ? `В этом браузере выполнен выход из аккаунта «${switched.from.name}»` : switched.to?.name ? `В этом браузере теперь открыт аккаунт «${switched.to.name}»` : "В этом браузере открыт другой аккаунт"}</h1>
+          <p>
+            Работа ученика «{switched.from.name}» сохранена за ним: черновик остаётся на этом компьютере, а
+            отправленное решение — в Kodik. Всё продолжится, когда {switched.from.name} снова войдёт в свой аккаунт.
+          </p>
+          <p>Эта вкладка больше ничего не отправляет от имени «{switched.from.name}».</p>
+          <button className="primary" autoFocus onClick={() => void openCurrentAccount()}>
+            {switched.signedOut ? "Войти" : switched.to?.name ? `Открыть аккаунт «${switched.to.name}»` : "Открыть текущий аккаунт"}
+          </button>
+        </section>
+      </main>
+    );
   if (!state)
     return (
       <>
@@ -479,6 +541,7 @@ export default function B2BApp() {
         )}
         <Auth
           onLogin={async (code) => {
+            setSessionUser(null);
             await refresh();
             if (code) setRecovery(code);
             setLoadError("");
@@ -764,7 +827,7 @@ export default function B2BApp() {
     const nextTask=task&&s.tasks.find(t=>t.assignment_id!==task.assignment_id&&(task.run_id?t.run_id===task.run_id:!t.run_id&&t.group_id===task.group_id&&t.order_snapshot?.course_id===task.order_snapshot?.course_id)&&!isPassed(progressKey(t)));
     content = task ? (
       <Workspace
-        key={task.assignment_id||id}
+        key={`${s.user.id}:${task.assignment_id||id}`}
         task={task}
         state={s}
         refresh={refresh}
@@ -1611,6 +1674,8 @@ export default function B2BApp() {
               onClick={() =>
                 act(async () => {
                   await api("/auth/logout", {});
+                  setSessionUser(null);
+                  announce(null);
                   setState(null);
                   setRecovery("");
                   go("overview");

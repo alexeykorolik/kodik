@@ -41,7 +41,7 @@ export async function rehearseUpgrade(source,target,password='Fill-pilot-data-32
   const {server}=createApp({dbPath:target,secure:false});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const origin=`http://127.0.0.1:${server.address().port}`;
-  const call=async(c,path,body,method='POST')=>{const r=await fetch(origin+'/api'+path,{method:body===undefined?'GET':method,headers:{Origin:origin,'Content-Type':'application/json',...(c.cookie?{Cookie:c.cookie}:{})},body:body===undefined?undefined:JSON.stringify(body)});if(r.headers.get('set-cookie'))c.cookie=r.headers.get('set-cookie').split(';')[0];return {status:r.status,data:await r.json()}};
+  const call=async(c,path,body,method='POST')=>{const r=await fetch(origin+'/api'+path,{method:body===undefined?'GET':method,headers:{Origin:origin,'X-Kodik-Client':'2','Content-Type':'application/json',...(c.cookie?{Cookie:c.cookie}:{})},body:body===undefined?undefined:JSON.stringify(body)});if(r.headers.get('set-cookie'))c.cookie=r.headers.get('set-cookie').split(';')[0];return {status:r.status,data:await r.json()}};
   const login=async n=>{const c={};const r=await call(c,'/auth/login',{login:n,password});check(`login ${n}`,r.status===200,JSON.stringify(r.data));return c};
   try{
     const anya=await login('fill-anya'),borya=await login('fill-borya'),teacher=await login('fill-teacher'),owner=await login('fill-owner');

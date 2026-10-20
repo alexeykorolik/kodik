@@ -7,7 +7,7 @@ async function call(page: Page, path: string, body?: unknown) {
   if(path==='/assignments'&&body)body={request_key:crypto.randomUUID(),...(body as object)};
   const r = await page.request.fetch("/api" + path, {
     method: body === undefined ? "GET" : "POST",
-    headers: { Origin: "http://127.0.0.1:4186" },
+    headers: { Origin: "http://127.0.0.1:4186", "X-Kodik-Client": "2" },
     data: body,
   });
   const data = await r.json();
@@ -120,7 +120,7 @@ test('repeat assignment opens a fresh workspace and leaves the previous result i
     await learner.getByRole('button',{name:'← К моим курсам',exact:true}).click();
     await expect(learner.getByRole('button',{name:/Курс завершён/})).toBeVisible();
     const original=(await call(page,'/state')).tasks.find((t:any)=>t.id===material.id);
-    const update=await page.request.put(`/api/tasks/${material.id}`,{headers:{Origin:'http://127.0.0.1:4186'},data:{...original,title:'New version',starter:'# Fresh assignment\n',reference_solution:'print(43)',tests:[{inputs:[],expected:'43',hidden:false}]}});
+    const update=await page.request.put(`/api/tasks/${material.id}`,{headers:{Origin:'http://127.0.0.1:4186','X-Kodik-Client':'2'},data:{...original,title:'New version',starter:'# Fresh assignment\n',reference_solution:'print(43)',tests:[{inputs:[],expected:'43',hidden:false}]}});
     expect(update.status()).toBe(200);
     await call(page,`/tasks/${material.id}/publish`,{published:true,revision:2});
     const second=await call(page,'/assignments',{group_id:group.id,task_id:material.id,repeat_of:first.id});
