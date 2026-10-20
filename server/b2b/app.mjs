@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { loginProblem, LOGIN_RULE } from './logins.mjs';
 import {
   randomBytes,
   randomUUID,
@@ -384,11 +385,12 @@ export function createApp({
         "Сервер перезапускается. Черновик сохранён; повторите запрос позже.",
       );
     if (path.startsWith("/api/ai/")) fail(503, "AI отключён.");
+    const newLogin = (value) => { const login = text(value, "Логин", 120).toLowerCase(); if (loginProblem(login)) fail(400, LOGIN_RULE); return login; };
     if (path === "/api/auth/register" && method === "POST") {
       limit(`register:${ip}`, registrationBudget, 3600000);
       const orgName = text(b.school, "Название школы"),
         name = text(b.name, "Имя"),
-        login = text(b.login, "Логин", 120).toLowerCase(),
+        login = newLogin(b.login),
         password = await passwordHash(passwordText(b.password));
       const orgId = randomUUID(),
         id = randomUUID(),
@@ -607,7 +609,7 @@ export function createApp({
       if(b.role==='student')pilot.seats(user);
       const id = randomUUID(),
         name = text(b.name, "Имя"),
-        login = text(b.login, "Логин", 120).toLowerCase(),
+        login = newLogin(b.login),
         password = await passwordHash(passwordText(b.password));
       if(b.role==='student')pilot.seats(user);
       if (get("SELECT id FROM users WHERE login=?", login))
@@ -1159,6 +1161,8 @@ export function createApp({
           if (!shape.ok) fail(400, shape.errors[0].message, { translation_errors: shape.errors.slice(0, 5) });
           const workspace = JSON.stringify(b.workspace);
           const current = get("SELECT workspace,revision FROM assignment_block_drafts WHERE user_id=? AND assignment_id=?", user.id, task.assignment_id);
+          // The same content saved again (a send on page close, then the local copy) is not a conflict.
+          if (current && base !== current.revision && current.workspace === workspace) return { saved_at: now(), revision: current.revision, mode };
           if (current && base !== current.revision) {
             const conflictId = randomUUID();
             run("INSERT INTO assignment_block_draft_history VALUES(?,?,?,?,?,?,?,?)", conflictId, user.org_id, user.id, task.assignment_id, base, workspace, 1, now());
@@ -1177,6 +1181,7 @@ export function createApp({
             user.id,
             task.assignment_id,
           );
+        if (current && base !== current.revision && current.code === code) return { saved_at: now(), revision: current.revision };
         if (current && base !== current.revision) {
           const conflictId = randomUUID();
           run(

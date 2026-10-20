@@ -24,14 +24,14 @@ export const setSessionUser = (user: { id: string; org_id: string } | null) => {
   sessionUser = user ? { id: user.id, org_id: user.org_id } : null;
 };
 export type Owner = { id: string; org_id: string };
-export type ApiOptions = { owner?: Owner; timeout?: number };
+export type ApiOptions = { owner?: Owner; timeout?: number; keepalive?: boolean };
 export const isOwnerMismatch = (e: unknown) => e instanceof ApiError && e.details.code === "owner_mismatch";
 export async function api(
   path: string,
   body?: unknown,
   method = "POST",
   signal?: AbortSignal,
-  { owner = sessionUser ?? undefined, timeout }: ApiOptions = {},
+  { owner = sessionUser ?? undefined, timeout, keepalive }: ApiOptions = {},
 ) {
   const headers: Record<string, string> = { "X-Kodik-Client": CLIENT_PROTOCOL };
   if (owner) {
@@ -50,7 +50,7 @@ export async function api(
       `/api${path}`,
       body === undefined
         ? { credentials: "same-origin", signal: control.signal, headers }
-        : { method, signal: control.signal, credentials: "same-origin", headers, body: JSON.stringify(body) },
+        : { method, signal: control.signal, credentials: "same-origin", headers, body: JSON.stringify(body), keepalive },
     );
     const data = await response.json();
     if (response.status === 401)

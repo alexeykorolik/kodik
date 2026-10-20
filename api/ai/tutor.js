@@ -814,7 +814,10 @@ var ExpressionParser = class {
     return this.tokens[this.index++];
   }
   expect(value) {
-    if (this.take() !== value) syntax(`\u041E\u0436\u0438\u0434\u0430\u0435\u0442\u0441\u044F \xAB${value}\xBB. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0441\u043A\u043E\u0431\u043A\u0438 \u0438 \u0437\u0430\u043F\u044F\u0442\u044B\u0435.`);
+    const got = this.take();
+    if (got === value) return;
+    if (got === void 0) syntax(value === ")" || value === "]" ? `\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB${value}\xBB \u0432 \u043A\u043E\u043D\u0446\u0435.` : `\u0412 \u043A\u043E\u043D\u0446\u0435 \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \xAB${value}\xBB.`);
+    syntax(value === "," ? `\u041C\u0435\u0436\u0434\u0443 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F\u043C\u0438 \u043D\u0443\u0436\u043D\u0430 \u0437\u0430\u043F\u044F\u0442\u0430\u044F \u2014 \u043F\u0435\u0440\u0435\u0434 \xAB${got}\xBB.` : `\u041E\u0436\u0438\u0434\u0430\u0435\u0442\u0441\u044F \xAB${value}\xBB, \u0430 \u043D\u0430\u043F\u0438\u0441\u0430\u043D\u043E \xAB${got}\xBB. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0441\u043A\u043E\u0431\u043A\u0438.`);
   }
   parse() {
     const value = this.expression(0);
@@ -852,8 +855,9 @@ var ExpressionParser = class {
     } else if (token === "[") {
       const items = [];
       while (this.peek() !== "]") {
-        if (!this.peek()) syntax("\u041D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442 \u0441\u043F\u0438\u0441\u043E\u043A.");
+        if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB]\xBB \u0443 \u0441\u043F\u0438\u0441\u043A\u0430.");
         items.push(this.expression(0));
+        if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB]\xBB \u0443 \u0441\u043F\u0438\u0441\u043A\u0430.");
         if (this.peek() !== "]") this.expect(",");
       }
       this.expect("]");
@@ -874,8 +878,9 @@ var ExpressionParser = class {
         if (value.kind !== "name") syntax("\u041F\u0435\u0440\u0435\u0434 \u0441\u043A\u043E\u0431\u043A\u0430\u043C\u0438 \u0432\u044B\u0437\u043E\u0432\u0430 \u0437\u0430\u043F\u0438\u0448\u0438 \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
         const args = [];
         while (this.peek() !== ")") {
-          if (!this.peek()) syntax("\u041D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442 \u0432\u044B\u0437\u043E\u0432 \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
+          if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB)\xBB \u0432 \u043A\u043E\u043D\u0446\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u044B.");
           args.push(this.expression(0));
+          if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB)\xBB \u0432 \u043A\u043E\u043D\u0446\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u044B.");
           if (this.peek() !== ")") this.expect(",");
         }
         this.expect(")");
@@ -892,6 +897,14 @@ var ExpressionParser = class {
 };
 function expression(source) {
   return new ExpressionParser(tokenize(source)).parse();
+}
+function lineExpression(source, line) {
+  try {
+    return expression(source);
+  } catch (e) {
+    const message = e.message;
+    throw new Error(message.startsWith("\u0421\u0442\u0440\u043E\u043A\u0430") ? message : `\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: ${message[0].toLowerCase()}${message.slice(1)}`);
+  }
 }
 function withoutComment(raw) {
   let quote = "", escaped = false;
@@ -939,10 +952,11 @@ function parseCourseProgram(source) {
       };
       let match;
       if (match = /^if\s+(.+):$/.exec(line.text)) {
-        const branches = [{ condition: expression(match[1]), body: nested() }];
+        const branches = [{ condition: lineExpression(match[1], line), body: nested() }];
         while (lines[cursor]?.indent === indent && (match = /^elif\s+(.+):$/.exec(lines[cursor].text))) {
+          const elifLine = lines[cursor];
           cursor++;
-          branches.push({ condition: expression(match[1]), body: nested() });
+          branches.push({ condition: lineExpression(match[1], elifLine), body: nested() });
         }
         let otherwise = [];
         if (lines[cursor]?.indent === indent && lines[cursor].text === "else:") {
@@ -954,11 +968,11 @@ function parseCourseProgram(source) {
       }
       if (match = /^for\s+([\p{L}_][\p{L}\p{N}_]*)\s+in\s+(.+):$/u.exec(line.text)) {
         if (!variableName(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u0441\u0447\u0451\u0442\u0447\u0438\u043A\u0430.`);
-        result.push({ kind: "for", name: match[1], iterable: expression(match[2]), body: nested() });
+        result.push({ kind: "for", name: match[1], iterable: lineExpression(match[2], line), body: nested() });
         continue;
       }
       if (match = /^while\s+(.+):$/.exec(line.text)) {
-        result.push({ kind: "while", condition: expression(match[1]), body: nested() });
+        result.push({ kind: "while", condition: lineExpression(match[1], line), body: nested() });
         continue;
       }
       if (match = /^def\s+([\p{L}_][\p{L}\p{N}_]*)\s*\(([^()]*)\):$/u.exec(line.text)) {
@@ -969,7 +983,7 @@ function parseCourseProgram(source) {
         continue;
       }
       if (match = /^return\s+(.+)$/.exec(line.text)) {
-        result.push({ kind: "return", value: expression(match[1]) });
+        result.push({ kind: "return", value: lineExpression(match[1], line) });
         continue;
       }
       if (line.text === "return") {
@@ -982,11 +996,11 @@ function parseCourseProgram(source) {
       }
       if (match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*=\s*(.+)$/u.exec(line.text)) {
         if (!variableName(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439; \u0438\u043C\u0435\u043D\u0430 \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u0430\u043D\u0434 \u043D\u0435 \u043F\u0435\u0440\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0439.`);
-        result.push({ kind: "assign", name: match[1], index: match[2] ? expression(match[2]) : void 0, value: expression(match[3]) });
+        result.push({ kind: "assign", name: match[1], index: match[2] ? lineExpression(match[2], line) : void 0, value: lineExpression(match[3], line) });
         continue;
       }
       if (/^(if|elif|else|while|for|def)\b/.test(line.text)) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u043E\u0441\u043B\u0435 \u0443\u0441\u043B\u043E\u0432\u0438\u044F, \u0446\u0438\u043A\u043B\u0430 \u0438\u043B\u0438 def \u043D\u0443\u0436\u043D\u044B \u0434\u0432\u043E\u0435\u0442\u043E\u0447\u0438\u0435 \u0438 \u0441\u0442\u0440\u043E\u043A\u0430 \u0441 \u043E\u0442\u0441\u0442\u0443\u043F\u043E\u043C.`);
-      const value = expression(line.text);
+      const value = lineExpression(line.text, line);
       if (value.kind !== "call") syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u0437\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u0438\u043B\u0438 \u043F\u0440\u0438\u0441\u0432\u0430\u0438\u0432\u0430\u043D\u0438\u0435.`);
       result.push({ kind: "expression", value });
     }

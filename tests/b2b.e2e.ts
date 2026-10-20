@@ -22,6 +22,7 @@ test("School → teacher → constructor → group → student → persisted res
     .getByRole("button", { name: "Создать школу", exact: true })
     .click();
   await page.getByRole("button", { name: "Я сохранил код" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Да, код сохранён" }).click();
   await expect(
     page.getByRole("heading", { name: "Привет, Алексей!" }),
   ).toBeVisible();
@@ -30,8 +31,8 @@ test("School → teacher → constructor → group → student → persisted res
     await page.getByRole("button", { name: "Добавить участника" }).click();
     const modal = page.getByRole("dialog");
     await modal.getByLabel("Имя или псевдоним").fill(name);
-    await modal.getByLabel("Уникальный логин").fill(login);
-    await modal.getByLabel("Пароль (от 10 символов)").fill(password);
+    await modal.getByLabel("Логин", { exact: true }).fill(login);
+    await modal.getByLabel("Пароль", { exact: true }).fill(password);
     await modal.getByLabel("Роль", { exact: true }).selectOption(role);
     await modal.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(modal).toHaveCount(0);
@@ -107,7 +108,7 @@ test("School → teacher → constructor → group → student → persisted res
   await page.getByRole("button", { name: "Продолжить", exact: true }).click();
   await page.locator("#python-answer").fill('print("Привет, мир!")');
   await page.getByRole("button", { name: "Проверить пример решения" }).click();
-  await expect(page.getByText("Отлично! Все тесты пройдены.")).toBeVisible();
+  await expect(page.getByText("Отлично! Все проверки пройдены.")).toBeVisible();
   await page.screenshot({ path: "work/b2b-builder.png", fullPage: true });
   await page.getByRole("button", { name: "К конструктору задания", exact: false }).click();
   await page.getByLabel('Эталонное решение · только преподавателю',{exact:true}).fill('print("Привет, мир!")');
@@ -146,6 +147,7 @@ test("School → teacher → constructor → group → student → persisted res
     .getByRole("dialog")
     .getByRole("button", { name: "Сохранить", exact: true })
     .click();
+  await page.getByRole("tab", { name: "Программа и задания" }).click();
   await page
     .getByRole("button", { name: "Назначить задание", exact: false })
     .click();
@@ -176,12 +178,12 @@ test("School → teacher → constructor → group → student → persisted res
     .click();
   await page.locator("#python-answer").fill('print("Привет, мир!")');
   await expect(
-    page.getByText("Сохранено на сервере", { exact: true }),
+    page.getByText("✓ Сохранено", { exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Проверить решение", exact: false })
     .click();
-  await expect(page.getByText("Отлично! Все тесты пройдены.")).toBeVisible();
+  await expect(page.getByText("Отлично! Все проверки пройдены.")).toBeVisible();
   await page.screenshot({ path: "work/b2b-workspace.png", fullPage: true });
   await expect(
     teacherViewer.getByRole("button", { name: "Открыть решение", exact: true }),
@@ -191,7 +193,7 @@ test("School → teacher → constructor → group → student → persisted res
   await expect(page.locator("#python-answer")).toHaveValue(
     'print("Привет, мир!")',
   );
-  await expect(page.getByText("Попыток: 1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Попытки · 1", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await login(page, teacher);
 

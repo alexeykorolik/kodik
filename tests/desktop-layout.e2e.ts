@@ -61,10 +61,10 @@ for (const screen of SCREENS) test(`desktop ${screen.name}: lesson screens fit, 
   try {
     await call(context.request, "/auth/login", { login: admin, password });
     const teacherScreens: [string, string, string | RegExp, RegExp][] = [
-      ["journal", "Журнал и ручная проверка", /Выведи 42 · версия/, /Журнал обновлён в/],
+      ["journal", "Журнал и ручная проверка", /^Выведи 42$/, /Журнал обновлён в/],
       ["classroom", "Помощь на занятии", "Помощь оказана", /Запросы обновлены в/],
       ["modes", "Способы решения", "Сохранить разрешения", /Данные обновлены в/],
-      ["school", "Управление школой", "Проверить список", /./],
+      ["school", "Управление школой", "Обновить данные", /./],
     ];
     for (const [hash, heading, action, fresh] of teacherScreens) {
       await page.goto(`/#${hash}`);
@@ -76,7 +76,7 @@ for (const screen of SCREENS) test(`desktop ${screen.name}: lesson screens fit, 
     }
     await page.goto("/#classroom");
     await page.getByRole("button", { name: "Помощь оказана" }).first().click();
-    await expect(page.getByRole("status").filter({ hasText: /Помощь ученику .* отмечена/ })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: /Помощь отмечена/ })).toBeVisible();
     await page.screenshot({ path: `work/desktop-${screen.name.replace("%", "pct")}-classroom.png` });
     // Re-open the request for the next screen size.
     await call(context.request, "/auth/logout", {});
@@ -89,9 +89,9 @@ for (const screen of SCREENS) test(`desktop ${screen.name}: lesson screens fit, 
     await expect(page.locator("#python-answer")).toBeVisible();
     await fits(page, `${screen.name} learner`);
     await reachable(page, page.getByRole("button", { name: /Проверить решение/ }), `${screen.name} learner check`);
-    await page.getByText("Нужна помощь").click();
-    await page.getByLabel("Что не получается?").fill("Снова нужна помощь");
-    await page.getByRole("button", { name: "Позвать преподавателя" }).click();
+    await page.getByRole("button", { name: /Нужна помощь|Ждём учителя/ }).click();
+    await page.getByLabel("Или напиши своими словами").fill("Снова нужна помощь");
+    await page.getByRole("button", { name: "Отправить учителю" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Учитель увидит твой запрос" })).toBeVisible();
     await call(context.request, "/auth/logout", {});
 

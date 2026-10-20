@@ -41,7 +41,7 @@ for(const width of [1366,1920]) test(`learner: keyboard blocks, restore, mirror 
   const add = async (name: string) => {await page.getByRole("group", { name: "Блоки этого задания" }).getByRole("button", { name, exact: true }).focus();await page.keyboard.press("Enter");};
   await add("присвоить");
   await add("ввести целое число");
-  await expect(page.getByText("Блоки сохранены на сервере")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("✓ Сохранено")).toBeVisible({ timeout: 10000 });
 
   // Incomplete program survives a reload (server draft), then is explained, not run.
   await page.reload();
@@ -56,7 +56,7 @@ for(const width of [1366,1920]) test(`learner: keyboard blocks, restore, mirror 
   await add("значение переменной");
   await expect(mirror).toContainText("print(");
   await page.getByRole("button", { name: /Проверить решение/ }).click();
-  await expect(page.getByRole("status").filter({ hasText: /Тест 1/ })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("status").filter({ hasText: /Проверка 1/ })).toBeVisible({ timeout: 20000 });
 
   // Python mode: a separate draft. The block program is not copied into it.
   await modeSwitch.getByRole("radio", { name: "Python", exact: true }).click();
@@ -64,7 +64,7 @@ for(const width of [1366,1920]) test(`learner: keyboard blocks, restore, mirror 
   await expect(editor).not.toHaveValue(/int\(input\(\)\)/);
   await editor.fill("n = int(input())\nprint(n * 2)\n");
   await page.getByRole("button", { name: /Проверить решение/ }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Отлично! Все тесты пройдены." })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("status").filter({ hasText: "Отлично! Все проверки пройдены." })).toBeVisible({ timeout: 20000 });
 
   // Back to blocks after a reload: the block work is intact.
   await page.reload();

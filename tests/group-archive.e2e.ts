@@ -69,7 +69,7 @@ test("archiving the group during an open lesson: view for the learner and teache
   await expect(page.getByRole("heading", { name: "Привет, Учитель!" })).toBeVisible();
   await page.goto(`/#lesson-run/${run.id}`);
   await expect(page.getByTestId("view-only-note")).toContainText("Открыть занятие нельзя");
-  await expect(page.getByRole("button", { name: "Открыть занятие", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Открыть занятие для класса", exact: true })).toHaveCount(0);
   const row = page.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Ира", exact: true }) });
   await expect(row.getByRole("button", { name: "✓ Завершено", exact: true })).toHaveCount(1);
   await page.screenshot({ path: "work/group-archive-teacher-1920.png", fullPage: true });

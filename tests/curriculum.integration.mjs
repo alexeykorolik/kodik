@@ -77,7 +77,7 @@ test('composed lessons, atomic programs, server progress, private content and co
       await complete('text');await complete('code');await submit(practiceAssignment,'print(42)');
       const wrong=await complete('question',1);assert.equal(wrong.status,'incorrect');assert.ok(!JSON.stringify(wrong).includes('correct_index'));assert.ok(!wrong.message.includes('42'));
       await h.request(`/lesson-runs/${first.id}/steps/summary`,{acknowledged:true},student,409);
-      const correct=await complete('question',0);assert.equal(correct.status,'completed');assert.equal(correct.message,'Because the value is 42.');
+      const correct=await complete('question',0);assert.equal(correct.status,'completed');assert.equal(correct.message,'Верно!');assert.equal(correct.explanation,'Because the value is 42.');
       await submit(finalAssignment,'print(43)');await complete('summary');
       await h.restart();
       const detail=await h.request(`/lesson-runs/${first.id}`,undefined,student);

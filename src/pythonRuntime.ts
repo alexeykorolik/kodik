@@ -72,7 +72,12 @@ class ExpressionParser {
   constructor(private tokens: string[]) {}
   private peek() { return this.tokens[this.index] }
   private take() { return this.tokens[this.index++] }
-  private expect(value: string) { if (this.take() !== value) syntax(`Ожидается «${value}». Проверь скобки и запятые.`) }
+  private expect(value: string) {
+    const got = this.take()
+    if (got === value) return
+    if (got === undefined) syntax(value === ')' || value === ']' ? `Не хватает закрывающей скобки «${value}» в конце.` : `В конце не хватает «${value}».`)
+    syntax(value === ',' ? `Между значениями нужна запятая — перед «${got}».` : `Ожидается «${value}», а написано «${got}». Проверь скобки.`)
+  }
   parse(): Expr {
     const value = this.expression(0)
     if (this.peek()) syntax(`Лишний фрагмент «${this.peek()}» в выражении.`)
@@ -102,7 +107,7 @@ class ExpressionParser {
     else if (token === '(') { value = this.expression(0); this.expect(')') }
     else if (token === '[') {
       const items: Expr[] = []
-      while (this.peek() !== ']') { if (!this.peek()) syntax('Не закрыт список.'); items.push(this.expression(0)); if (this.peek() !== ']') this.expect(',') }
+      while (this.peek() !== ']') { if (!this.peek()) syntax('Не хватает закрывающей скобки «]» у списка.'); items.push(this.expression(0)); if (!this.peek()) syntax('Не хватает закрывающей скобки «]» у списка.'); if (this.peek() !== ']') this.expect(',') }
       this.expect(']'); value = { kind: 'list', items }
     } else if (/^['"]/.test(token)) value = { kind: 'literal', value: decodeString(token) }
     else if (/^[\d.]/.test(token)) {
@@ -120,7 +125,7 @@ class ExpressionParser {
         this.take()
         if (value.kind !== 'name') syntax('Перед скобками вызова запиши имя функции.')
         const args: Expr[] = []
-        while (this.peek() !== ')') { if (!this.peek()) syntax('Не закрыт вызов функции.'); args.push(this.expression(0)); if (this.peek() !== ')') this.expect(',') }
+        while (this.peek() !== ')') { if (!this.peek()) syntax('Не хватает закрывающей скобки «)» в конце команды.'); args.push(this.expression(0)); if (!this.peek()) syntax('Не хватает закрывающей скобки «)» в конце команды.'); if (this.peek() !== ')') this.expect(',') }
         this.expect(')'); value = { kind: 'call', name: value.name, args }
       } else {
         this.take(); const index = this.expression(0); this.expect(']'); value = { kind: 'index', target: value, index }
@@ -130,6 +135,10 @@ class ExpressionParser {
   }
 }
 function expression(source: string) { return new ExpressionParser(tokenize(source)).parse() }
+/** The same parse, with the line named so a child knows where to look. */
+function lineExpression(source: string, line: { number: number }) {
+  try { return expression(source) } catch (e) { const message = (e as Error).message; throw new Error(message.startsWith('Строка') ? message : `Строка ${line.number}: ${message[0].toLowerCase()}${message.slice(1)}`) }
+}
 
 type SourceLine = { number: number; indent: number; text: string }
 function withoutComment(raw: string) {
@@ -163,32 +172,32 @@ export function parseCourseProgram(source: string): Statement[] {
       const nested = (functionBody=false) => { const body = block(indent + 4,functionDepth+(functionBody?1:0)); if (!body.length) syntax(`Строка ${line.number}: после двоеточия нужна команда с отступом.`); return body }
       let match: RegExpExecArray | null
       if ((match = /^if\s+(.+):$/.exec(line.text))) {
-        const branches = [{ condition: expression(match[1]), body: nested() }]
-        while (lines[cursor]?.indent === indent && (match = /^elif\s+(.+):$/.exec(lines[cursor].text))) { cursor++; branches.push({ condition: expression(match[1]), body: nested() }) }
+        const branches = [{ condition: lineExpression(match[1], line), body: nested() }]
+        while (lines[cursor]?.indent === indent && (match = /^elif\s+(.+):$/.exec(lines[cursor].text))) { const elifLine = lines[cursor]; cursor++; branches.push({ condition: lineExpression(match[1], elifLine), body: nested() }) }
         let otherwise: Statement[] = []
         if (lines[cursor]?.indent === indent && lines[cursor].text === 'else:') { cursor++; otherwise = nested() }
         result.push({ kind: 'if', branches, otherwise }); continue
       }
       if ((match = /^for\s+([\p{L}_][\p{L}\p{N}_]*)\s+in\s+(.+):$/u.exec(line.text))) {
         if (!variableName(match[1])) syntax(`Строка ${line.number}: неверное имя счётчика.`)
-        result.push({ kind: 'for', name: match[1], iterable: expression(match[2]), body: nested() }); continue
+        result.push({ kind: 'for', name: match[1], iterable: lineExpression(match[2], line), body: nested() }); continue
       }
-      if ((match = /^while\s+(.+):$/.exec(line.text))) { result.push({ kind: 'while', condition: expression(match[1]), body: nested() }); continue }
+      if ((match = /^while\s+(.+):$/.exec(line.text))) { result.push({ kind: 'while', condition: lineExpression(match[1], line), body: nested() }); continue }
       if ((match = /^def\s+([\p{L}_][\p{L}\p{N}_]*)\s*\(([^()]*)\):$/u.exec(line.text))) {
         if(functionDepth)syntax('Вложенные функции пока не поддерживаются. Опиши функции отдельно.')
         const params = match[2].trim() ? match[2].split(',').map(item => item.trim()) : []
         if (!variableName(match[1]) || params.some(name => !variableName(name)) || new Set(params).size !== params.length) syntax(`Строка ${line.number}: проверь имя функции и параметры; имена встроенных команд не переопределяй.`)
         result.push({ kind: 'function', name: match[1], params, body: nested(true) }); continue
       }
-      if ((match = /^return\s+(.+)$/.exec(line.text))) { result.push({ kind: 'return', value: expression(match[1]) }); continue }
+      if ((match = /^return\s+(.+)$/.exec(line.text))) { result.push({ kind: 'return', value: lineExpression(match[1], line) }); continue }
       if(line.text==='return'){result.push({kind:'return',value:{kind:'literal',value:null}});continue}
       if (line.text === 'pass') { result.push({ kind: 'pass' }); continue }
       if ((match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*=\s*(.+)$/u.exec(line.text))) {
         if (!variableName(match[1])) syntax(`Строка ${line.number}: неверное имя переменной; имена встроенных команд не переопределяй.`)
-        result.push({ kind: 'assign', name: match[1], index: match[2] ? expression(match[2]) : undefined, value: expression(match[3]) }); continue
+        result.push({ kind: 'assign', name: match[1], index: match[2] ? lineExpression(match[2], line) : undefined, value: lineExpression(match[3], line) }); continue
       }
       if (/^(if|elif|else|while|for|def)\b/.test(line.text)) syntax(`Строка ${line.number}: после условия, цикла или def нужны двоеточие и строка с отступом.`)
-      const value = expression(line.text)
+      const value = lineExpression(line.text, line)
       if (value.kind !== 'call') syntax(`Строка ${line.number}: здесь нужна команда или присваивание.`)
       result.push({ kind: 'expression', value })
     }

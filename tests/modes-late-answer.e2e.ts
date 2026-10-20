@@ -33,22 +33,22 @@ test("mode management: a late answer for the previous assignment never replaces 
   const lateA = page.waitForResponse((r) => r.url().includes(`/api/assignments/${assignments["Класс A"]}/modes`));
   await switcher.selectOption(assignments["Класс A"]);
   await switcher.selectOption(assignments["Класс B"]);
-  await expect(page.getByRole("heading", { name: /^Борис · / })).toBeVisible();
+  await expect(page.getByRole("rowheader", { name: "Борис", exact: true })).toBeVisible();
   // Right after the late answer for class A arrives (before the next 5 s polling round could hide a bug).
   await lateA;
   // Sample the screen repeatedly without retrying assertions: a late answer must never be shown, even briefly.
   for (let i = 0; i < 8; i++) {
     expect(await switcher.inputValue()).toBe(assignments["Класс B"]);
-    expect(await page.locator("article h2").allTextContents()).toEqual([expect.stringMatching(/^Борис · /)]);
+    expect(await page.locator(".learner-modes tbody th").allTextContents()).toEqual(["Борис"]);
     await page.waitForTimeout(100);
   }
   // And after another polling round.
   await page.waitForTimeout(5500);
   await expect(switcher).toHaveValue(assignments["Класс B"]);
-  await expect(page.getByRole("heading", { name: /^Борис · / })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /^Анна · / })).toHaveCount(0);
+  await expect(page.getByRole("rowheader", { name: "Борис", exact: true })).toBeVisible();
+  await expect(page.getByRole("rowheader", { name: "Анна", exact: true })).toHaveCount(0);
   // Switching back shows class A once its own answer arrives, and only then.
   await switcher.selectOption(assignments["Класс A"]);
-  await expect(page.getByRole("heading", { name: /^Борис · / })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: /^Анна · / })).toBeVisible({ timeout: 8000 });
+  await expect(page.getByRole("rowheader", { name: "Борис", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("rowheader", { name: "Анна", exact: true })).toBeVisible({ timeout: 8000 });
 });

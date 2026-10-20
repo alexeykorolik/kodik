@@ -111,7 +111,7 @@ test("blocks: refused empty and unfinished programs free the learner; the fixed 
   await buildPrint(page, 7);
   await expect(page.locator(".blockly-host .blocklyDraggable")).toHaveCount(2);
   await checkButton(page).click();
-  await expect(page.getByText("Отлично! Все тесты пройдены.", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 15000 });
   const last = sent.at(-1)!;
   expect(JSON.stringify(last.body.workspace)).toContain('"NUM":7');
   expect(counts(s.kids[0].id)).toEqual({ jobs: 1, attempts: 1 });
@@ -147,7 +147,7 @@ test("mixed mode at 1920: a stored operation of the previous version without a c
   await buildPrint(page, 7);
   await expect(page.getByRole("region", { name: "Python из твоих блоков" })).toContainText("print(7)");
   await checkButton(page).click();
-  await expect(page.getByText("Отлично! Все тесты пройдены.", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 15000 });
   expect(counts(s.kids[0].id)).toEqual({ jobs: 1, attempts: 1 });
   await page.screenshot({ path: "work/submission-recovery-mixed-1920.png", fullPage: true });
   await s.r.dispose();
@@ -163,20 +163,20 @@ test("accepted work is recovered once: stored record without a check id, lost re
   await signIn(page, s.kids[0].login);
   await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ request_key: "legacy-accepted-key-1", mode: "python", code: "print(7)" })), `kodik:submission:${s.org}:${s.kids[0].id}:${s.assignment.id}`);
   await page.goto(`/#assignment/${s.assignment.id}`);
-  await expect(page.getByText("Отлично! Все тесты пройдены.", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 15000 });
   expect(counts(s.kids[0].id)).toEqual({ jobs: 1, attempts: 1 });
   expect(db((d) => (d.prepare("SELECT id FROM submission_jobs WHERE request_key='legacy-accepted-key-1' AND user_id=?").get(s.kids[0].id) as { id: string }).id)).toBe(accepted.id);
 
   // 2. Response lost after acceptance; the learner edits meanwhile: the same key and the same code are resent.
   const sent = submissions(page);
   await page.locator("#python-answer").fill("print(7) # вторая");
-  await expect(page.getByText("Сохранено на сервере", { exact: true })).toBeVisible();
+  await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
   await page.route("**/api/tasks/*/submissions", async (route) => { await route.fetch(); await route.abort("failed"); }, { times: 1 });
   await checkButton(page).click();
   await expect(page.getByTestId("submission-notice")).toHaveAttribute("data-kind", "unconfirmed");
   await expect(page.getByTestId("submission-notice")).toContainText("пока неизвестно, принято ли решение");
   await page.locator("#python-answer").fill("print(8) # новая правка");
-  await expect(page.getByText("Отлично! Все тесты пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
   expect(new Set(sent.map((x) => x.key)).size).toBe(1);
   expect(sent.every((x) => x.body.code === "print(7) # вторая")).toBe(true);
   expect(counts(s.kids[0].id)).toEqual({ jobs: 2, attempts: 2 });
@@ -195,11 +195,11 @@ test("accepted work is recovered once: stored record without a check id, lost re
   // 4. Rate limit is not a refusal: the same operation is resent later and accepted once.
   sent.length = 0;
   await page.locator("#python-answer").fill("print(7)");
-  await expect(page.getByText("Сохранено на сервере", { exact: true })).toBeVisible();
+  await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
   await page.route("**/api/tasks/*/submissions", (route) => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "Слишком много запросов." }) }), { times: 1 });
   await checkButton(page).click();
   await expect(page.getByTestId("submission-notice")).toContainText("Слишком много отправок подряд");
-  await expect(page.getByText("Отлично! Все тесты пройдены.", { exact: true })).toBeVisible({ timeout: 25000 });
+  await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 25000 });
   expect(new Set(sent.map((x) => x.key)).size).toBe(1);
   expect(counts(s.kids[0].id)).toEqual({ jobs: 4, attempts: 4 });
 
@@ -217,7 +217,7 @@ test("accepted work is recovered once: stored record without a check id, lost re
   await page.getByRole("button", { name: "Войти в Kodik" }).click();
   await expect(page.getByRole("heading", { name: "Привет, Маша!" })).toBeVisible();
   await page.goto(`/#assignment/${s.assignment.id}`);
-  await expect(page.getByText("Отлично! Все тесты пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
   expect(new Set(sent.map((x) => x.key))).toEqual(new Set([key]));
   expect(counts(s.kids[0].id)).toEqual({ jobs: 5, attempts: 5 });
   await kid.dispose(); await s.r.dispose();
@@ -231,9 +231,9 @@ test("held, Python errors, refusals by mode and archive, and a shared computer",
 
   // A Python syntax error is accepted and checked: a finished result, not a refusal or a lost connection.
   await page.locator("#python-answer").fill("print(");
-  await expect(page.getByText("Сохранено на сервере", { exact: true })).toBeVisible();
+  await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
   await checkButton(page).click();
-  await expect(page.locator(".console")).toContainText("Не закрыт вызов функции", { timeout: 15000 });
+  await expect(page.locator(".console")).toContainText("не хватает закрывающей скобки", { timeout: 15000 });
   await expect(page.getByTestId("submission-notice")).toHaveCount(0);
   expect(counts(s.kids[0].id)).toEqual({ jobs: 1, attempts: 1 });
 
@@ -250,7 +250,7 @@ test("held, Python errors, refusals by mode and archive, and a shared computer",
   await expect(page.getByTestId("submission-notice")).toContainText("В редакторе сейчас черновик");
   await expect(page.getByRole("button", { name: "Решение принято — результат появится позже", exact: true })).toBeDisabled();
   await page.locator("#python-answer").fill("print(7) # черновик");
-  await expect(page.getByText("Сохранено на сервере", { exact: true })).toBeVisible();
+  await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
   expect(sent, "no new submission while an accepted one waits").toHaveLength(0);
   db((d) => d.prepare("UPDATE submission_jobs SET status='completed',result=(SELECT result FROM submission_jobs WHERE user_id=? AND status='completed' LIMIT 1),updated_at=? WHERE id=?").run(s.kids[0].id, new Date().toISOString(), `held-${s.tag}`));
   await expect(page.getByTestId("submission-notice")).toHaveCount(0, { timeout: 30000 });
@@ -278,7 +278,7 @@ test("held, Python errors, refusals by mode and archive, and a shared computer",
 
   // Shared computer: Маша's unconfirmed operation is never sent as Лёва; it completes when Маша returns.
   await page.locator("#python-answer").fill("print(7)");
-  await expect(page.getByText("Сохранено на сервере", { exact: true })).toBeVisible();
+  await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
   await page.context().setOffline(true);
   await checkButton(page).click();
   await expect(page.getByTestId("submission-notice")).toHaveAttribute("data-kind", "unconfirmed");
@@ -298,7 +298,7 @@ test("held, Python errors, refusals by mode and archive, and a shared computer",
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await signIn(page, s.kids[0].login);
   await page.goto(`/#assignment/${s.assignment.id}`);
-  await expect(page.getByText("Отлично! Все тесты пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
   expect(sent.map((x) => x.key)).toEqual([mashaKey]);
   await s.r.dispose();
 });

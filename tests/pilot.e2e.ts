@@ -54,20 +54,20 @@ async function task(page: Page, lesson: string,fields:Record<string,unknown>={})
 test('lost issuance response survives reload; retry, deadline change and explicit repeat keep the intended contexts',async({page})=>{
   const setup=await school(page),material=await task(page,setup.lesson.id),group=await call(page,'/groups',{title:'Reliable class'});
   await call(page,`/tasks/${material.id}/publish`,{published:true});
-  await page.goto('/#groups');
+  await page.goto(`/#group/${group.id}`);await page.getByRole('tab',{name:'Программа и задания'}).click();
   await page.getByRole('button',{name:'Назначить задание',exact:false}).click();
   await page.route('**/api/assignments',async route=>{await route.fetch();await route.abort('failed')},{times:1});
   await page.getByRole('dialog').getByRole('button',{name:'Выдать группе',exact:true}).click();
   await expect(page.getByRole('alert')).toBeVisible();
   const issued=(await call(page,'/state')).assignments;
   expect(issued).toHaveLength(1);
-  await page.reload();
+  await page.reload();await page.getByRole('tab',{name:'Программа и задания'}).click();
   await page.getByRole('button',{name:'Назначить задание',exact:false}).click();
   await expect(page.getByRole('dialog').getByRole('status')).toContainText('Выдача сохранена');
   await page.getByRole('button',{name:'Проверить результат выдачи',exact:true}).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect((await call(page,'/state')).assignments.map((a:any)=>a.id)).toEqual([issued[0].id]);
-  await page.getByRole('button',{name:'Срок',exact:true}).click();
+  await page.getByRole('button',{name:'Изменить срок',exact:true}).click();
   await page.getByRole('dialog').getByLabel('Срок (необязательно)').fill('2026-12-15');
   await page.getByRole('dialog').getByRole('button',{name:'Сохранить',exact:true}).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -98,7 +98,7 @@ test('continuation follows the course order when the second lesson was assigned 
   await expect(page.getByRole('heading',{name:'First lesson work',exact:true})).toBeVisible();
   await page.locator('#python-answer').fill('print(42)');
   await page.getByRole('button',{name:'Проверить решение',exact:true}).click();
-  await expect(page.getByText('Отлично! Все тесты пройдены.',{exact:true})).toBeVisible();
+  await expect(page.getByText('Отлично! Все проверки пройдены.',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Следующее задание →',exact:true}).click();
   await expect(page).toHaveURL(new RegExp(`#assignment/${later.id}$`));
 });
@@ -116,7 +116,7 @@ test('repeat assignment opens a fresh workspace and leaves the previous result i
     await learner.goto(`/#assignment/${first.id}`);
     await learner.locator('#python-answer').fill('print(42)');
     await learner.getByRole('button',{name:'Проверить решение',exact:true}).click();
-    await expect(learner.getByText('Отлично! Все тесты пройдены.',{exact:true})).toBeVisible();
+    await expect(learner.getByText('Отлично! Все проверки пройдены.',{exact:true})).toBeVisible();
     await learner.getByRole('button',{name:'← К моим курсам',exact:true}).click();
     await expect(learner.getByRole('button',{name:/Курс завершён/})).toBeVisible();
     const original=(await call(page,'/state')).tasks.find((t:any)=>t.id===material.id);
@@ -129,7 +129,6 @@ test('repeat assignment opens a fresh workspace and leaves the previous result i
     await learner.getByRole('button',{name:/Продолжить обучение/}).click();
     await expect(learner).toHaveURL(new RegExp(`assignment/${second.id}$`));
     await expect(learner.locator('#python-answer')).toHaveValue('# Fresh assignment\n');
-    await expect(learner.getByText('Version group · Попыток: 0',{exact:true})).toBeVisible();
     await learner.getByRole('button',{name:'Попытки',exact:true}).click();
     await expect(learner.getByText('Пока нет отправленных решений.',{exact:true})).toBeVisible();
     await learner.goto(`/#assignment/${first.id}`);
@@ -179,7 +178,7 @@ test("teacher leaves an incomplete draft, restores offline work and resolves a s
   );
   await page.context().setOffline(false);
   await expect(
-    page.getByText("Сохранено на сервере", { exact: true }),
+    page.getByText("✓ Сохранено", { exact: true }),
   ).toBeVisible({ timeout: 20000 });
   await page.reload();
   await page.getByRole("button", { name: /Содержимое/ }).click();
@@ -196,7 +195,7 @@ test("teacher leaves an incomplete draft, restores offline work and resolves a s
       .getByLabel("Инструкция для ученика")
       .fill("Правка первого преподавателя");
     await expect(
-      page.getByText("Сохранено на сервере", { exact: true }),
+      page.getByText("✓ Сохранено", { exact: true }),
     ).toBeVisible();
     await peer
       .getByLabel("Инструкция для ученика")
@@ -213,7 +212,7 @@ test("teacher leaves an incomplete draft, restores offline work and resolves a s
       })
       .click();
     await expect(
-      peer.getByText("Сохранено на сервере", { exact: true }),
+      peer.getByText("✓ Сохранено", { exact: true }),
     ).toBeVisible();
     const history = await call(peer, `/tasks/${material.id}/revisions`);
     expect(
@@ -391,7 +390,7 @@ test("session expiry keeps the offline draft with its owner; lost submit respons
     );
     await page.locator("#python-answer").fill("print(42)");
     await expect(
-      page.getByText("Сохранено на сервере", { exact: true }),
+      page.getByText("✓ Сохранено", { exact: true }),
     ).toBeVisible();
     await page.route(
       "**/api/tasks/*/submissions",
@@ -409,7 +408,7 @@ test("session expiry keeps the offline draft with its owner; lost submit respons
     await expect(page.getByRole("button", { name: "Отправить то же решение ещё раз", exact: true })).toBeVisible();
     await page.reload();
     await expect(
-      page.getByText("Отлично! Все тесты пройдены.", { exact: true }),
+      page.getByText("Отлично! Все проверки пройдены.", { exact: true }),
     ).toBeVisible({ timeout: 15000 });
     const state = await call(page, "/state");
     expect(state.attempts).toHaveLength(1);

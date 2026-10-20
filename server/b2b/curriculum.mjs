@@ -205,7 +205,7 @@ export function createCurriculum({db,own,teacher,fail,tx,contextChanged=()=>{},s
       const at=now();tx(()=>{
         run('INSERT INTO lesson_step_progress VALUES(?,?,?,?,?,?) ON CONFLICT(user_id,lesson_run_id,step_id) DO UPDATE SET status=excluded.status,answer=excluded.answer,updated_at=excluded.updated_at',u.id,row.id,step.id,correct?'completed':'incorrect',answer,at);
         run('INSERT INTO lesson_step_events VALUES(?,?,?,?,?,?,?,?)',randomUUID(),u.org_id,u.id,row.id,step.id,answer,Number(correct),at);
-      });return {status:correct?'completed':'incorrect',message:correct?(step.explanation||'Верно. Можно продолжать.'):'Пока не совпало. Вернитесь к примеру и попробуйте ещё раз.'};
+      });return step.type==='question'?{status:correct?'completed':'incorrect',correct,message:correct?'Верно!':'Пока не совпало. Посмотри на пример ещё раз и попробуй снова.',explanation:correct?(step.explanation||''):''}:{status:'completed',message:''};
     }
     return undefined;
   }

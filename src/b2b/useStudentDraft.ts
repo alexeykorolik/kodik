@@ -21,10 +21,10 @@ export function useStudentDraft(
     ),
     [saved, setSaved] = useState(
       backup
-        ? "Восстановлено с этого компьютера"
+        ? "Работа восстановлена на этом компьютере"
         : serverDraft
-          ? "Черновик сохранён на сервере"
-          : "Стартовый код",
+          ? "✓ Сохранено"
+          : "Начни писать код",
     ),
     [error, setError] = useState(""),
     [conflict, setConflict] = useState<Row | null>(null);
@@ -60,7 +60,7 @@ export function useStudentDraft(
     revision.current++;
     cache();
     setCode(value);
-    setSaved("Сохранено на компьютере");
+    setSaved("Сохраняем…");
   };
   const persist = (value = latest.current, generation = revision.current) => {
     queue.current = queue.current
@@ -86,7 +86,7 @@ export function useStudentDraft(
             } catch {}
           } else cache();
           if (mounted.current && generation === revision.current) {
-            setSaved("Сохранено на сервере");
+            setSaved("✓ Сохранено");
             setError("");
           }
           return true;
@@ -101,7 +101,7 @@ export function useStudentDraft(
             setSaved(
               blocked.current
                 ? "Конфликт двух вкладок"
-                : "Сохранено на компьютере",
+                : "Нет связи — сохранено на этом компьютере",
             );
             setError(
               e instanceof ApiError
@@ -116,7 +116,7 @@ export function useStudentDraft(
   };
   useEffect(() => {
     if (code === lastSaved.current) return;
-    const timer = setTimeout(() => void persist(code, revision.current), 600);
+    const timer = setTimeout(() => void persist(code, revision.current), 300);
     return () => clearTimeout(timer);
   }, [code]);
   useEffect(() => {
@@ -130,13 +130,25 @@ export function useStudentDraft(
         e.returnValue = "";
       }
     };
+    // Closing the tab right after typing: the last code still reaches the server (a shared computer).
+    const hide = () => {
+      if (!blocked.current && latest.current !== lastSaved.current) {
+        cache();
+        void api(`/tasks/${task.id}/draft`, { code: latest.current, revision: serverRevision.current, assignment_id: task.assignment_id }, "PUT", undefined, { owner, keepalive: true }).catch(() => {});
+      }
+    };
+    const hidden = () => { if (document.visibilityState === "hidden") retry(); };
     window.addEventListener("online", retry);
     window.addEventListener("beforeunload", beforeUnload);
+    window.addEventListener("pagehide", hide);
+    document.addEventListener("visibilitychange", hidden);
     const timer = setInterval(retry, 15000);
     return () => {
       mounted.current = false;
       window.removeEventListener("online", retry);
       window.removeEventListener("beforeunload", beforeUnload);
+      window.removeEventListener("pagehide", hide);
+      document.removeEventListener("visibilitychange", hidden);
       clearInterval(timer);
       if (latest.current !== lastSaved.current) {
         cache();
@@ -157,7 +169,7 @@ export function useStudentDraft(
       try {
         localStorage.removeItem(key);
       } catch {}
-      setSaved("Сохранено на сервере");
+      setSaved("✓ Сохранено");
       return;
     }
     cache();

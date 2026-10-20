@@ -25,7 +25,7 @@ test('teacher authors a full lesson; a lost program response recovers; child com
   await step(6,'Remember print','You can now show a value with print.');
   await page.getByRole('button',{name:'Сохранить и опубликовать урок',exact:true}).click();
   await expect(page.getByRole('alert')).toContainText('Опубликована новая версия урока');
-  await page.getByRole('link',{name:'Учебные группы',exact:true}).click();
+  await page.getByRole('link',{name:'Учебные группы',exact:true}).click();await page.getByRole('button',{name:'Открыть группу',exact:true}).click();
   await page.getByRole('button',{name:'Выдать учебную программу',exact:true}).click();
   await page.getByRole('button',{name:'Проверить состав программы',exact:true}).click();
   await expect(page.locator('.program-preview')).toContainText('Remember print');
@@ -33,12 +33,12 @@ test('teacher authors a full lesson; a lost program response recovers; child com
   await page.getByRole('button',{name:'Выдать программу группе',exact:true}).click();
   await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
   expect((await call(page,'/state')).programs).toHaveLength(1);
-  await page.reload();await page.getByRole('button',{name:'Выдать учебную программу',exact:true}).click();
+  await page.reload();await page.getByRole('button',{name:'Выдать ещё одну программу',exact:true}).click();
   await expect(page.getByRole('dialog').getByRole('status')).toContainText('Выдача сохранена');
   await page.getByRole('button',{name:'Проверить результат программы',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
   const issued=(await call(page,'/state')).programs;expect(issued).toHaveLength(1);
-  await page.getByRole('button',{name:/First Python program · 1 занятий/}).click();await page.getByRole('button',{name:'Провести занятие',exact:true}).click();
-  await expect(page.getByText('private UI lesson notes',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Провести занятие',exact:true}).click();
+  await page.getByText('Заметки преподавателя · ученики их не видят',{exact:true}).click();await expect(page.getByText('private UI lesson notes',{exact:true})).toBeVisible();
   const learnerContext=await browser.newContext({baseURL:'http://127.0.0.1:4186',viewport:{width:1366,height:768}}),child=await learnerContext.newPage();
   try{
     await child.goto('/');await child.getByLabel('Логин',{exact:true}).fill(login);await child.getByLabel('Пароль',{exact:true}).fill(password);await child.getByRole('button',{name:'Войти в Kodik',exact:true}).click();
@@ -47,10 +47,10 @@ test('teacher authors a full lesson; a lost program response recovers; child com
     await child.getByRole('button',{name:'Продолжить',exact:true}).click();await expect(child.locator('.lesson-code')).toHaveText('print(42)');await child.getByRole('button',{name:'Продолжить',exact:true}).click();
     await expect(child.locator('#python-answer')).toBeVisible();expect(await child.locator('#python-answer').evaluate(e=>parseFloat(getComputedStyle(e).fontSize))).toBe(16);
     await child.locator('#python-answer').fill('print(41)');await child.getByRole('button',{name:'Проверить решение',exact:true}).click();await expect(child.getByText('Ожидается',{exact:true})).toBeVisible();
-    await child.locator('#python-answer').fill('print(42)');await child.getByRole('button',{name:'Проверить решение',exact:true}).click();await expect(child.getByText('Отлично! Все тесты пройдены.',{exact:true})).toBeVisible();
+    await child.locator('#python-answer').fill('print(42)');await child.getByRole('button',{name:'Проверить решение',exact:true}).click();await expect(child.getByText('Отлично! Все проверки пройдены.',{exact:true})).toBeVisible();
     await child.getByRole('button',{name:'Следующее задание →',exact:true}).click();await expect(child.getByRole('heading',{name:'Check understanding',exact:true})).toBeVisible();
     await child.getByRole('radio',{name:'43',exact:true}).check();await child.getByRole('button',{name:'Ответить',exact:true}).click();await expect(child.locator('.lesson-run-screen [role="status"]')).toContainText('Пока не совпало');
-    await child.getByRole('radio',{name:'42',exact:true}).check();await child.getByRole('button',{name:'Ответить',exact:true}).click();await expect(child.getByRole('heading',{name:'Independent print',exact:true})).toBeVisible();
+    await child.getByRole('radio',{name:'42',exact:true}).check();await child.getByRole('button',{name:'Ответить',exact:true}).click();await expect(child.getByText('The program displays 42.',{exact:true})).toBeVisible();await child.getByRole('button',{name:'Дальше →',exact:true}).click();await expect(child.getByRole('heading',{name:'Independent print',exact:true})).toBeVisible();
     await child.locator('#python-answer').fill('print(43)');await child.getByRole('button',{name:'Проверить решение',exact:true}).click();await child.getByRole('button',{name:'Следующее задание →',exact:true}).click();
     await expect(child.getByRole('heading',{name:'Remember print',exact:true})).toBeVisible();await child.getByRole('button',{name:'Продолжить',exact:true}).click();await expect(child.getByRole('heading',{name:'Урок завершён!',exact:true})).toBeVisible();
     await child.reload();await expect(child.getByText('Завершено 6 из 6 шагов',{exact:true})).toBeVisible();

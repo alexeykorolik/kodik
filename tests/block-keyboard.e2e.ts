@@ -155,5 +155,5 @@ test("learner edits a full block program from the keyboard at 1366×768; graph, 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
   await page.getByRole("button", { name: /Проверить решение/ }).click();
-  await expect(page.getByRole("status").filter({ hasText: /Тест 1|тест/i })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("status").filter({ hasText: /Проверка 1|провер/i })).toBeVisible({ timeout: 20000 });
 });

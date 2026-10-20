@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type Row, type State } from "./api";
 import { MinimalCodeEditor } from "../MinimalCodeEditor";
 import { Badge, Glyph, Header } from "./App";
@@ -64,7 +64,15 @@ export function Builder({
   const requested=Number(new URLSearchParams(location.hash.split("?")[1]).get("step")||0);
   const [step, setStep] = useState([0,1,2,3,5].includes(requested)?requested:0),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [visited, setVisited] = useState<number[]>([0]),
+    [verifyNote, setVerifyNote] = useState(""),
+    [published, setPublished] = useState<Row | null>(null),
+    [savedAt, setSavedAt] = useState(original ? "" : "");
+  const panel = useRef<HTMLElement>(null);
+  // Each step opens at its top, so the heading and the first field are in view.
+  useEffect(() => { setVisited((v) => (v.includes(step) ? v : [...v, step])); panel.current?.scrollIntoView?.({ block: "start" }); window.scrollTo?.(0, 0); }, [step]);
+  useEffect(() => { if (draft.status === "saved" && draft.serverId) setSavedAt(new Date().toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })); }, [draft.status, draft.serverRevision]);
   const approved=verification?.status==='approved'&&verification.signature===signature(task)&&verification.revision===draft.serverRevision&&!draft.hasChanges;
   const issues:[number,string][]=[];
   if(!task.title.trim())issues.push([0,'Заполните название задания.']);
@@ -73,7 +81,7 @@ export function Builder({
   else {if(!task.reference_solution.trim())issues.push([3,'Сохраните закрытый эталон.']);if(!task.wrong_solutions.length||task.wrong_solutions.some((s:string)=>!s.trim()))issues.push([3,'Подготовьте характерный неправильный пример.']);if(!task.tests.length)issues.push([3,'Добавьте тесты.'])}
   if(!approved)issues.push([3,'Подтвердите проверку текущей ревизии.']);
   async function gotoStep(index:number){setError('');if(index!==4){setStep(index);return}setBusy(true);try{const saved=await draft.persist();location.hash=`preview/${saved.id}`}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
-  async function verify(){setBusy(true);setError('');try{const saved=await draft.persist();const proof=await api(`/tasks/${saved.id}/verify`,{revision:saved.revision});setVerification({...proof,signature:signature(task)});setError(proof.message)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
+  async function verify(){setBusy(true);setError('');setVerifyNote('');try{const saved=await draft.persist();const proof=await api(`/tasks/${saved.id}/verify`,{revision:saved.revision});setVerification({...proof,signature:signature(task)});setVerifyNote(proof.message||'')}catch(e){setVerifyNote((e as Error).message)}finally{setBusy(false)}}
   async function loadHistory(){try{const id=draft.serverId||(await draft.persist()).id;setVerificationHistory((await api(`/tasks/${id}/verifications`)).items)}catch(e){setError((e as Error).message)}}
   async function replayProof(record:Row){setBusy(true);try{const result=await api(`/tasks/${draft.serverId}/verify`,{revision:record.revision,verification_id:record.id});if(result.publication_eligible)setVerification({...result,signature:signature(task)});setError(`Повторная проверка ревизии ${record.revision}: ${result.message}${result.publication_eligible?'':' Текущая ревизия этим результатом не подтверждена.'}`);await loadHistory()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
   const courseOf = (lid: string) => {
@@ -90,7 +98,8 @@ export function Builder({
       const tid = result.id;
       if (publish) await api(`/tasks/${tid}/publish`, { published: true,revision:result.revision });
       await onSaved(tid);
-      if (!publish) setError("Черновик сохранён.");
+      if (publish) setPublished({ id: tid, title: task.title, lesson: task.lesson_id });
+      else setError("Черновик сохранён.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -115,20 +124,22 @@ export function Builder({
         title={original ? "Редактирование задания" : "От идеи — к практике"}
         text="Шесть шагов, чтобы создать полезное учебное задание."
       >
-        <Badge>
-          {{
-                saved: "Сохранено на сервере",
-                saving: "Сохраняем…",
-                local: "Сохранено на компьютере",
+        <Badge status={draft.status === "saved" && draft.serverId ? "passed" : draft.status === "conflict" || draft.status === "error" ? "failed" : ""}>
+          {draft.status === "saved" && !draft.serverId
+            ? "Ещё не сохранено"
+            : {
+                saved: "✓ Сохранено",
+                saving: "Сохраняется…",
+                local: "Нет связи — изменения в браузере",
                 conflict: "Конфликт версий",
-                error: "Нужна синхронизация",
+                error: "Нет связи — изменения в браузере",
               }[draft.status]}
         </Badge>
         <button disabled={busy} onClick={() => save()}>
           Сохранить черновик
         </button>
       </Header>
-      {step===0&&<section className="panel task-template-picker"><label>Начать с шаблона<select value={selectedTemplate} onChange={e=>setSelectedTemplate(e.target.value)} aria-label="Начать с шаблона"><option value="">Выберите пример</option>{templates.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label><button disabled={busy||!selectedTemplate} onClick={async()=>{setBusy(true);try{await draft.persist();const template=templates.find(t=>t.id===selectedTemplate)!;for(const [field,value] of Object.entries({...template.task,template_id:template.id}))set(field,value);setVerification(null)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}>Применить шаблон к черновику</button><p>Шаблон заполняет цель, условие, объяснение и проверку. Измените их под свой урок; перед публикацией нужна проверка.</p></section>}
+      {step===0&&<section className="panel task-template-picker"><label>Начать с шаблона<select value={selectedTemplate} onChange={e=>setSelectedTemplate(e.target.value)} aria-label="Начать с шаблона"><option value="">Выберите пример</option>{templates.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label><button disabled={busy||!selectedTemplate} onClick={async()=>{setBusy(true);try{await draft.persist();const template=templates.find(t=>t.id===selectedTemplate)!;for(const [field,value] of Object.entries({...template.task,template_id:template.id}))set(field,value);if(template.python_only)set('learning_config',{...config,modes:[]});setVerification(null)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}>Применить шаблон к черновику</button><p>Шаблон заполняет цель, условие, объяснение и проверку. Измените их под свой урок; перед публикацией нужна проверка.</p>{templates.find(t=>t.id===selectedTemplate)?.python_only&&<p className="muted">Этот шаблон решается только на Python: блоков для его конструкции пока нет.</p>}</section>}
       {draft.error && (
         <div className="notice" role="status">
           {draft.error}
@@ -167,26 +178,44 @@ export function Builder({
           </div>
         </section>
       )}
-      {original?.published && (
+      {!!original?.published && (
         <div className="notice">
           Изменения сохраняются в черновик. Публикация создаст новую версию для будущих назначений; текущие группы продолжат прежнюю.
         </div>
       )}
       <div className="builder-steps">
-        {steps.map((name, i) => (
+        {steps.map((name, i) => {
+          const problems = issues.filter(([at]) => at === i);
+          const seen = visited.includes(i) && step !== i, ok = seen && !issues.some(([at]) => at === i);
+          return (
           <button
             key={name}
-            className={step === i ? "active" : step > i ? "complete" : ""}
+            className={step === i ? "active" : ok ? "complete" : seen && problems.length ? "warn" : ""}
+            aria-current={step === i ? "step" : undefined}
+            title={problems.map(([, m]) => m).join(" ") || undefined}
             onClick={() => {
               void gotoStep(i);
             }}
           >
-            <span>{step > i ? "✓" : i + 1}</span>
-            {name}
+            <span>{i + 1}</span>
+            {name}{ok ? " ✓" : ""}
+            {seen && problems.length > 0 && <small className="step-warning">не заполнено</small>}
           </button>
-        ))}
+        );})}
       </div>
-      <section className="panel builder-panel">
+      {published ? (
+        <section className="panel builder-panel publish-done" role="status">
+          <span className="publish-icon"><Glyph name="book" /></span>
+          <h2>Опубликовано: «{published.title}»</h2>
+          <p>Задание готово к выдаче. Если оно — шаг урока, выдайте программу курса группе; отдельное задание выдаётся на странице группы.</p>
+          <div className="actions">
+            <button className="primary" onClick={() => { location.hash = "groups"; }}>Выдать группе →</button>
+            <button onClick={() => setPublished(null)}>Вернуться к заданию</button>
+            <button className="link" onClick={onBack}>Все задания</button>
+          </div>
+        </section>
+      ) : (
+      <section className="panel builder-panel" ref={panel}>
         <div className="builder-heading">
           <span className="overline">ШАГ {step + 1} ИЗ 6</span>
           <h2>{steps[step]}</h2>
@@ -245,10 +274,7 @@ export function Builder({
                     <option value="hard">Продвинутый</option>
                   </select>
                 </label>
-                <label>
-                  Тип задания
-                  <input value="Практика Python" readOnly />
-                </label>
+                <p className="muted form-note">Ученик решает на Python или блоками — способы решения выбираются на шаге «Редактор».</p>
               </div>
               <label>
                 Краткое описание
@@ -301,20 +327,21 @@ export function Builder({
           )}
           {step === 2 && (
             <>
-              <section aria-label="Способы решения"><h3>Способы решения</h3><p>Python поддерживается платформой. При выдаче вы выберете, что разрешено группе.</p>
+              <section aria-label="Способы решения"><h3>Способы решения</h3><p>Python доступен всегда. Отметьте, можно ли решать ещё и блоками. Что разрешено конкретной группе и ученику, настраивается после выдачи в разделе <a href="#modes">«Способы решения»</a>.</p>
               {(['blocks','mixed'] as const).map(mode=><label className="checkbox" key={mode}><input type="checkbox" disabled={task.check_mode==='manual'} checked={config.modes.includes(mode)} onChange={e=>set('learning_config',{...config,modes:e.target.checked?[...config.modes,mode]:config.modes.filter((m:string)=>m!==mode),palette:config.palette.length?config.palette:BLOCKS.map(b=>b.type)})}/>{mode==='blocks'?'Блоки':'Блоки + Python'}</label>)}</section>
-              <details><summary>Целевые навыки и набор блоков</summary><p>Отметьте цели сами: готовая конструкция в заготовке не доказывает навык ученика.</p>
-              <p>Копии и версии одного упражнения считаются одним семейством. Если создаёте похожий вариант заново, свяжите его с исходным упражнением до первой публикации.</p><label>Вариант существующего задания<select value={familySource} onChange={e=>setFamilySource(e.target.value)} disabled={!!task.published_version_id}><option value="">Отдельное упражнение</option>{s.tasks.filter(t=>t.id!==task.id).map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label><button type="button" disabled={!familySource||!!task.published_version_id} onClick={async()=>{try{const saved=await draft.persist();await api(`/tasks/${saved.id}/family`,{source_task_id:familySource},'PUT');setError('Вариант связан с семейством исходного задания.')}catch(e){setError((e as Error).message)}}}>Связать с исходным упражнением</button>
-              <p>В эталоне обнаружено: {analysis.skills.map(skillLabel).join(', ')||'пока ничего'}. Это предложения для автора.</p><button type="button" disabled={!analysis.skills.length} onClick={()=>setConfig('skills',analysis.skills)}>Подтвердить обнаруженное как цели задания</button><button type="button" disabled={!analysis.palette.length} onClick={()=>setConfig('palette',analysis.palette)}>Предложить палитру по эталону</button>{analysis.reasons.map(r=><p key={r}>{r} Можно подготовить другой эквивалентный блоковый образец.</p>)}
-              {SKILLS.map(skill=><label className="checkbox" key={skill.id}><input type="checkbox" checked={config.skills.includes(skill.id)} onChange={e=>setConfig('skills',e.target.checked?[...config.skills,skill.id]:config.skills.filter((s:string)=>s!==skill.id))}/>{skill.label}</label>)}
-              {config.modes.length>0&&<fieldset><legend>Блоки этого задания</legend>{BLOCKS.map(b=><label className="checkbox" key={b.type}><input type="checkbox" checked={config.palette.includes(b.type)} onChange={e=>setConfig('palette',e.target.checked?[...config.palette,b.type]:config.palette.filter((t:string)=>t!==b.type))}/>{b.label}</label>)}</fieldset>}</details>
-              {config.modes.length>0&&<><details open id="starter-blocks"><summary>Стартовые блоки ученика</summary><p>Можно оставить незаполненные места. Закрытый образец ниже хранится отдельно.</p><div className="author-blocks"><BlockEditor value={config.starter_blocks} palette={config.palette} onChange={w=>setConfig('starter_blocks',w)}/></div></details>
-              <details><summary>Закрытый блоковый образец</summary><p>Соберите полное решение. Оно должно пройти те же тесты и учебные правила. Ученик его не увидит.</p><div className="author-blocks"><BlockEditor value={task.block_solution} palette={config.palette} onChange={w=>set('block_solution',w)} label="Закрытый блоковый образец"/></div></details></>}
+              <section className="builder-group" aria-label="Цели задания"><h3>Чему учит задание</h3><p className="muted">Отметьте цели сами: готовая конструкция в заготовке не доказывает навык ученика.</p>
+              <p>В эталоне найдено: {analysis.skills.map(skillLabel).join(', ')||'пока ничего'}.</p><div className="actions wrap"><button type="button" disabled={!analysis.skills.length} onClick={()=>setConfig('skills',analysis.skills)}>Взять цели из эталона</button>{config.modes.length>0&&<button type="button" disabled={!analysis.palette.length} onClick={()=>setConfig('palette',analysis.palette)}>Подобрать блоки по эталону</button>}</div>{analysis.reasons.map(r=><p key={r} className="muted">{r} Можно подготовить другой равноценный блоковый образец.</p>)}
+              <div className="check-grid">{SKILLS.map(skill=><label className="checkbox" key={skill.id}><input type="checkbox" checked={config.skills.includes(skill.id)} onChange={e=>setConfig('skills',e.target.checked?[...config.skills,skill.id]:config.skills.filter((s:string)=>s!==skill.id))}/>{skill.label}</label>)}</div></section>
+              {config.modes.length>0&&<fieldset className="builder-group palette-picker"><legend>Палитра ученика · выбрано блоков: {config.palette.length} из {BLOCKS.length}</legend>{[...new Set(BLOCKS.map(b=>b.category))].map(cat=>{const items=BLOCKS.filter(b=>b.category===cat),all=items.every(b=>config.palette.includes(b.type));return <div className="palette-category" key={cat}><label className="checkbox category-toggle"><input type="checkbox" checked={all} onChange={e=>setConfig('palette',e.target.checked?[...new Set([...config.palette,...items.map(b=>b.type)])]:config.palette.filter((t:string)=>!items.some(b=>b.type===t)))}/><b>{cat}</b></label><div className="palette-blocks">{items.map(b=><label className={`palette-chip${config.palette.includes(b.type)?' on':''}`} key={b.type}><input type="checkbox" checked={config.palette.includes(b.type)} onChange={e=>setConfig('palette',e.target.checked?[...config.palette,b.type]:config.palette.filter((t:string)=>t!==b.type))}/>{b.label}<code>{b.python}</code></label>)}</div></div>})}</fieldset>}
+              <details className="builder-group"><summary>Похожее задание уже есть?</summary><p>Если это вариант существующего задания, свяжите их до первой публикации — тогда результаты ученика по обоим учитываются как одно упражнение.</p><label>Это вариант задания<select value={familySource} onChange={e=>setFamilySource(e.target.value)} disabled={!!task.published_version_id}><option value="">Нет, это отдельное задание</option>{s.tasks.filter(t=>t.id!==task.id).map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label><button type="button" disabled={!familySource||!!task.published_version_id} onClick={async()=>{try{const saved=await draft.persist();await api(`/tasks/${saved.id}/family`,{source_task_id:familySource},'PUT');setError('Задания связаны как варианты одного упражнения.')}catch(e){setError((e as Error).message)}}}>Связать задания</button></details>
+              {config.modes.length>0&&<><details open id="starter-blocks" className="builder-group"><summary>Стартовые блоки ученика</summary><p>Можно оставить незаполненные места. Закрытый образец ниже хранится отдельно.</p><div className="author-blocks"><BlockEditor value={config.starter_blocks} palette={config.palette} onChange={w=>setConfig('starter_blocks',w)}/></div></details>
+              <details open className="builder-group" id="block-solution"><summary>Закрытый блоковый образец</summary><p>Соберите полное решение. Оно должно пройти те же тесты и учебные правила. Ученик его не увидит.</p><div className="author-blocks"><BlockEditor value={task.block_solution} palette={config.palette} onChange={w=>set('block_solution',w)} label="Закрытый блоковый образец"/></div></details></>}
               <label id="starter-python">Стартовый код</label>
               <MinimalCodeEditor
                 value={task.starter}
                 onChange={(v) => set("starter", v)}
                 rows={12}
+                label="Стартовый код"
               />
               <details className="runtime-info">
                 <summary>Возможности учебного Python</summary>
@@ -329,9 +356,6 @@ export function Builder({
           )}
           {step === 3 && (
             <>
-              {task.check_mode==='manual'?<label>Критерии ручной проверки<textarea aria-label="Критерии ручной проверки" rows={4} value={task.manual_criteria} onChange={e=>set('manual_criteria',e.target.value)} placeholder="Что должно быть в работе и по каким признакам она будет принята?"/></label>:<><label>Эталонное решение · только преподавателю<textarea aria-label="Эталонное решение · только преподавателю" className="code-field" rows={7} value={task.reference_solution} onChange={e=>set('reference_solution',e.target.value)} placeholder="Правильная программа для всех открытых и скрытых тестов"/></label><h3>Характерные неправильные решения · закрытые примеры</h3>{task.wrong_solutions.map((code:string,i:number)=><div className="test-card" key={i}><label>Неправильный пример {i+1}<textarea aria-label={'Неправильный пример '+(i+1)} rows={4} className="code-field" value={code} onChange={e=>set('wrong_solutions',task.wrong_solutions.map((v:string,j:number)=>i===j?e.target.value:v))}/></label><button onClick={()=>set('wrong_solutions',task.wrong_solutions.filter((_:string,j:number)=>j!==i))}>Удалить неправильный пример</button></div>)}<button disabled={task.wrong_solutions.length>=6} onClick={()=>set('wrong_solutions',[...task.wrong_solutions,''])}>Добавить неправильный пример</button></>}
-              <div className="verification-panel"><button className="primary" disabled={busy} onClick={()=>void verify()}>{busy?'Проверяем…':task.check_mode==='manual'?'Подтвердить критерии':'Проверить эталон и неправильные примеры'}</button><p role="status">{approved?'Текущая ревизия подтверждена.':'После изменений нужна новая проверка перед публикацией.'}</p>{verification&&verification.status!=='solved_starter'&&<p>{verification.message||`Подтверждена ревизия ${verification.revision}`}</p>}</div>{verification?.status==='solved_starter'&&<section className="starter-problem" role="alert"><h3>Заготовка уже решает задачу</h3><p>{verification.message}</p><div className="actions">{verification.starter?.solved?.map((s:Row)=><button key={s.mode} onClick={()=>{setStep(2);requestAnimationFrame(()=>document.getElementById(s.mode==='python'?'starter-python':'starter-blocks')?.scrollIntoView({block:'center'}))}}>{s.mode==='python'?'Исправить стартовый код Python':'Исправить стартовые блоки'}</button>)}</div></section>}
-              <button onClick={()=>void loadHistory()}>История проверок качества</button>{verificationHistory&&<section className="quality-history"><h3>Сохранённые проверки</h3>{verificationHistory.length?verificationHistory.map(v=><article key={v.id}><b>Ревизия {v.revision} · {v.status==='approved'?'Подтверждена':v.status==='weak_tests'?'Нужны сильнее тесты':v.status==='bad_reference'?'Эталон не прошёл':'Техническая ошибка'}</b><p>{new Date(v.created_at).toLocaleString('ru')} · {s.users.find(u=>u.id===v.author_id)?.name||'Преподаватель'}</p><button disabled={busy} onClick={()=>void replayProof(v)}>Повторить проверку ревизии {v.revision}</button></article>):<p>Проверок пока нет.</p>}</section>}
               <label>
                 Способ проверки
                 <select
@@ -344,6 +368,9 @@ export function Builder({
                   <option value="manual">Ручная проверка преподавателем</option>
                 </select>
               </label>
+              {task.check_mode==='manual'?<label>Критерии ручной проверки<textarea aria-label="Критерии ручной проверки" rows={4} value={task.manual_criteria} onChange={e=>set('manual_criteria',e.target.value)} placeholder="Что должно быть в работе и по каким признакам она будет принята?"/></label>:<><label>Эталонное решение · только преподавателю<textarea aria-label="Эталонное решение · только преподавателю" className="code-field" rows={7} value={task.reference_solution} onChange={e=>set('reference_solution',e.target.value)} placeholder="Правильная программа для всех открытых и скрытых тестов"/></label><h3>Характерные неправильные решения · закрытые примеры</h3>{task.wrong_solutions.map((code:string,i:number)=><div className="test-card" key={i}><label>Неправильный пример {i+1}<textarea aria-label={'Неправильный пример '+(i+1)} rows={4} className="code-field" value={code} onChange={e=>set('wrong_solutions',task.wrong_solutions.map((v:string,j:number)=>i===j?e.target.value:v))}/></label><button onClick={()=>set('wrong_solutions',task.wrong_solutions.filter((_:string,j:number)=>j!==i))}>Удалить неправильный пример</button></div>)}<button disabled={task.wrong_solutions.length>=6} onClick={()=>set('wrong_solutions',[...task.wrong_solutions,''])}>Добавить неправильный пример</button></>}
+              <div className="verification-panel"><button className="primary" disabled={busy} onClick={()=>void verify()}>{busy?'Проверяем…':task.check_mode==='manual'?'Подтвердить критерии':'Проверить эталон и неправильные примеры'}</button><p role="status">{approved?'Текущая ревизия подтверждена.':'После изменений нужна новая проверка перед публикацией.'}</p>{verifyNote&&<p className={approved?'success-note':'verify-problem'} role="alert">{verifyNote}{/блоков[а-я]* образец/i.test(verifyNote)&&<> <button type="button" className="link" onClick={()=>{setStep(2);requestAnimationFrame(()=>document.getElementById('block-solution')?.scrollIntoView({block:'center'}))}}>Перейти к блоковому образцу →</button></>}</p>}{verification&&verification.status!=='solved_starter'&&!verifyNote&&<p>{verification.message||`Подтверждена ревизия ${verification.revision}`}</p>}</div>{verification?.status==='solved_starter'&&<section className="starter-problem" role="alert"><h3>Заготовка уже решает задачу</h3><p>{verification.message}</p><div className="actions">{verification.starter?.solved?.map((s:Row)=><button key={s.mode} onClick={()=>{setStep(2);requestAnimationFrame(()=>document.getElementById(s.mode==='python'?'starter-python':'starter-blocks')?.scrollIntoView({block:'center'}))}}>{s.mode==='python'?'Исправить стартовый код Python':'Исправить стартовые блоки'}</button>)}</div></section>}
+              <button onClick={()=>void loadHistory()}>История проверок качества</button>{verificationHistory&&<section className="quality-history"><h3>Сохранённые проверки</h3>{verificationHistory.length?verificationHistory.map(v=><article key={v.id}><b>Ревизия {v.revision} · {v.status==='approved'?'Подтверждена':v.status==='weak_tests'?'Нужны сильнее тесты':v.status==='bad_reference'?'Эталон не прошёл':'Техническая ошибка'}</b><p>{new Date(v.created_at).toLocaleString('ru')} · {s.users.find(u=>u.id===v.author_id)?.name||'Преподаватель'}</p><button disabled={busy} onClick={()=>void replayProof(v)}>Повторить проверку ревизии {v.revision}</button></article>):<p>Проверок пока нет.</p>}</section>}
               {task.check_mode === "manual" ? (
                 <div className="info-box">
                   Решение сохранится со статусом «На проверке». Преподаватель
@@ -455,8 +482,8 @@ export function Builder({
             </div>
             <p>Набор: {config.palette.length} блоков. Цели: {config.skills.map((id:string)=>SKILLS.find(s=>s.id===id)?.label).join(', ')||'не выбраны'}. {original?.published?'Новая публикация сохранит прежние назначения без изменений.':''}</p>
             <p className="muted">
-              После публикации назначьте задание группе в разделе «Учебные
-              группы». Ученики других групп его не увидят.
+              После публикации выдайте задание группе на странице группы.
+              Ученики других групп его не увидят.
             </p>
             {issues.length>0&&<section className="publication-issues"><h3>Что ещё подготовить</h3><ul>{issues.map(([index,message])=><li key={message}><button className="link" onClick={()=>void gotoStep(index)}>{message}</button></li>)}</ul></section>}
             <button
@@ -507,6 +534,7 @@ export function Builder({
           )}
         </div>
       </section>
+      )}
     </>
   );
 }

@@ -11,6 +11,19 @@ const theme = Blockly.Theme.defineTheme("kodik-b2b", {
   componentStyles: { workspaceBackgroundColour: "#f8f7f2", toolboxBackgroundColour: "#edf0e8", flyoutBackgroundColour: "#fffefa", scrollbarColour: "#b7cfca", insertionMarkerColour: "#1f6f8b" },
   fontStyle: { family: "Nunito, Arial, sans-serif", weight: "600", size: 14 },
 });
+// An empty text field is drawn wide with a prompt, so a child sees where to type and can hit it.
+const textProto = Blockly.FieldTextInput.prototype as unknown as { getDisplayText_: () => string; isBeingEdited_?: boolean; __kodik?: boolean };
+if (!textProto.__kodik) {
+  const original = textProto.getDisplayText_;
+  textProto.getDisplayText_ = function (this: typeof textProto) { const text = original.call(this); return text.trim() === "" && !this.isBeingEdited_ ? "  впиши текст  " : text; };
+  textProto.__kodik = true;
+}
+/** Keeps blocks readable: never larger than 100% after fitting, never smaller than the minimum. */
+function fit(w: Blockly.WorkspaceSvg) {
+  if (!w.getAllBlocks(false).length) { w.setScale(0.9); return; }
+  w.zoomToFit();
+  if (w.scale > 1) { w.setScale(1); w.scrollCenter(); }
+}
 
 /**
  * Learner (and teacher preview) block workspace. Emits the Blockly JSON serialization on every
@@ -30,7 +43,6 @@ export function BlockEditor({ value, palette, onChange, onSelect, readOnly = fal
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<Blockly.BlockSvg[]>([]), [variable, setVariable] = useState('');
-  const [newType,setNewType]=useState(palette[0]||'text_print');
   const emitted = useRef('');
   const [rename, setRename] = useState('');
   const sync = () => { const w = ws.current; if (!w) return; const state = Blockly.serialization.workspaces.save(w); emitted.current = JSON.stringify(state); setBlocks(w.getAllBlocks(true)); setSelected(id => id && w.getBlockById(id) ? id : null); change.current(state); };
@@ -48,7 +60,7 @@ export function BlockEditor({ value, palette, onChange, onSelect, readOnly = fal
     catch { setNotice("Сохранённые блоки не удалось открыть. Начни заново — прежний вариант остался в истории черновиков."); }
     emitted.current = JSON.stringify(value);
     setBlocks(w.getAllBlocks(true));
-    const initialFit=requestAnimationFrame(()=>{if(w.getAllBlocks(false).length)w.zoomToFit()});
+    const initialFit=requestAnimationFrame(()=>fit(w));
     const statementOf = (id: string | null) => { let b = id ? w.getBlockById(id) : null; while (b && b.outputConnection) b = b.getParent(); return b?.id ?? null; };
     const listener = (e: Blockly.Events.Abstract) => {
       if (e.type === Blockly.Events.SELECTED) { const id = (e as Blockly.Events.Selected).newElementId ?? null; setSelected(id); select.current?.(id, statementOf(id)); return; }
@@ -98,8 +110,10 @@ export function BlockEditor({ value, palette, onChange, onSelect, readOnly = fal
       }
       if (!connected) block.moveBy(40, 40 + w.getTopBlocks(false).length * 60);
       block.select();
+      // The new block is brought into view instead of appearing off-screen.
+      requestAnimationFrame(() => { const r = block.getBoundingRectangle(), v = w.getMetricsManager().getViewMetrics(true); if (r.left < v.left || r.top < v.top || r.right > v.left + v.width || r.bottom > v.top + v.height) w.centerOnBlock(block.id); });
       setSelected(block.id); sync();
-      setNotice(connected ? `Блок «${label_(type)}» добавлен в программу.` : `Блок «${label_(type)}» добавлен отдельно. Перетащи или выбери место.`);
+      setNotice(connected ? `Блок «${label_(type)}» добавлен в программу.` : `Блок «${label_(type)}» добавлен отдельно — перетащи его к программе или выбери место.`);
     } finally { Blockly.Events.setGroup(false); }
   }
   const label_ = (type: string) => BLOCKS.find((b) => b.type === type)?.label ?? type;
@@ -158,8 +172,12 @@ export function BlockEditor({ value, palette, onChange, onSelect, readOnly = fal
 
   return (
     <div className="block-editor">
-      {!readOnly&&<div className="compact-palette"><label>Новый блок<select value={palette.includes(newType)?newType:palette[0]||''} onChange={e=>setNewType(e.target.value)}>{BLOCKS.filter(b=>palette.includes(b.type)).map(b=><option key={b.type} value={b.type}>{b.label}</option>)}</select></label><button type="button" disabled={!palette.length} onClick={()=>add(palette.includes(newType)?newType:palette[0])}>Добавить</button></div>}
-      <div className="blockly-host" ref={host} role="application" aria-label={label} />
+      {!readOnly&&<div className="block-toolbar"><div className="block-palette" role="group" aria-label="Палитра блоков">{BLOCKS.filter(b=>palette.includes(b.type)).map(b=><button key={b.type} type="button" className={`palette-block cat-${BLOCKS.findIndex(x=>x.category===b.category)}`} onClick={()=>add(b.type)} title={`Добавить блок «${b.label}»`}>＋ {b.label}</button>)}</div>
+        <div className="block-tools"><button type="button" className="tool" aria-label="Отменить действие" title="Отменить" onClick={() => ws.current?.undo(false)}>↶</button><button type="button" className="tool" aria-label="Вернуть действие" title="Вернуть" onClick={() => ws.current?.undo(true)}>↷</button><button type="button" className="tool wide" onClick={() => { const w = ws.current; if (w) fit(w); }}>Показать мою программу</button></div></div>}
+      <div className="blockly-wrap">
+        <div className="blockly-host" ref={host} role="application" aria-label={label} />
+        {!readOnly && blocks.length === 0 && <p className="blockly-empty" aria-hidden="true">Нажми «＋ {label_(palette[0] || "text_print")}» выше — блок появится здесь.<br/>Блоки можно перетаскивать мышкой или пальцем.</p>}
+      </div>
       {!readOnly && (
         <details className="block-keyboard">
           <summary>Добавить блок с клавиатуры</summary>

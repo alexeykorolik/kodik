@@ -16,6 +16,10 @@ import {ProgramCards,ProgramOverview,ProgramIssueDialog} from './Programs';
 import {TaskPreview} from './TaskPreview';
 import {ModeManagement,SchoolPanel,ClassroomPanel,Journal} from './PilotPanels';
 import {Owner} from './Owner';
+import {GroupsList,GroupPage,type GroupActions} from './Groups';
+import {useConfirm} from './confirm';
+import {learnerStatus} from './feedback';
+import {friendlyPassword} from './passwords';
 
 export function Glyph({ name = "grid" }: { name?: string }) {
   const paths: Record<string, string> = {
@@ -28,6 +32,11 @@ export function Glyph({ name = "grid" }: { name?: string }) {
     arrow: "M5 12h14 m-6-6 6 6-6 6",
     plus: "M12 5v14 M5 12h14",
     code: "m8 6-6 6 6 6 m8-12 6 6-6 6 M14 3l-4 18",
+    help: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14 M12 17.5v.01",
+    journal: "M6 3h12v18H6z M9 7h6 M9 11h6 M9 15h4",
+    switch: "M4 7h11 m-3-3 3 3-3 3 M20 17H9 m3-3-3 3 3 3",
+    school: "M3 21h18 M5 21V10l7-5 7 5v11 M10 21v-5h4v5",
+    person: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1",
   };
   return (
     <svg
@@ -44,6 +53,11 @@ export function Glyph({ name = "grid" }: { name?: string }) {
       <path d={paths[name] || paths.grid} />
     </svg>
   );
+}
+/** Russian plural: plural(5, ["модуль", "модуля", "модулей"]) → "5 модулей". */
+export function plural(n: number, [one, few, many]: [string, string, string]) {
+  const t = Math.abs(n) % 100, u = t % 10;
+  return `${n} ${t > 10 && t < 20 ? many : u === 1 ? one : u >= 2 && u <= 4 ? few : many}`;
 }
 export function Badge({
   status,
@@ -78,6 +92,16 @@ export function Empty({
     </div>
   );
 }
+export function NotFound({ title = "Страница не найдена", text = "Такого раздела нет. Возможно, ссылка устарела.", back = "overview", backLabel = "На обзор" }: { title?: string; text?: string; back?: string; backLabel?: string }) {
+  return (
+    <div className="empty not-found" role="status">
+      <div className="empty-icon"><Glyph name="book" /></div>
+      <h1>{title}</h1>
+      <p>{text}</p>
+      <a className="button-link primary" href={`#${back}`}>{backLabel}</a>
+    </div>
+  );
+}
 export function Header({
   eyebrow,
   title,
@@ -92,7 +116,7 @@ export function Header({
   return (
     <div className="page-heading">
       <div>
-        <div className="eyebrow">{eyebrow || "РАБОЧЕЕ ПРОСТРАНСТВО"}</div>
+        {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         <h1>{title}</h1>
         {detail && <p>{detail}</p>}
       </div>
@@ -107,6 +131,7 @@ type Field = {
   options?: Row[];
   optional?: boolean;
   value?: string;
+  hint?: string;
 };
 type Dialog = {
   title: string;
@@ -114,6 +139,18 @@ type Dialog = {
   fields: Field[];
   submit: (b: Row) => Promise<unknown>;
 };
+/** A text field; a password field comes with a generated value the admin can show to the learner once. */
+function PasswordAware({ field: f }: { field: Field }) {
+  const [value, setValue] = useState(f.type === "password" ? friendlyPassword() : f.value || "");
+  if (f.type !== "password")
+    return <input aria-label={f.label} autoComplete="off" name={f.key} type={f.type || "text"} defaultValue={f.value} required={!f.optional} {...(f.key === "login" ? { pattern: "[A-Za-z0-9][A-Za-z0-9._\\-]{2,119}", title: "Латинские буквы, цифры, точка, дефис или «_» — без пробелов" } : {})} />;
+  return (
+    <span className="password-field">
+      <input aria-label={f.label} autoComplete="new-password" name={f.key} type="text" value={value} onChange={(e) => setValue(e.target.value)} required={!f.optional} minLength={10} spellCheck={false} />
+      <button type="button" className="small" onClick={() => setValue(friendlyPassword())}>Другой пароль</button>
+    </span>
+  );
+}
 function FormDialog({ dialog, close }: { dialog: Dialog; close: () => void }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -152,13 +189,15 @@ function FormDialog({ dialog, close }: { dialog: Dialog; close: () => void }) {
           {dialog.fields.map((f) => (
             <label key={f.key}>
               {f.label}
+              {f.hint && <small className="field-hint">{f.hint}</small>}
               {f.options ? (
                 <select
                   aria-label={f.label}
                   name={f.key}
-                  defaultValue={f.value || f.options[0]?.id}
+                  defaultValue={f.value ?? f.options[0]?.id}
                   required={!f.optional}
                 >
+                  {f.value === "" && <option value="" disabled>Выберите…</option>}
                   {f.options.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.title || o.name}
@@ -174,15 +213,7 @@ function FormDialog({ dialog, close }: { dialog: Dialog; close: () => void }) {
                   rows={3}
                 />
               ) : (
-                <input
-                  aria-label={f.label}
-                  autoComplete={f.type === "password" ? "new-password" : "off"}
-                  name={f.key}
-                  type={f.type || "text"}
-                  defaultValue={f.value}
-                  required={!f.optional}
-                  minLength={f.type === "password" ? 10 : undefined}
-                />
+                <PasswordAware field={f} />
               )}
             </label>
           ))}
@@ -210,6 +241,7 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
     [busy, setBusy] = useState(false);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
     setBusy(true);
     setError("");
     try {
@@ -220,6 +252,7 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
       await onLogin(result.recovery);
     } catch (e) {
       setError((e as Error).message);
+      form.querySelector<HTMLInputElement>("input")?.focus();
     } finally {
       setBusy(false);
     }
@@ -273,7 +306,7 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
               ? "Создайте рабочее пространство и аккаунт администратора."
               : mode === "recover"
                 ? "Используйте код, полученный при создании школы. Ученику поможет преподаватель."
-                : "Войдите, чтобы продолжить обучение и работу."}
+                : "Ученик? Войди с логином и паролем, которые дал учитель."}
           </p>
           <form onSubmit={submit}>
             {mode === "register" && (
@@ -302,10 +335,15 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
               Логин
               <input
                 name="login"
+                aria-label="Логин"
                 autoComplete="username"
                 required
                 maxLength={120}
+                aria-describedby={error ? "auth-error" : mode === "register" ? "login-rule" : undefined}
+                aria-invalid={!!error || undefined}
+                {...(mode === "register" ? { pattern: "[A-Za-z0-9._\\-]{3,120}", title: "Латинские буквы, цифры, точка, дефис или подчёркивание — без пробелов" } : {})}
               />
+              {mode === "register" && <small id="login-rule" className="field-hint">Латинские буквы, цифры, точка, дефис или «_» — без пробелов. Например: anna.petrova</small>}
             </label>
             {mode === "recover" && (
               <label>
@@ -317,18 +355,23 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
               {mode === "recover" ? "Новый пароль" : "Пароль"}
               <input
                 name="password"
+                aria-label={mode === "recover" ? "Новый пароль" : "Пароль"}
                 type="password"
                 required
                 minLength={10}
                 maxLength={128}
+                aria-invalid={!!error || undefined}
+                aria-describedby={error ? "auth-error" : mode !== "login" ? "password-rule" : undefined}
                 autoComplete={
                   mode === "login" ? "current-password" : "new-password"
                 }
               />
+              {mode !== "login" && <small id="password-rule" className="field-hint">Не короче 10 символов.</small>}
             </label>
             {error && (
-              <p className="error" role="alert">
+              <p className="error" role="alert" id="auth-error">
                 {error}
+                {mode === "login" && " Забыл пароль? Спроси учителя — он выдаст новый."}
               </p>
             )}
             <button className="primary full" disabled={busy}>
@@ -344,7 +387,7 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
           </form>
           <div className="auth-links">
             <button
-              className="link"
+              className={mode === "register" ? "link" : "secondary-action"}
               onClick={() => {
                 setMode(mode === "register" ? "login" : "register");
                 setError("");
@@ -355,7 +398,7 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
                 : "Открываете школу? Создать пространство"}
             </button>
             <button
-              className="link subtle"
+              className="link"
               onClick={() => {
                 setMode(mode === "recover" ? "login" : "recover");
                 setError("");
@@ -393,8 +436,20 @@ export default function B2BApp() {
     [refreshedAt, setRefreshedAt] = useState(""),
     [refreshError, setRefreshError] = useState(""),
     [compactSidebar, setCompactSidebar] = useState(false),
+    [drawer, setDrawer] = useState(false),
     [switched, setSwitched] = useState<{ from: Row; to?: Row; signedOut?: boolean } | null>(null);
   const refreshSequence = useRef(0), shown = useRef<Row | null>(null), switchedRef = useRef(false);
+  const confirm = useConfirm();
+  const [narrow, setNarrow] = useState(() => window.matchMedia?.("(max-width: 1023px)").matches ?? false);
+  useEffect(() => { const q = window.matchMedia?.("(max-width: 1023px)"); if (!q) return; const on = () => setNarrow(q.matches); q.addEventListener("change", on); return () => q.removeEventListener("change", on); }, []);
+  const [helpWaiting, setHelpWaiting] = useState(0), [toast, setToast] = useState<{ text: string; sticky?: boolean; action?: { label: string; path: string } } | null>(null);
+  // The recovery code stays on screen (this tab only) until the administrator confirms it is saved.
+  useEffect(() => { try { const kept = sessionStorage.getItem("kodik:recovery"); if (kept) setRecovery(kept); } catch { /* storage unavailable */ } }, []);
+  useEffect(() => { try { if (recovery) sessionStorage.setItem("kodik:recovery", recovery); else sessionStorage.removeItem("kodik:recovery"); } catch { /* storage unavailable */ } }, [recovery]);
+  useEffect(() => { setDrawer(false); }, [route]);
+  useEffect(() => { window.scrollTo?.(0, 0); document.querySelector<HTMLElement>(".main-content")?.scrollTo?.(0, 0); }, [route.split("?")[0]]);
+  useEffect(() => { const show = (e: Event) => setToast((e as CustomEvent).detail); window.addEventListener("kodik-toast", show); return () => window.removeEventListener("kodik-toast", show); }, []);
+  useEffect(() => { if (!toast || toast.sticky) return; const t = setTimeout(() => setToast(null), 9000); return () => clearTimeout(t); }, [toast]);
   shown.current = state?.user ?? null;
   switchedRef.current = !!switched;
   useEffect(()=>{
@@ -442,6 +497,14 @@ export default function B2BApp() {
       window.removeEventListener("online", update);
     };
   }, [route, state?.user.id, refresh]);
+  // Waiting help requests are counted in the navigation for teachers and administrators.
+  useEffect(() => {
+    if (!state?.user.id || state.user.role === "student" || state.user.platform_owner) return;
+    let live = true;
+    const load = () => api("/help?limit=1").then((r) => { if (live) setHelpWaiting(r.open.total); }).catch(() => {});
+    void load(); const t = setInterval(load, 10000);
+    return () => { live = false; clearInterval(t); };
+  }, [state?.user.id, state?.user.role, refreshedAt.slice(0, 15)]);
   useEffect(() => {
     refresh()
       .catch((e) => {
@@ -512,6 +575,7 @@ export default function B2BApp() {
       setNotice((e as Error).message);
     }
   };
+  const groupActions: GroupActions = { go, mutate, act, refresh, dialog: (d) => setDialog(d), issueProgram: (g) => setProgramGroup(g), assign: (g, repeat) => setAssignmentDialog({ group: g, repeat }) };
   if (loading)
     return <main className="fatal">Открываем рабочее пространство…</main>;
   if (switched)
@@ -606,14 +670,12 @@ export default function B2BApp() {
   const createUser = () =>
     setDialog({
       title: "Новый участник",
-      text: "Передайте логин и пароль участнику лично. Для ученика достаточно имени или псевдонима.",
+      text: "Передайте логин и пароль участнику лично — пароль виден только сейчас. Для ученика достаточно имени или псевдонима.",
       fields: [
-        { key: "name", label: "Имя или псевдоним" },
-        { key: "login", label: "Уникальный логин" },
-        { key: "password", label: "Пароль (от 10 символов)", type: "password" },
         {
           key: "role",
           label: "Роль",
+          value: s.user.role === "admin" ? "" : "student",
           options:
             s.user.role === "admin"
               ? [
@@ -623,11 +685,15 @@ export default function B2BApp() {
                 ]
               : [{ id: "student", name: "Ученик" }],
         },
+        { key: "name", label: "Имя или псевдоним" },
+        { key: "login", label: "Логин", hint: "Латинские буквы, цифры, точка, дефис или «_». Например: anna.petrova" },
+        { key: "password", label: "Пароль", type: "password", hint: "Сгенерирован автоматически. Запишите его — он больше не покажется." },
       ],
-      submit: (b) => mutate("/users", b),
+      submit: async (b) => { await mutate("/users", b); setToast({ text: `Участник ${b.name} добавлен. Логин: ${b.login}, пароль: ${b.password} — передайте лично.`, sticky: true }); },
     });
-  const openAttempt = (aid: string) =>
-    act(async () => setAttempt(await api(`/attempts/${aid}`)));
+  // A queue (the journal's "awaiting review" page) lets the teacher go on to the next work after saving.
+  const openAttempt = (aid: string, queue?: string[]) =>
+    act(async () => setAttempt({ ...(await api(`/attempts/${aid}`)), queue }));
   const move = (kind: string, rows: Row[], index: number, direction: number) =>
     act(async () => {
       const ids = rows.map((r) => r.id);
@@ -675,7 +741,7 @@ export default function B2BApp() {
           <small>
             {student
               ? `${t.group_title} · ${s.attempts.filter((a) => matchesTask(a,t)).length?`Попыток: ${s.attempts.filter((a)=>matchesTask(a,t)).length}`:"Пока не начато"}`
-              : `${t.check_mode === "manual" ? "Ручная проверка" : "Автопроверка"} · ${t.difficulty === "easy" ? "Начальный" : t.difficulty === "medium" ? "Средний" : "Продвинутый"} уровень`}
+              : `${t.check_mode === "manual" ? "Проверяет преподаватель" : "Проверяется автоматически"} · ${t.difficulty === "easy" ? "начальный" : t.difficulty === "medium" ? "средний" : "продвинутый"} уровень`}
           </small>
         </div>
         <Badge
@@ -709,13 +775,13 @@ export default function B2BApp() {
             </button>
             <button
               className="small"
-              onClick={() =>
-                act(() =>
-                  mutate(`/tasks/${t.id}/publish`, { published: !t.published||t.published_revision!==t.revision,revision:t.revision }),
-                )
-              }
+              onClick={async () => {
+                const unpublish = t.published && t.published_revision === t.revision;
+                if (unpublish && !await confirm.ask({ title: `Снять «${t.title}» с публикации?`, text: <p>Задание нельзя будет выдать заново, пока вы его снова не опубликуете. Уже выданные классам версии и работы учеников не изменятся.</p>, confirm: "Снять с публикации", danger: true })) return;
+                void act(() => mutate(`/tasks/${t.id}/publish`, { published: !unpublish, revision: t.revision }));
+              }}
             >
-              {t.published ? t.published_revision!==t.revision?"Обновить публикацию":"Снять" : "Опубликовать"}
+              {t.published ? t.published_revision!==t.revision?"Обновить публикацию":"Снять с публикации…" : "Опубликовать"}
             </button>
             {rows && orderButtons("tasks", rows, index!)}
           </>
@@ -733,13 +799,13 @@ export default function B2BApp() {
             <article className="course-card" key={c.id}>
               <div className={`course-art art-${i % 3}`}>
                 <Glyph name="code" />
-                <span>PYTHON</span>
+                <span>{/блок/i.test(c.title) ? "БЛОКИ → PYTHON" : "PYTHON"}</span>
                 <strong>{["{ }", "</>", "( )"][i % 3]}</strong>
               </div>
               <div className="course-card-body">
                 <span className="overline">
-                  {s.modules.filter((m) => m.course_id === c.id).length} модулей
-                  · {tasks.length} заданий
+                  {plural(s.modules.filter((m) => m.course_id === c.id).length, ["модуль", "модуля", "модулей"])}
+                  {" · "}{plural(tasks.length, ["задание", "задания", "заданий"])}
                 </span>
                 <h3>
                   <button
@@ -749,7 +815,7 @@ export default function B2BApp() {
                     {c.title}
                   </button>
                 </h3>
-                <p>{c.description || "Программа обучения Python"}</p>
+                <p>{c.description || (student ? "Задания от учителя" : "Описание курса пока не добавлено")}</p>
                 {student ? (
                   <>
                     <div className="progress-label">
@@ -777,8 +843,8 @@ export default function B2BApp() {
                   </>
                 ) : (
                   <div className="card-bottom">
-                    <Badge>
-                      {c.import_status==='building'?'Готовим курс · пока нельзя выдать':`${tasks.filter((t) => t.published).length} опубликовано`}
+                    <Badge status={c.import_status === "building" ? "pending_review" : tasks.length && tasks.every((t) => t.published) ? "passed" : ""}>
+                      {c.import_status === "building" ? "Готовим курс…" : !tasks.length ? "Пустой курс" : tasks.every((t) => t.published) ? "Готов к выдаче" : `Черновик · опубликовано ${tasks.filter((t) => t.published).length} из ${tasks.length}`}
                     </Badge>
                     <button
                       className="link"
@@ -836,9 +902,11 @@ export default function B2BApp() {
         onNext={nextTask?()=>go(taskLink(nextTask)):undefined}
       />
     ) : (
-      <Empty
+      <NotFound
         title="Задание недоступно"
-        text={matches.length>1?"Задание назначено несколько раз. Выберите нужную группу в разделе «Мои курсы».":"Возможно, преподаватель изменил назначение. Вернитесь к своим курсам."}
+        text={matches.length>1?"Задание выдано несколько раз. Выбери нужную группу в разделе «Мои курсы».":"Возможно, учитель изменил задание. Вернись к своим курсам."}
+        back="courses"
+        backLabel={student ? "К моим курсам" : "К курсам"}
       />
     );
   } else if (page === "courses" && id) {
@@ -885,8 +953,19 @@ export default function B2BApp() {
               >
                 Копировать курс
               </button>
+              {s.groups.some((g) => !g.archived) && taskForCourse(c.id).some((t) => t.published) && c.import_status !== "building" && (
+                <button
+                  className="primary"
+                  onClick={() => {
+                    const open = s.groups.filter((g) => !g.archived);
+                    if (open.length === 1) { setProgramGroup(open[0]); return; }
+                    setDialog({ title: `Выдать «${c.title}» группе`, fields: [{ key: "group", label: "Группа", options: open }], submit: async (b) => { const g = open.find((x) => x.id === b.group); if (g) setTimeout(() => setProgramGroup(g)); } });
+                  }}
+                >
+                  Выдать группе
+                </button>
+              )}
               <button
-                className="primary"
                 onClick={() =>
                   setDialog({
                     title: "Новый модуль",
@@ -969,6 +1048,7 @@ export default function B2BApp() {
                           </button>
                           <button
                             className="link"
+                            title="Новое задание урока. Чтобы оно стало шагом урока, добавьте его в «Сценарии урока»."
                             onClick={() => go(`builder/new?lesson=${l.id}`)}
                           >
                             + Задание
@@ -976,6 +1056,7 @@ export default function B2BApp() {
                         </div>
                       )}
                     </div>
+                    {(() => { let steps: Row[] = []; try { steps = typeof l.steps === "string" ? JSON.parse(l.steps) : l.steps || []; } catch { steps = []; } const outside = steps.length ? s.tasks.filter((t) => t.lesson_id === l.id && !steps.some((st) => st.task_id === t.id)) : []; return outside.length > 0 && !student ? <p className="muted inset scenario-note">Не входят в сценарий урока и выдаются отдельно: {outside.map((t) => `«${t.title}»`).join(", ")}. Чтобы задание стало шагом урока, добавьте его в «Сценарии урока».</p> : null; })()}
                     {s.tasks
                       .filter((t) => t.lesson_id === l.id)
                       .map((t, ti, ts) => taskRow(t, ts, ti))}
@@ -1001,239 +1082,144 @@ export default function B2BApp() {
     ) : (
       <Empty title="Курс не найден" text="Вернитесь к списку курсов." />
     );
-  } else if (page === "courses")
+  } else if (page === "courses") {
+    const starterInstalled = s.courses.some((c) => c.import_status);
+    const installStarter = () => void act(async () => {
+      setToast({ text: "Готовим шесть уроков и проверяем образцы. Это может занять около минуты.", sticky: true });
+      const course = await mutate("/starter-course/install", {});
+      setToast({ text: "Стартовый курс готов. Теперь выдайте его группе.", action: { label: "К группам", path: "groups" } });
+      go(`courses/${course.id}`);
+    });
     content = (
       <>
         <Header
           title={student ? "Мои курсы" : "Курсы"}
-          text={
-            student
-              ? "Учись в своём темпе. Каждое решение — шаг вперёд."
-              : "Создавайте программы, которые растут вместе с вашими учениками."
-          }
+          text={student ? "Здесь всё, что выдал учитель." : "Готовые и свои программы. Выдают их группе на странице группы."}
         >
+          {!student && !starterInstalled && s.courses.length > 0 && (
+            <button className="primary" onClick={installStarter}>Добавить стартовый курс · 6 уроков</button>
+          )}
           {!student && (
-            <button className="primary" onClick={createCourse}>
+            <button className={starterInstalled ? "primary" : ""} onClick={createCourse}>
               <Glyph name="plus" />
               Создать курс
             </button>
           )}
-          {!student&&<button onClick={()=>void act(async()=>{setNotice('Готовим шесть уроков и проверяем образцы. Это может занять около минуты.');const course=await mutate('/starter-course/install',{});setNotice('Стартовый курс готов к назначению группе.');go(`courses/${course.id}`)})}>Добавить стартовый курс · 6 уроков</button>}
         </Header>
-        {s.courses.length||student&&s.programs.length ? (
+        {s.courses.length || (student && s.programs.length) ? (
           courseCards()
+        ) : student ? (
+          <Empty title="Скоро здесь появится твой первый курс" text="Учитель выдаст задания твоей группе." />
         ) : (
-          <Empty
-            title={
-              student
-                ? "Скоро здесь появится ваш первый курс"
-                : "Ваша программа начинается здесь"
-            }
-            text={
-              student
-                ? "Преподаватель назначит задания вашей группе."
-                : "Создайте курс, добавьте модуль и первый урок."
-            }
-          >
-            {!student && (
-              <button className="primary" onClick={createCourse}>
-                Создать первый курс
-              </button>
-            )}
-          </Empty>
+          <section className="starter-offer panel">
+            <div>
+              <span className="overline">ПРОЩЕ ВСЕГО НАЧАТЬ ЗДЕСЬ</span>
+              <h2>Стартовый курс «Первые шаги: от блоков к Python»</h2>
+              <p>6 уроков по 40 минут, 12 проверенных практик с блоками и Python, заметки для учителя с планом урока.</p>
+            </div>
+            <div className="actions">
+              <button className="primary" onClick={installStarter}>Добавить стартовый курс · 6 уроков</button>
+              <button className="link" onClick={createCourse}>или создать свой курс</button>
+            </div>
+          </section>
         )}
       </>
     );
-  else if (page === "tasks" && !student)
+  } else if (page === "tasks" && !student) {
+    const [, query = ""] = route.split("?");
+    const filter = new URLSearchParams(query).get("status") || "";
+    const statusOf = (t: Row) => (t.published ? (t.published_revision !== t.revision ? "changed" : "published") : "draft");
+    const shown = s.tasks.filter((t) => !t.run_id && (!filter || statusOf(t) === filter));
+    const lessonOf = (t: Row) => s.lessons.find((l) => l.id === t.lesson_id);
+    const courseOf = (t: Row) => s.courses.find((c) => c.id === s.modules.find((m) => m.id === lessonOf(t)?.module_id)?.course_id);
+    const byCourse = s.courses.map((c) => ({ c, tasks: shown.filter((t) => courseOf(t)?.id === c.id) })).filter((x) => x.tasks.length);
     content = (
       <>
-        <Header title="Задания" text="От идеи до первого решения ученика.">
-          <button
-            className="primary"
-            disabled={!s.lessons.length}
-            onClick={() => go("builder/new")}
-          >
+        <Header title="Задания" text="Все задания по курсам и урокам. Новое задание создаётся внутри урока.">
+          <label className="inline-filter">Показать
+            <select value={filter} onChange={(e) => go(e.target.value ? `tasks?status=${e.target.value}` : "tasks")}>
+              <option value="">Все</option>
+              <option value="published">Опубликованные</option>
+              <option value="changed">С неопубликованными правками</option>
+              <option value="draft">Черновики</option>
+            </select>
+          </label>
+          <button className="primary" disabled={!s.lessons.length} title={s.lessons.length ? undefined : "Сначала создайте курс с уроком"} onClick={() => go("builder/new")}>
             + Создать задание
           </button>
         </Header>
-        {s.tasks.length ? (
-          <section className="panel">{s.tasks.map((t) => taskRow(t))}</section>
-        ) : (
+        {byCourse.map(({ c, tasks }) => (
+          <section className="panel spaced" key={c.id}>
+            <div className="panel-heading"><h2><a href={`#courses/${c.id}`}>{c.title}</a></h2><span className="muted">{plural(tasks.length, ["задание", "задания", "заданий"])}</span></div>
+            {[...new Set(tasks.map((t) => t.lesson_id))].map((lid) => (
+              <div key={lid} className="task-group">
+                <h3 className="task-group-title">{s.lessons.find((l) => l.id === lid)?.title}</h3>
+                {tasks.filter((t) => t.lesson_id === lid).map((t) => taskRow(t))}
+              </div>
+            ))}
+          </section>
+        ))}
+        {!shown.length && (s.tasks.length ? <Empty title="Нет заданий с таким статусом" text="Выберите другой фильтр."><button onClick={() => go("tasks")}>Показать все</button></Empty> : (
           <Empty
             title="Создайте первое задание"
             text="Сначала добавьте курс, модуль и урок. Затем откройте пошаговый конструктор."
           >
             <button onClick={() => go("courses")}>Перейти к курсам</button>
           </Empty>
-        )}
+        ))}
       </>
     );
+  }
   else if (page === "groups" && !student)
+    content = <GroupsList state={s} actions={groupActions}/>;
+  else if (page === "group" && !student) {
+    const g = s.groups.find((g) => g.id === id);
+    content = g ? <GroupPage key={g.id} state={s} group={g} actions={groupActions}/> : <NotFound title="Группа не найдена" text="Возможно, у вас нет доступа к этой группе." back="groups" backLabel="К группам"/>;
+  }
+  else if (page === "users" && !student) {
+    const [, query = ""] = route.split("?"), params = new URLSearchParams(query);
+    const search = (params.get("q") || "").toLowerCase(), role = params.get("role") || "";
+    const groupsOf = (uid: string) => s.members.filter((m) => m.user_id === uid).map((m) => s.groups.find((g) => g.id === m.group_id)?.title).filter(Boolean).join(", ");
+    const roleName = (r: string) => (r === "student" ? "Ученик" : r === "teacher" ? "Преподаватель" : "Администратор");
+    const shownUsers = s.users.filter((u) => (!role || u.role === role) && (!search || `${u.name} ${u.login} ${groupsOf(u.id)}`.toLowerCase().includes(search)));
+    const setParam = (key: string, value: string) => { const next = new URLSearchParams(query); if (value) next.set(key, value); else next.delete(key); const q = next.toString(); history.replaceState(null, "", `#users${q ? "?" + q : ""}`); setRoute(`users${q ? "?" + q : ""}`); };
     content = (
       <>
-        <Header
-          title="Учебные группы"
-          text="Объединяйте учеников и назначайте им практику."
-        >
-          <button
-            className="primary"
-            onClick={() =>
-              setDialog({
-                title: "Новая группа",
-                fields: [nameField()],
-                submit: (b) => mutate("/groups", b),
-              })
-            }
-          >
-            + Создать группу
-          </button>
-        </Header>
-        {!s.groups.length && (
-          <Empty
-            title="Учиться вместе интереснее"
-            text="Создайте группу, добавьте учеников и назначьте опубликованные задания."
-          />
-        )}
-        <div className="groups-grid">
-          {s.groups.map((g) => {
-            const members = s.members.filter((m) => m.group_id === g.id),
-              assignments = s.assignments.filter((a) => a.group_id === g.id&&!a.run_id);
-            return (
-              <section className="panel group-card" key={g.id}>
-                <div className="section-title">
-                  <div>
-                    <div className="overline">УЧЕБНАЯ ГРУППА</div>
-                    <h2>{g.title}</h2>
-                  </div>
-                  <div className="round-icon">
-                    <Glyph name="users" />
-                  </div>
-                </div>
-                <h4>Ученики · {members.length}</h4>
-                {members.map((m) => (
-                  <div className="member" key={m.user_id}>
-                    <span>
-                      {students.find((u) => u.id === m.user_id)?.name}
-                    </span>
-                    <button
-                      className="link subtle"
-                      aria-label="Убрать ученика"
-                      onClick={() =>
-                        act(() =>
-                          mutate(
-                            `/groups/${g.id}/members`,
-                            { user_id: m.user_id },
-                            "DELETE",
-                          ),
-                        )
-                      }
-                    >
-                      Убрать
-                    </button>
-                  </div>
-                ))}
-                <button
-                  className="link"
-                  disabled={
-                    !students.some(
-                      (u) => !members.some((m) => m.user_id === u.id),
-                    )
-                  }
-                  onClick={() =>
-                    setDialog({
-                      title: `Добавить в «${g.title}»`,
-                      fields: [
-                        {
-                          key: "user_id",
-                          label: "Ученик",
-                          options: students.filter(
-                            (u) => !members.some((m) => m.user_id === u.id),
-                          ),
-                        },
-                      ],
-                      submit: (b) => mutate(`/groups/${g.id}/members`, b),
-                    })
-                  }
-                >
-                  + Добавить ученика
-                </button>
-                <hr />
-                <h4>Учебные программы</h4>{s.programs.filter(r=>r.group_id===g.id&&!r.archived).map(r=><p key={r.id}><button className="link" onClick={()=>go(`program/${r.id}`)}>{r.title} · {r.lessons.length} занятий</button></p>)}<button className="primary full" onClick={()=>setProgramGroup(g)}>Выдать учебную программу</button>
-                <h4>Назначено · {assignments.length}</h4>
-                {assignments.map((a) => (
-                  <div className="member" key={a.id}>
-                    <span>
-                      {a.title||s.tasks.find((t) => t.id === a.task_id)?.title}
-                      <small>Версия {a.version_revision} · отдельное прохождение</small>
-                      {a.due_at && (
-                        <small>
-                          до {new Date(a.due_at).toLocaleDateString("ru")}
-                        </small>
-                      )}
-                    </span>
-                    <button className="link" onClick={()=>setDialog({title:'Изменить срок',fields:[{key:'due_at',label:'Срок (необязательно)',type:'date',optional:true,value:a.due_at?.slice(0,10)||''}],submit:b=>mutate(`/assignments/${a.id}`,{...b,revision:a.revision},'PUT')})}>Срок</button>
-                    <button className="link" disabled={!s.tasks.some(t=>t.id===a.task_id&&t.published)} onClick={()=>setAssignmentDialog({group:g,repeat:a})}>Назначить повторно</button>
-                    <button
-                      className="link subtle"
-                      onClick={() =>
-                        act(() => mutate(`/assignments/${a.id}`, {}, "DELETE"))
-                      }
-                    >
-                      Снять
-                    </button>
-                  </div>
-                ))}
-                <button
-                  className="primary full"
-                  disabled={!s.tasks.some((t) => t.published)}
-                  onClick={() =>setAssignmentDialog({group:g})}
-                >
-                  + Назначить задание
-                </button>
-              </section>
-            );
-          })}
-        </div>
-      </>
-    );
-  else if (page === "users" && !student)
-    content = (
-      <>
-        <Header
-          title="Участники школы"
-          text="Личные кабинеты и доступ к обучению."
-        >
+        <Header title="Участники школы" text="Аккаунты учеников, преподавателей и администраторов.">
           <button className="primary" onClick={createUser}>
             + Добавить участника
           </button>
         </Header>
+        <div className="actions filters">
+          <label>Поиск<input type="search" defaultValue={params.get("q") || ""} placeholder="Имя, логин или группа" onChange={(e) => setParam("q", e.target.value)} /></label>
+          <label>Роль<select value={role} onChange={(e) => setParam("role", e.target.value)}><option value="">Все</option><option value="student">Ученики</option><option value="teacher">Преподаватели</option><option value="admin">Администраторы</option></select></label>
+          <span className="muted">{plural(shownUsers.length, ["участник", "участника", "участников"])}</span>
+        </div>
         <section className="panel">
+          <div className="table-scroll">
           <table>
             <thead>
               <tr>
                 <th>Участник</th>
                 <th>Логин</th>
                 <th>Роль</th>
+                <th>Группы</th>
                 <th>Доступ</th>
               </tr>
             </thead>
             <tbody>
-              {s.users.map((u) => (
-                <tr key={u.id}>
+              {shownUsers.map((u) => (
+                <tr key={u.id} className={u.active ? "" : "inactive"}>
                   <td>
                     <b>{u.name}</b>
+                    {!u.active && <small>Доступ отключён</small>}
                   </td>
-                  <td>{u.login}</td>
+                  <td><code>{u.login}</code></td>
                   <td>
-                    <Badge>
-                      {u.role === "student"
-                        ? "Ученик"
-                        : u.role === "teacher"
-                          ? "Преподаватель"
-                          : "Администратор"}
-                    </Badge>
+                    <Badge>{roleName(u.role)}</Badge>
                   </td>
-                  <td>
+                  <td>{groupsOf(u.id) || <span className="muted">—</span>}</td>
+                  <td className="row-actions">
                     {(s.user.role === "admin" || u.role === "student") && (
                       <button
                         className="link"
@@ -1246,9 +1232,10 @@ export default function B2BApp() {
                                 key: "password",
                                 label: "Новый пароль",
                                 type: "password",
+                                hint: "Сгенерирован автоматически. Запишите его и передайте участнику.",
                               },
                             ],
-                            submit: (b) => mutate(`/users/${u.id}/password`, b),
+                            submit: async (b) => { await mutate(`/users/${u.id}/password`, b); setToast({ text: `Новый пароль для ${u.name}: ${b.password}`, sticky: true }); },
                           })
                         }
                       >
@@ -1257,16 +1244,13 @@ export default function B2BApp() {
                     )}
                     {s.user.role === "admin" && u.id !== s.user.id && (
                       <button
-                        className="link access-toggle"
-                        onClick={() =>
-                          act(() =>
-                            mutate(`/users/${u.id}/access`, {
-                              active: !u.active,
-                            }),
-                          )
-                        }
+                        className={`link access-toggle${u.active ? " danger-text" : ""}`}
+                        onClick={async () => {
+                          if (u.active && !await confirm.ask({ title: `Отключить доступ: ${u.name}?`, text: <p>Участник не сможет войти. Работы и история сохранятся, место в лицензии освободится. Доступ можно вернуть.</p>, confirm: "Отключить доступ", danger: true })) return;
+                          void act(() => mutate(`/users/${u.id}/access`, { active: !u.active }));
+                        }}
                       >
-                        {u.active ? "Отключить доступ" : "Вернуть доступ"}
+                        {u.active ? "Отключить доступ…" : "Вернуть доступ"}
                       </button>
                     )}
                   </td>
@@ -1274,15 +1258,81 @@ export default function B2BApp() {
               ))}
             </tbody>
           </table>
+          </div>
+          {!shownUsers.length && <p className="inset muted">Никого не нашли. Измените поиск или фильтр.</p>}
         </section>
       </>
     );
+  }
+  else if (page === "results" && student) {
+    const lessons = s.programs.filter((r) => !r.archived).flatMap((r) => r.lessons.map((l: Row) => ({ ...l, program: r.title })));
+    const passedLessons = lessons.filter((l) => l.total > 0 && l.completed === l.total);
+    const solved = s.tasks.filter((t) => isPassed(progressKey(t)));
+    content = (
+      <>
+        <Header eyebrow="" title="Мой прогресс" text="Что ты уже умеешь и что решено." />
+        <div className="stats two">
+          <div><span>Уроков пройдено</span><strong>{passedLessons.length}</strong><small>из {lessons.length}</small></div>
+          <div><span>Задач решено</span><strong>{solved.length}</strong><small>из {s.tasks.length}</small></div>
+        </div>
+        {lessons.length > 0 && (
+          <section className="panel spaced">
+            <div className="panel-heading"><h2>Уроки</h2></div>
+            <ul className="progress-list">
+              {lessons.map((l) => (
+                <li key={l.id} className={l.total > 0 && l.completed === l.total ? "done" : ""}>
+                  <span className="progress-mark" aria-hidden="true">{l.total > 0 && l.completed === l.total ? "✓" : l.state === "scheduled" ? "🔒" : "•"}</span>
+                  <span className="grow"><b>{l.title}</b><small>{l.program} · {l.total > 0 && l.completed === l.total ? "пройден" : l.state === "scheduled" ? "откроет учитель" : `шагов: ${l.completed} из ${l.total}`}</small></span>
+                  {l.state !== "scheduled" && <a href={`#lesson-run/${l.id}`}>{l.completed === l.total ? "Повторить" : "Открыть"}</a>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <section className="panel spaced">
+          <div className="panel-heading"><h2>Задачи</h2></div>
+          {s.tasks.length ? (
+            <ul className="progress-list">
+              {s.tasks.map((t) => {
+                const done = isPassed(progressKey(t)), tries = s.attempts.filter((a) => matchesTask(a, t));
+                return (
+                  <li key={t.assignment_id || t.id} className={done ? "done" : ""}>
+                    <span className="progress-mark" aria-hidden="true">{done ? "✓" : "•"}</span>
+                    <span className="grow"><b>{t.title}</b><small>{done ? "Решено" : tries.length ? "Пока не решено — можно продолжить" : "Ещё не начато"}</small></span>
+                    <a href={`#${taskLink(t)}`}>{done ? "Посмотреть" : "Решать"}</a>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : <p className="inset muted">Задач пока нет.</p>}
+        </section>
+        {s.attempts.length > 0 && (
+          <details className="panel all-attempts">
+            <summary>Все попытки · {s.attempts.length}</summary>
+            <div className="table-scroll"><table>
+              <thead><tr><th>Задача</th><th>Результат</th><th>Дата</th><th /></tr></thead>
+              <tbody>
+                {s.attempts.map((a) => (
+                  <tr key={a.id}>
+                    <td>{a.task_title || s.tasks.find((t) => t.id === a.task_id)?.title}</td>
+                    <td><span className={`attempt-status ${a.status}`}>{learnerStatus[a.status] || a.status}</span></td>
+                    <td>{new Date(a.created_at).toLocaleString("ru")}</td>
+                    <td><button className="link" onClick={() => openAttempt(a.id)}>Открыть решение</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+          </details>
+        )}
+      </>
+    );
+  }
   else if (page === "results")
     content = (
       <>
         <Header
-          title={student ? "Мой прогресс" : "Результаты обучения"}
-          text="Реальные решения, попытки и движение вперёд."
+          title="Результаты обучения"
+          text="Прогресс каждого ученика по выданным заданиям."
         />
         {!student && (
           <section className="panel spaced">
@@ -1344,7 +1394,7 @@ export default function B2BApp() {
                             ? new Date(attempts[0].created_at).toLocaleString(
                                 "ru",
                               )
-                            : "Пока не начинал"}
+                            : "Попыток пока нет"}
                         </td>
                       </tr>
                     );
@@ -1361,7 +1411,7 @@ export default function B2BApp() {
         <section className="panel">
           <div className="panel-heading">
             <h2>История решений</h2>
-            <span className="muted">{s.attempts.length} попыток</span>
+            <span className="muted">{plural(s.attempts.length, ["попытка", "попытки", "попыток"])}</span>
           </div>
           {s.attempts.length ? (
             <table>
@@ -1406,215 +1456,173 @@ export default function B2BApp() {
         </section>
       </>
     );
-  else {
-    const completed = student
-        ? s.tasks.filter((t) => isPassed(progressKey(t))).length
-        : s.attempts.filter((a) => a.status === "passed").length,
-      recent = s.attempts.slice(0, 5),
-      difficult: Row[] = s.tasks
-        .map((t) => ({
-          ...t,
-          errors: s.attempts.filter(
-            (a) =>
-              matchesTask(a,t) &&
-              ["failed", "runtime_error"].includes(a.status),
-          ).length,
-        }))
-        .filter((t) => t.errors)
-        .sort((a, b) => b.errors - a.errors)
-        .slice(0, 4);
+  else if (page !== "overview" && page !== "")
+    content = <NotFound />;
+  else if (student) {
+    const programs = s.programs.filter((r) => !r.archived && !r.group_archived);
+    const open = programs.flatMap((r) => r.lessons.filter((l: Row) => l.state === "open" && l.completed < l.total)).at(0);
+    const nextTask = s.tasks.find((t) => !isPassed(progressKey(t)) && !t.run_id);
+    const lessons = programs.flatMap((r) => r.lessons), passedLessons = lessons.filter((l: Row) => l.total > 0 && l.completed === l.total).length;
+    const solved = s.tasks.filter((t) => isPassed(progressKey(t))).length;
     content = (
       <>
-        <Header
-          eyebrow={
-            student
-              ? "СЕГОДНЯ ХОРОШИЙ ДЕНЬ, ЧТОБЫ НАУЧИТЬСЯ НОВОМУ"
-              : "ВАША ШКОЛА В KODIK"
-          }
-          title={`Привет, ${s.user.name.split(" ")[0]}!`}
-          text={
-            student
-              ? "Продолжим путь от идеи к работающему коду."
-              : "Всё готово для новых открытий ваших учеников."
-          }
-        />
-        <section className="welcome-banner">
+        <Header eyebrow="" title={`Привет, ${s.user.name.split(" ")[0]}!`} text="Продолжим учиться программировать." />
+        <section className="welcome-banner learner-banner">
           <div>
-            <Badge>
-              {student ? "ТВОЙ СЛЕДУЮЩИЙ ШАГ" : "ОТ ЗНАНИЙ К ПРАКТИКЕ"}
-            </Badge>
-            <h2>
-              {student
-                ? "Маленькие шаги. Большие возможности."
-                : "Обучение начинается с хорошей идеи."}
-            </h2>
-            <p>
-              {student
-                ? "Открой задание, попробуй решение и не бойся ошибаться."
-                : "Соберите свой курс, добавьте практику и наблюдайте за ростом учеников."}
-            </p>
-            <button
-              className="dark"
-              onClick={() =>
-                student
-                  ? go("courses")
-                  : s.courses.length
-                    ? go("tasks")
-                    : createCourse()
-              }
-            >
-              {student
-                ? "К моим курсам"
-                : s.courses.length
-                  ? "Открыть задания"
-                  : "Создать первый курс"}
-              <Glyph name="arrow" />
-            </button>
+            <Badge>ТВОЙ СЛЕДУЮЩИЙ ШАГ</Badge>
+            <h2>{open ? `${open.completed ? "Продолжить" : "Начать"} урок: ${open.title}` : nextTask ? `Задача: ${nextTask.title}` : lessons.length && passedLessons === lessons.length ? "Все уроки пройдены!" : "Следующий урок откроет учитель"}</h2>
+            <p>{open ? `Шагов пройдено: ${open.completed} из ${open.total}. Ошибки — это нормально.` : nextTask ? "Открой задачу и попробуй решить." : "Пока можно повторить пройденное."}</p>
+            {open ? (
+              <button className="primary big" onClick={() => go(`lesson-run/${open.id}`)}>{open.completed ? "Продолжить урок" : "Начать урок"} <Glyph name="arrow" /></button>
+            ) : nextTask ? (
+              <button className="primary big" onClick={() => go(taskLink(nextTask))}>Решать задачу <Glyph name="arrow" /></button>
+            ) : (
+              <button className="dark" onClick={() => go("results")}>Мой прогресс <Glyph name="arrow" /></button>
+            )}
           </div>
           <div className="banner-art" aria-hidden="true">
             <span>↗</span>
             <code>{"{ учимся }"}</code>
-            <small>код · практика · рост</small>
           </div>
         </section>
-        <div className="stats">
-          <div>
-            <span>{student ? "Мои курсы" : "Курсы"}</span>
-            <strong>{s.courses.length}</strong>
-            <small>Программы обучения</small>
-          </div>
-          <div>
-            <span>{student ? "Задания" : "Ученики"}</span>
-            <strong>{student ? s.tasks.length : students.length}</strong>
-            <small>
-              {student ? "Назначено преподавателем" : "В вашей школе"}
-            </small>
-          </div>
-          <div>
-            <span>{student ? "Выполнено" : "Успешные решения"}</span>
-            <strong>{completed}</strong>
-            <small>Результат реальной практики</small>
-          </div>
-          <div>
-            <span>{student ? "Попытки" : "На проверке"}</span>
-            <strong>
-              {student
-                ? s.attempts.length
-                : s.attempts.filter((a) => a.status === "pending_review")
-                    .length}
-            </strong>
-            <small>
-              {student ? "Каждая попытка учит" : "Ждут вашего внимания"}
-            </small>
-          </div>
+        <div className="stats two">
+          <div><span>Уроков пройдено</span><strong>{passedLessons}</strong><small>из {lessons.length}</small></div>
+          <div><span>Задач решено</span><strong>{solved}</strong><small>из {s.tasks.length}</small></div>
         </div>
         <div className="section-title">
-          <h2>{student ? "Продолжить обучение" : "Ваши курсы"}</h2>
-          <button className="link" onClick={() => go("courses")}>
-            Все курсы →
-          </button>
+          <h2>Мои курсы</h2>
+          <a className="link" href="#courses">Все курсы →</a>
         </div>
-        {s.courses.length||student&&s.programs.length ? (
-          courseCards()
-        ) : (
-          <Empty
-            title={
-              student
-                ? "Ждём первое назначение"
-                : "Создайте пространство для знаний"
-            }
-            text={
-              student
-                ? "После назначения задания появятся в вашем кабинете."
-                : "Начните с курса. Дальше добавьте уроки, задания и учеников."
-            }
-          >
-            {!student && (
-              <button className="primary" onClick={createCourse}>
-                + Создать курс
-              </button>
-            )}
-          </Empty>
+        {s.courses.length || s.programs.length ? courseCards() : <Empty title="Ждём первое задание" text="Когда учитель выдаст урок, он появится здесь." />}
+      </>
+    );
+  } else {
+    const admin = s.user.role === "admin", license = (s as Row).license;
+    const myGroups = s.groups.filter((g) => !g.archived);
+    const openLessons = s.programs.filter((r) => !r.archived && !r.group_archived).flatMap((r) => r.lessons.filter((l: Row) => l.state === "open").map((l: Row) => ({ ...l, group: r.group_title, program: r.title })));
+    const pending = s.attempts.filter((a) => a.status === "pending_review").length;
+    const recent = s.attempts.slice(0, 5);
+    const difficult: Row[] = s.tasks
+      .map((t) => ({ ...t, errors: s.attempts.filter((a) => matchesTask(a, t) && ["failed", "runtime_error"].includes(a.status)).length }))
+      .filter((t) => t.errors)
+      .sort((a, b) => b.errors - a.errors)
+      .slice(0, 4);
+    const steps = [
+      { done: s.groups.length > 0, label: "Создать группу (класс)", path: "groups" },
+      { done: s.members.length > 0, label: "Добавить учеников списком", path: s.groups[0] ? `group/${s.groups[0].id}` : "groups" },
+      { done: ((s as Row).group_teachers || []).length > 0, label: "Назначить преподавателя группе", path: s.groups[0] ? `group/${s.groups[0].id}` : "groups" },
+      { done: s.courses.some((c) => c.import_status === "ready") || s.tasks.some((t) => t.published), label: "Добавить стартовый курс", path: "courses" },
+      { done: s.programs.length > 0, label: "Выдать программу группе", path: s.groups[0] ? `group/${s.groups[0].id}` : "groups" },
+    ];
+    const setupLeft = steps.filter((x) => !x.done).length;
+    content = (
+      <>
+        <Header eyebrow={s.organization.name.toUpperCase()} title={`Привет, ${s.user.name.split(" ")[0]}!`} text={openLessons.length ? "Сегодня на занятиях:" : "Вот что происходит в школе."} />
+        {admin && license && (
+          <p className={`license-strip${license.valid ? "" : " expired"}`} role="status">
+            {license.valid ? "Лицензия" : "Лицензия истекла"}{license.expires_at ? ` до ${new Date(license.expires_at).toLocaleDateString("ru")}` : ""} · учеников: {license.used} из {license.student_limit}
+            {" · "}<a href="#school">Подробнее</a>
+          </p>
         )}
-        {!student && (
-          <div className="overview-bottom">
-            <section className="panel">
-              <div className="panel-heading">
-                <h2>Последняя активность</h2>
-                <button className="link" onClick={() => go("results")}>
-                  Все результаты →
+        {admin && setupLeft > 0 && (
+          <section className="panel setup-checklist" aria-labelledby="setup-title">
+            <div className="panel-heading"><div><span className="overline">ПЕРВЫЙ КЛАСС</span><h2 id="setup-title">До первого урока осталось шагов: {setupLeft}</h2></div></div>
+            <ol>
+              {steps.map((x, i) => (
+                <li key={i} className={x.done ? "done" : steps.findIndex((y) => !y.done) === i ? "next" : ""}>
+                  <span className="check" aria-hidden="true">{x.done ? "✓" : i + 1}</span>
+                  <span className="grow">{x.label}</span>
+                  {!x.done && <a className={steps.findIndex((y) => !y.done) === i ? "button-link primary" : "link"} href={`#${x.path}`}>{steps.findIndex((y) => !y.done) === i ? "Сделать сейчас" : "Открыть"}</a>}
+                  {x.done && <span className="muted">готово</span>}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+        <div className="today-grid">
+          <section className="panel today-lessons">
+            <div className="panel-heading"><h2>Открытые занятия</h2><a className="link" href="#groups">Все группы →</a></div>
+            {openLessons.length ? openLessons.map((l) => (
+              <div className="member inset" key={l.id}>
+                <span><b>{l.title}</b><small>{l.group} · {l.program}</small></span>
+                <button className="primary" onClick={() => go(`lesson-run/${l.id}`)}>Провести занятие</button>
+              </div>
+            )) : <p className="inset muted">Сейчас нет открытых занятий. {myGroups.length ? "Откройте занятие на странице группы." : "Начните с группы."}</p>}
+          </section>
+          <section className="panel today-attention">
+            <div className="panel-heading"><h2>Требует внимания</h2></div>
+            <a className={`attention-row${helpWaiting ? " hot" : ""}`} href="#classroom"><span>✋ Ждут помощи</span><b>{helpWaiting}</b></a>
+            <a className={`attention-row${pending ? " hot" : ""}`} href="#journal?status=pending_review"><span>На ручной проверке</span><b>{pending}</b></a>
+            <div className="attention-groups">
+              <h3>Мои группы</h3>
+              {myGroups.length ? myGroups.map((g) => <a key={g.id} href={`#group/${g.id}`}>{g.title} · {plural(s.members.filter((m) => m.group_id === g.id).length, ["ученик", "ученика", "учеников"])}</a>) : <a href="#groups">Создать первую группу →</a>}
+            </div>
+          </section>
+        </div>
+        <div className="overview-bottom">
+          <section className="panel">
+            <div className="panel-heading">
+              <h2>Последние решения</h2>
+              <a className="link" href="#journal">Журнал →</a>
+            </div>
+            {recent.length ? (
+              recent.map((a) => (
+                <button className="activity" key={a.id} onClick={() => openAttempt(a.id)}>
+                  <span className="avatar">{s.users.find((u) => u.id === a.user_id)?.name?.slice(0, 1)}</span>
+                  <span className="grow">
+                    <b>{s.users.find((u) => u.id === a.user_id)?.name}</b>
+                    <small>{a.task_title || s.tasks.find((t) => t.id === a.task_id)?.title}</small>
+                  </span>
+                  <Badge status={a.status} />
                 </button>
-              </div>
-              {recent.length ? (
-                recent.map((a) => (
-                  <button
-                    className="activity"
-                    key={a.id}
-                    onClick={() => openAttempt(a.id)}
-                  >
-                    <span className="avatar">
-                      {s.users
-                        .find((u) => u.id === a.user_id)
-                        ?.name?.slice(0, 1)}
-                    </span>
-                    <span className="grow">
-                      <b>{s.users.find((u) => u.id === a.user_id)?.name}</b>
-                      <small>
-                        {a.task_title||s.tasks.find((t) => t.id === a.task_id)?.title}
-                      </small>
-                    </span>
-                    <Badge status={a.status} />
-                  </button>
-                ))
-              ) : (
-                <p className="muted inset">
-                  Здесь появятся первые решения учеников.
-                </p>
-              )}
-            </section>
-            <section className="panel">
-              <div className="panel-heading">
-                <h2>Нужна поддержка</h2>
-              </div>
-              {difficult.length ? (
-                difficult.map((t) => (
-                  <div className="member inset" key={t.assignment_id||t.id}>
-                    <span>{t.title}</span>
-                    <Badge>{t.errors} ошибок</Badge>
-                  </div>
-                ))
-              ) : (
-                <p className="muted inset">
-                  Пока нет заданий, вызывающих затруднения.
-                </p>
-              )}
-            </section>
-          </div>
-        )}
+              ))
+            ) : (
+              <p className="muted inset">Здесь появятся первые решения учеников.</p>
+            )}
+          </section>
+          <section className="panel">
+            <div className="panel-heading">
+              <h2>Где ученикам трудно</h2>
+            </div>
+            {difficult.length ? (
+              difficult.map((t) => (
+                <div className="member inset" key={t.assignment_id || t.id}>
+                  <span>{t.title}</span>
+                  <Badge>{plural(t.errors, ["ошибка", "ошибки", "ошибок"])}</Badge>
+                </div>
+              ))
+            ) : (
+              <p className="muted inset">Пока нет заданий, вызывающих затруднения.</p>
+            )}
+          </section>
+        </div>
       </>
     );
   }
-  const nav = s.user.platform_owner ? [['overview','users','Клиенты и лицензии']] : student
+  const nav: [string, string, string, string?][] = s.user.platform_owner ? [['overview','users','Клиенты и лицензии']] : student
     ? [
         ["overview", "grid", "Обзор"],
         ["courses", "book", "Мои курсы"],
         ["results", "chart", "Мой прогресс"],
       ]
     : [
-        ["overview", "grid", "Обзор"],
-        ["courses", "book", "Курсы"],
+        ["overview", "grid", "Обзор", "СЕГОДНЯ"],
+        ["classroom", "help", "Запросы помощи"],
+        ["groups", "users", "Учебные группы", "КЛАССЫ"],
+        ["users", "person", "Участники"],
+        ["courses", "book", "Курсы", "МАТЕРИАЛЫ"],
         ["tasks", "edit", "Задания"],
-        ["groups", "users", "Учебные группы"],
-        ["users", "users", "Участники"],
+        ["journal", "journal", "Журнал и проверка", "РЕЗУЛЬТАТЫ"],
         ["results", "chart", "Результаты"],
-        ["journal", "chart", "Журнал и проверка"],
-        ["classroom", "users", "Запросы помощи"],
-        ["modes", "code", "Способы решения"],
-        ...(s.user.role==='admin'?[["school","users","Управление школой"]]:[]),
+        ["modes", "switch", "Способы решения"],
+        ...(s.user.role==='admin'?[["school","school","Управление школой","ШКОЛА"] as [string,string,string,string]]:[]),
       ];
+  const pageTitle = nav.find((n) => n[0] === page)?.[2] || ({ builder: "Конструктор задания", group: "Учебная группа", program: "Программа", "lesson-run": "Занятие", assignment: "Задание", preview: "Предпросмотр", "lesson-editor": "Сценарий урока" } as Record<string, string>)[page] || "Kodik";
   return (
-    <div className={`b2b-shell ${compactSidebar ? "sidebar-collapsed" : ""}`}>
-      <aside className="sidebar">
+    <div className={`b2b-shell ${compactSidebar ? "sidebar-collapsed" : ""}${drawer ? " drawer-open" : ""}`}>
+      {drawer && <button className="drawer-backdrop" aria-label="Закрыть меню" onClick={() => setDrawer(false)} />}
+      <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>К содержимому</a>
+      <aside className="sidebar" id="sidebar">
         <a className="brand" href="#overview">
           <span className="brand-mark">k.</span>kodik
           <span className="brand-suffix">школы</span>
@@ -1624,41 +1632,46 @@ export default function B2BApp() {
             {s.organization.name.slice(0, 1)}
           </span>
           <div>
-            <b>{s.organization.name}</b>
-            <small>Пространство школы</small>
+            <b title={s.organization.name}>{s.organization.name}</b>
+            <small>{student ? "Моя школа" : "Пространство школы"}</small>
           </div>
         </div>
-        <span className="nav-caption">ОБУЧЕНИЕ</span>
-        <nav>
-          {nav.map(([key, icon, label]) => (
-            <a
-              key={key}
-              className={page === key ? "active" : ""}
-              href={`#${key}`}
-            >
-              <Glyph name={icon} />
-              {label}
-              {key === "tasks" && (
-                <span className="nav-count">{s.tasks.length}</span>
-              )}
-            </a>
+        <nav aria-label="Разделы">
+          {nav.map(([key, icon, label, section]) => (
+            <span key={key} className="nav-item">
+              {section && <span className="nav-caption">{section}</span>}
+              <a
+                className={page === key || (key === "groups" && page === "group") ? "active" : ""}
+                aria-current={page === key ? "page" : undefined}
+                href={`#${key}`}
+                title={label}
+              >
+                <Glyph name={icon} />
+                <span className="nav-label">{label}</span>
+                {key === "classroom" && helpWaiting > 0 && (
+                  <span className="nav-count hot" aria-label={`ждут помощи: ${helpWaiting}`}>{helpWaiting}</span>
+                )}
+              </a>
+            </span>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="legacy-link">
-            <Glyph name="code" />
-            <div>
-              <b>Лаборатория Kodik</b>
-              <small>Исходный курс и Blockly</small>
-              <a href="?legacy=1" target="_blank" rel="noreferrer">
-                Открыть практику ↗
-              </a>
+          {!student && (
+            <div className="legacy-link">
+              <Glyph name="code" />
+              <div>
+                <b>Демо для самостоятельной практики</b>
+                <small>Исходный курс Kodik вне школы</small>
+                <a href="?legacy=1" target="_blank" rel="noreferrer">
+                  Открыть демо ↗
+                </a>
+              </div>
             </div>
-          </div>
+          )}
           <div className="profile">
             <span className="avatar">{s.user.name.slice(0, 1)}</span>
             <div>
-              <b>{s.user.name}</b>
+              <b title={s.user.name}>{s.user.name}</b>
               <small>
                 {student
                   ? "Ученик"
@@ -1691,44 +1704,49 @@ export default function B2BApp() {
         <header className="topbar">
           <button
             className="sidebar-toggle"
-            aria-label={
-              compactSidebar ? "Развернуть навигацию" : "Свернуть навигацию"
-            }
-            aria-pressed={compactSidebar}
-            onClick={() => setCompactSidebar((v) => !v)}
+            aria-label={narrow ? (drawer ? "Закрыть меню" : "Открыть меню") : compactSidebar ? "Развернуть навигацию" : "Свернуть навигацию"}
+            aria-expanded={narrow ? drawer : !compactSidebar}
+            aria-controls="sidebar"
+            onClick={() => (narrow ? setDrawer((v) => !v) : setCompactSidebar((v) => !v))}
           >
             ☰
           </button>
-          <span>
+          <nav className="crumbs" aria-label="Навигационная цепочка">
             {s.organization.name}
-            <span className="topbar-divider">/</span>
-            {nav.find((n) => n[0] === page)?.[2] ||
-              (page === "builder" ? "Конструктор задания" : "Учебная практика")}
-          </span>
+            <span className="topbar-divider" aria-hidden="true">/</span>
+            {pageTitle}
+          </nav>
           <span className="topbar-meta">
-            <span role="status" className={refreshError ? "sync-warning" : ""}>
-              {refreshError
-                ? "Нет связи с сервером"
-                : refreshedAt
-                  ? `Обновлено в ${new Date(refreshedAt).toLocaleTimeString("ru")}`
-                  : "Обновляем…"}
+            {!student && (
+              <>
+                <span role="status" className={refreshError ? "sync-warning" : ""}>
+                  {refreshError
+                    ? "Нет связи с сервером"
+                    : refreshedAt
+                      ? `Обновлено в ${new Date(refreshedAt).toLocaleTimeString("ru")}`
+                      : "Обновляем…"}
+                </span>
+                <button
+                  className="link"
+                  onClick={() => act(refresh)}
+                  aria-label="Обновить данные"
+                >
+                  Обновить
+                </button>
+              </>
+            )}
+            {student && refreshError && <span role="status" className="sync-warning">Нет связи с сервером — работа сохраняется на этом компьютере</span>}
+            <span className="topbar-date">
+              {new Date().toLocaleDateString("ru", {
+                day: "numeric",
+                month: "long",
+              })}
             </span>
-            <button
-              className="link"
-              onClick={() => act(refresh)}
-              aria-label="Обновить данные"
-            >
-              Обновить
-            </button>
-            <span className="live-dot" />
-            Учимся создавать <span className="topbar-divider">|</span>
-            {new Date().toLocaleDateString("ru", {
-              day: "numeric",
-              month: "long",
-            })}
           </span>
         </header>
         <main
+          id="main"
+          tabIndex={-1}
           className={`main-content ${["task","assignment","lesson-run","preview"].includes(page) ? "workspace-page" : ""}`}
         >
           {notice && (
@@ -1737,15 +1755,26 @@ export default function B2BApp() {
               <button onClick={() => setNotice("")}>Закрыть</button>
             </div>
           )}
+          {toast && (
+            <div className="toast" role="status">
+              <span>{toast.text}</span>
+              {toast.action && <button className="primary small" onClick={() => { go(toast.action!.path); setToast(null); }}>{toast.action.label}</button>}
+              <button className="small" onClick={() => setToast(null)}>{toast.sticky ? "Готово, записано" : "Понятно"}</button>
+            </div>
+          )}
           {recovery && (
-            <section className="recovery-notice">
+            <section className="recovery-notice" role="alert">
               <h3>Сохраните код восстановления</h3>
               <p>
-                Он позволит вернуть доступ к аккаунту администратора. После
-                использования вы получите новый код.
+                Он вернёт доступ к аккаунту администратора, если пароль забыт. Код показывается только здесь и
+                останется на экране, пока вы не подтвердите, что сохранили его.
               </p>
               <code>{recovery}</code>
-              <button onClick={() => setRecovery("")}>Я сохранил код</button>
+              <div className="actions">
+                <button onClick={() => void navigator.clipboard?.writeText(recovery).then(() => setToast({ text: "Код скопирован. Сохраните его в надёжном месте." }))}>Скопировать</button>
+                <button onClick={() => { const url = URL.createObjectURL(new Blob([`Код восстановления Kodik для «${s.organization.name}»\nЛогин: ${s.user.login}\nКод: ${recovery}\n`], { type: "text/plain;charset=utf-8" })), link = document.createElement("a"); link.href = url; link.download = "kodik-код-восстановления.txt"; link.click(); URL.revokeObjectURL(url); }}>Скачать .txt</button>
+                <button className="primary" onClick={async () => { if (await confirm.ask({ title: "Код точно сохранён?", text: <p>После этого код больше не покажется. Без него восстановить доступ администратора можно будет только через поддержку.</p>, confirm: "Да, код сохранён" })) setRecovery(""); }}>Я сохранил код</button>
+              </div>
             </section>
           )}
           {content}
@@ -1759,12 +1788,17 @@ export default function B2BApp() {
           attempt={attempt}
           state={s}
           close={() => setAttempt(null)}
-          onReview={async (b) => {
+          onReview={async (b, next) => {
             await mutate(`/attempts/${attempt.id}/review`, {...b,revision:attempt.review_revision});
+            const who = s.users.find((u) => u.id === attempt.user_id)?.name || "ученику";
+            setToast({ text: b.status === attempt.status ? `Комментарий для ${who} сохранён.` : b.status === "passed" ? `Работа ${who} принята.` : `Работа возвращена ${who} на доработку.` });
+            const queue: string[] = (attempt.queue || []).filter((x: string) => x !== attempt.id);
             setAttempt(null);
+            if (next && queue.length) openAttempt(queue[0], queue);
           }}
         />
       )}
+      {confirm.element}
     </div>
   );
 }
@@ -1777,12 +1811,15 @@ function AttemptDialog({
   attempt: Row;
   state: State;
   close: () => void;
-  onReview: (b: Row) => Promise<void>;
+  onReview: (b: Row, next?: boolean) => Promise<void>;
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const [history,setHistory]=useState<Row[]>([]);
   useEffect(()=>{api(`/attempts/${a.id}/reviews`).then(r=>setHistory(r.items)).catch(()=>{})},[a.id]);
+  const staff = s.user.role !== "student", manual = a.snapshot?.check_mode === "manual";
+  const learner = s.users.find((u) => u.id === a.user_id)?.name;
+  const more = (a.queue || []).filter((x: string) => x !== a.id).length;
   return (
     <div className="overlay">
       <section
@@ -1792,30 +1829,33 @@ function AttemptDialog({
         aria-label="Решение ученика"
       >
         <div className="dialog-heading">
-          <h2>
-            {a.snapshot?.title || a.task_title || s.tasks.find((t) => t.id === a.task_id)?.title ||
-              "Решение ученика"}
-          </h2>
+          <div>
+            {staff && learner && <span className="overline">{learner}{a.group_title ? ` · ${a.group_title}` : ""}</span>}
+            <h2>
+              {a.snapshot?.title || a.task_title || s.tasks.find((t) => t.id === a.task_id)?.title ||
+                "Решение ученика"}
+            </h2>
+          </div>
           <button aria-label="Закрыть" onClick={close}>
             ×
           </button>
         </div>
-        <Badge status={a.status} />
-        <p>Способ решения: {a.mode==='blocks'?'Блоки':a.mode==='mixed'?'Блоки + Python':'Python'}</p>
-        <p className="muted">{a.context_origin==='legacy'?'Историческая попытка: назначение не восстановлено':`Версия задания ${a.snapshot?.revision||a.version_revision||''}`}</p>
+        <p className="attempt-meta"><Badge status={a.status} /> {new Date(a.created_at).toLocaleString("ru")} · {a.mode==='blocks'?'Блоки':a.mode==='mixed'?'Блоки + Python':'Python'}</p>
+        {staff && <p className="muted">{a.context_origin==='legacy'?'Историческая попытка: назначение не восстановлено':`Версия задания ${a.snapshot?.revision||a.version_revision||''}`}</p>}
         <p>{a.result.message}</p>
         <pre className="solution-code">{a.code}</pre>
-        <p className="muted">{a.feedback}</p>
+        {staff && manual && a.snapshot?.manual_criteria && <section className="criteria"><h3>Критерии проверки</h3><p className="preserve">{a.snapshot.manual_criteria}</p></section>}
+        {a.feedback && <p className="feedback-note"><b>Комментарий преподавателя:</b> {a.feedback}</p>}
         {history.length>0&&<details><summary>История оценок · {history.length}</summary>{history.map(h=><p key={h.id}>{new Date(h.created_at).toLocaleString('ru')} · {h.actor_name} · {statusNames[h.before_status]} → {statusNames[h.after_status]}: {h.after_feedback}</p>)}</details>}
-        {s.user.role !== "student" && a.snapshot?.check_mode === "manual" && (
+        {staff && (
           <form
             onSubmit={async (e) => {
               e.preventDefault();
+              const next = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "next";
               setBusy(true);
               try {
-                await onReview(
-                  Object.fromEntries(new FormData(e.currentTarget)),
-                );
+                const body = Object.fromEntries(new FormData(e.currentTarget));
+                await onReview(manual ? body : { ...body, status: a.status }, next);
               } catch (e) {
                 setError((e as Error).message);
               } finally {
@@ -1824,24 +1864,29 @@ function AttemptDialog({
             }}
           >
             <label>
-              Комментарий
-              <textarea name="feedback" rows={3} defaultValue={a.feedback} />
+              {manual ? "Комментарий" : "Комментарий ученику"}
+              <textarea name="feedback" rows={3} defaultValue={a.feedback} placeholder={manual ? "Что получилось и что исправить" : "Результат проверен автоматически; комментарий увидит ученик"} />
             </label>
-            <label>
-              Результат
-              <select name="status">
-                <option value="passed">Принять решение</option>
-                <option value="failed">Вернуть на доработку</option>
-              </select>
-            </label>
+            {manual && (
+              <label>
+                Результат
+                <select name="status">
+                  <option value="passed">Принять решение</option>
+                  <option value="failed">Вернуть на доработку</option>
+                </select>
+              </label>
+            )}
             {error && (
               <p className="error" role="alert">
                 {error}
               </p>
             )}
-            <button className="primary" disabled={busy}>
-              Сохранить проверку
-            </button>
+            <div className="actions">
+              <button className="primary" disabled={busy} value="save">
+                {manual ? "Сохранить проверку" : "Сохранить комментарий"}
+              </button>
+              {more > 0 && <button disabled={busy} value="next">Сохранить и следующая ({more})</button>}
+            </div>
           </form>
         )}
       </section>

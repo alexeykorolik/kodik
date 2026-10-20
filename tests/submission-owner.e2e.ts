@@ -57,11 +57,11 @@ function submissions(page: Page) {
 }
 const storedOp = (page: Page, s: Setup, kid: Kid) => page.evaluate((k) => localStorage.getItem(k), `kodik:submission:${s.org}:${kid.id}:${s.assignment.id}`);
 const checkButton = (page: Page) => page.getByRole("button", { name: "Проверить решение", exact: true });
-const passed = (page: Page) => page.getByText("Отлично! Все тесты пройдены.", { exact: true });
+const passed = (page: Page) => page.getByText("Отлично! Все проверки пройдены.", { exact: true });
 async function openTask(page: Page, s: Setup, code: string) {
   await page.goto(`/#assignment/${s.assignment.id}`);
   await page.locator("#python-answer").fill(code);
-  await expect(page.getByText("Сохранено на сервере", { exact: true })).toBeVisible();
+  await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
 }
 /** Аня's tab and the neighbouring tab, both signed in as Аня in one browser. */
 async function twoTabs(context: BrowserContext, page: Page, s: Setup) {
@@ -237,7 +237,7 @@ test("a hanging answer frees the workplace in time; the accepted check is recove
   // sent again with the same key, and the network answering again brings exactly one result.
   sent.length = 0;
   await page.locator("#python-answer").fill("print(8)");
-  await expect(page.getByText("Сохранено на сервере", { exact: true })).toBeVisible();
+  await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
   await page.route("**/api/tasks/*/submissions", () => new Promise<void>(() => {}), { times: 1 });
   await checkButton(page).click();
   await expect(notice).toHaveAttribute("data-kind", "unconfirmed", { timeout: 30000 });
@@ -251,7 +251,7 @@ test("a hanging answer frees the workplace in time; the accepted check is recove
   // 3. The check is accepted, but reading its result hangs: no new submission, the same check is asked again.
   sent.length = 0;
   await page.locator("#python-answer").fill("print(7)");
-  await expect(page.getByText("Сохранено на сервере", { exact: true })).toBeVisible();
+  await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
   await page.route("**/api/tasks/*/submissions", async (route) => { const answer = await route.fetch(); const body = await answer.json(); await route.fulfill({ response: answer, json: { ...body, status: "queued", result: null } }); }, { times: 1 });
   await page.route("**/api/submissions/*", () => new Promise<void>(() => {}), { times: 1 });
   await checkButton(page).click();

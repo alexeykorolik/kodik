@@ -9,6 +9,7 @@ import { BlockEditor } from "./BlockEditor";
 import { useSolvingModes, type SolvingModes } from "./useSolvingModes";
 import { MODE_LABEL, type Mode } from "../adaptive/modePolicy";
 import {HelpButton} from './PilotPanels';
+import { explainDifference, learnerStatus } from "./feedback";
 function useWorkspaceController({
   task,
   state,
@@ -91,8 +92,20 @@ export type WorkspaceModel=Omit<ReturnType<typeof useWorkspaceController>,'stude
 export function Workspace(props:Parameters<typeof useWorkspaceController>[0]){return <WorkspaceView model={useWorkspaceController(props)}/>;}
 export function WorkspaceView({model}:{model:WorkspaceModel}){
   const {modes,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,viewNote,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode,checkLabel,nextLabel,referenceAction}=model;
-  const [inputsExpanded,setInputsExpanded]=useState(false),consoleRef=useRef<HTMLDivElement>(null);
-  useEffect(()=>{if(result){setInputsExpanded(false);if(consoleRef.current)consoleRef.current.scrollTop=0}},[result]);
+  const [inputsExpanded,setInputsExpanded]=useState(false),[hintsShown,setHintsShown]=useState(0),consoleRef=useRef<HTMLDivElement>(null),resultRef=useRef<HTMLDivElement>(null);
+  // After a run or a check the result comes into view next to the buttons, without jumping the page.
+  useEffect(()=>{if(result){setInputsExpanded(false);if(consoleRef.current)consoleRef.current.scrollTop=0;resultRef.current?.scrollIntoView?.({block:'nearest'})}},[result]);
+  // On-screen keyboard (phones, tablets): keep the field being typed in visible above it.
+  useEffect(()=>{const vv=window.visualViewport;if(!vv)return;const keep=()=>{const el=document.activeElement as HTMLElement|null;if(el&&el!==document.body&&(el.closest('.coding-panel')||el.closest('.blocklyWidgetDiv')))el.scrollIntoView?.({block:'center'})};vv.addEventListener('resize',keep);return()=>vv.removeEventListener('resize',keep)},[]);
+  const hints:string[]=(task.hints||[]).filter(Boolean),usesInput=(task.examples||[]).some((e:Row)=>e.inputs?.length>0)||/input/.test(`${task.instruction||''} ${task.theory||''} ${code} ${modes?.mirror.python||''}`)||inputs!=='';
+  // Two or more unsuccessful checks in a row: the next hint is offered without the child asking.
+  const streak=(()=>{let n=0;for(const a of attempts){if(a.status==='passed')break;if(['failed','runtime_error'].includes(a.status))n++}return n})();
+  const passedNow=result?.status==='passed',passedBefore=!previewMode&&attempts.some(a=>a.status==='passed'),canGoOn=(passedNow||passedBefore)&&!!onNext&&!previewMode;
+  const failedCase=result?.cases?.find((c:Row)=>!c.passed&&!c.hidden);
+  const verdict=!result?'':result.status==='passed'?'✓ Всё верно!':result.status==='pending_review'?'Отправлено учителю':result.error||result.status==='runtime_error'?'В коде ошибка — смотри ниже':result.status==='failed'?(failedCase?'Почти! Смотри, что отличается':'Пока не получилось'):'Программа выполнена';
+  const resultTone=result?(result.status||(result.error?'runtime_error':'ran')):'';
+  const blocksPython=modes&&modes.mode==='python'&&modes.mirror.ok?modes.mirror.python.trim():'';
+  const emptyPython=!code.trim()||code.trim()===(task.starter||'').trim();
   return (
     <>
       <div className="workspace-heading">
@@ -106,19 +119,17 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
         >
           {backLabel}
         </button>
-        <span className="muted">{task.group_title} · <span>Попыток: {attempts.length}</span></span>
-        <Badge status={previewMode?result?.status:undefined}>
-          {previewMode?(result?.status?statusNames[result.status]||'Пробная проверка':result?.error?'Ошибка выполнения':'Пробное прохождение'):attempts.some((a) => a.status === "passed")
-            ? "✓ Выполнено"
-            : "Учебная практика"}
-        </Badge>
-        {(previewMode||result?.status==='passed'||attempts.some(a=>a.status==='passed'))&&onNext&&<button className="primary small" title={nextTask?.title} onClick={async()=>{if(await persist(code,revision.current))onNext()}}>{nextLabel}</button>}
+        {previewMode&&<span className="muted">{task.group_title}</span>}
+        {(previewMode||passedBefore)&&<Badge status={previewMode?result?.status:'passed'}>
+          {previewMode?(result?.status?statusNames[result.status]||'Пробная проверка':result?.error?'Ошибка выполнения':'Пробное прохождение'):"✓ Выполнено"}
+        </Badge>}
+        {previewMode&&onNext&&<button className="primary small" title={nextTask?.title} onClick={async()=>{if(await persist(code,revision.current))onNext()}}>{nextLabel}</button>}
         {previewMode&&referenceAction&&<button className="small" onClick={referenceAction}>Вставить эталон в предпросмотр</button>}
       </div>
       <div className="workspace-title">
-        <span className="overline">{previewMode?"ПРЕДПРОСМОТР УЧЕНИКА":"ПРАКТИКА PYTHON"}</span>
+        <span className="overline">{previewMode?"ПРЕДПРОСМОТР УЧЕНИКА":lessonContext?lessonContext.toUpperCase():"ПРАКТИКА"}</span>
         <h1>{task.title}</h1>
-        {lessonContext&&<button className="link" onClick={onLessonOverview}>{lessonContext} · шаги урока</button>}
+        {lessonContext&&<button className="steps-link" onClick={onLessonOverview}>☰ Все шаги урока</button>}
         {!previewMode&&<HelpButton assignmentId={task.assignment_id}/>}
         {readOnly&&viewNote&&<p className="notice view-only-note" role="status" data-testid="view-only-note">{viewNote}</p>}
         {task.due_at&&<p className="workspace-deadline">{Date.parse(task.due_at)<Date.now()?'Срок прошёл:':'Срок:'} {new Date(task.due_at).toLocaleDateString('ru')}</p>}
@@ -155,7 +166,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               ["task", "Задание"],
               ["theory", "Теория"],
               ["hints", "Подсказки"],
-              ["history", "Попытки"],
+              ["history", attempts.length?`Попытки · ${attempts.length}`:"Попытки"],
             ].map(([key, name]) => (
               <button
                 className={tab === key ? "active" : ""}
@@ -171,9 +182,10 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               <>
                 <h2>Мои попытки</h2>
                 {attempts.length ? (
-                  attempts.map((a) => (
-                    <div className="result-box" key={a.id}>
-                      <Badge status={a.status} />
+                  attempts.map((a, i) => (
+                    <div className={`attempt-card ${a.status === "passed" ? "passed" : ""}`} key={a.id}>
+                      <b>Попытка {attempts.length - i}{a.status === "passed" ? " · получилось!" : ""}</b>
+                      <span className="attempt-status">{learnerStatus[a.status] || a.status}</span>
                       <p>{a.feedback || a.result?.message}</p>
                       <small>
                         {new Date(a.created_at).toLocaleString("ru")}
@@ -186,26 +198,19 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               </>
             ) : tab === "task" ? (
               <>
-                <Badge>
-                  {task.difficulty === "easy"
-                    ? "Начальный уровень"
-                    : task.difficulty === "medium"
-                      ? "Средний уровень"
-                      : "Продвинутый уровень"}
-                </Badge>
                 <h2>Твоя задача</h2>
                 {task.goal && <p className="learning-goal">{task.goal}</p>}
                 <p className="preserve">{task.instruction}</p>
                 {task.learning_rules?.length>0&&<section><h3>В решении нужно применить</h3><ul>{learningRules.filter(rule=>task.learning_rules.includes(rule.id)).map(rule=><li key={rule.id}>{rule.label}</li>)}</ul></section>}
                 {task.examples?.length > 0 && (
                   <div className="public-examples">
-                    <h3>Примеры</h3>
+                    <h3>Должно получиться</h3>
                     {task.examples.map((example: Row, i: number) => (
                       <div key={i}>
-                        <small>Ввод</small>
-                        <pre>{example.inputs.join("\n") || "Не требуется"}</pre>
-                        <small>Вывод</small>
-                        <pre>{example.expected || "(пусто)"}</pre>
+                        {example.inputs.length > 0 && <><small>Если ввести</small>
+                        <pre>{example.inputs.join("\n")}</pre></>}
+                        <small>Программа напечатает</small>
+                        <pre className="screen">{example.expected || "(ничего)"}</pre>
                       </div>
                     ))}
                   </div>
@@ -229,10 +234,10 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               </>
             ) : tab === "theory" ? (
               <>
-                <h2>Разберёмся в теме</h2>
+                <h2>Шпаргалка</h2>
                 <p className="preserve">
                   {task.theory ||
-                    "Дополнительной теории для этого задания нет."}
+                    "Для этого задания шпаргалки нет. Посмотри пример в уроке или открой подсказку."}
                 </p>
               </>
             ) : (
@@ -241,19 +246,19 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 <p className="muted">
                   Открывай подсказки по очереди, если застрял.
                 </p>
-                {task.hints.filter(Boolean).map((h: string, i: number) => (
-                  <details key={i}>
+                {hints.map((h: string, i: number) => (
+                  <details key={`${i}:${i < hintsShown}`} open={i < hintsShown}>
                     <summary>Подсказка {i + 1}</summary>
                     <p className="preserve">{h}</p>
                   </details>
                 ))}
-                {!task.hints.filter(Boolean).length && (
-                  <p>Преподаватель пока не добавил подсказки.</p>
+                {!hints.length && (
+                  <p>Подсказок пока нет. Можно позвать учителя кнопкой «Нужна помощь».</p>
                 )}
               </>
             )}
           </article>
-          <div className="material-footer">↗ Каждая попытка — это опыт</div>
+          <div className="material-footer">Ошибки — это нормально: каждая попытка помогает</div>
         </section>
         <div
           className="workspace-divider"
@@ -315,14 +320,13 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               >
                 А−
               </button>
-              <span aria-label={`Размер шрифта ${fontSize}`}>{fontSize} пт</span>
+              <span aria-label={`Размер текста ${fontSize}`}>Размер {fontSize}</span>
               <button
                 aria-label="Увеличить шрифт кода"
                 onClick={() => setFontSize((s) => Math.min(24, s + 1))}
               >
                 А+
               </button>
-              Python <span className="live-dot" />
             </span>
           </div>
           {modes && modes.mode !== "python" ? (
@@ -338,12 +342,14 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
             </div>
           ) : (
           <fieldset disabled={readOnly || busy || submission.busy || submission.phase === "paused"}>
+            {blocksPython && emptyPython && !readOnly && <div className="from-blocks" role="status"><span>Твои блоки сохранены в режиме «{MODE_LABEL.blocks}». Здесь — отдельный черновик на Python.</span><button type="button" className="small" onClick={() => studentDraft.change(blocksPython + "\n")}>Перенести программу из блоков</button></div>}
             <MinimalCodeEditor
               value={code}
               onChange={(v) => {
                 studentDraft.change(v);
               }}
               rows={16}
+              label="Код на Python"
             />
           </fieldset>
           )}
@@ -362,6 +368,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
             >
               {modes && modes.mode !== "python" ? modes.blocks.saved : saved}
             </small>
+            {verdict && <span className={`check-summary ${resultTone}`}>{verdict}</span>}
             <div className="actions">
               <button
                 disabled={readOnly || busy || submission.busy || submission.phase === "paused"}
@@ -369,8 +376,13 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               >
                 ▷ Запустить
               </button>
+              {canGoOn && (
+                <button className="primary next-button" title={nextTask?.title} onClick={async () => { if (await persist(code, revision.current)) onNext!(); }}>
+                  {nextLabel}
+                </button>
+              )}
               <button
-                className="primary"
+                className={canGoOn ? "" : "primary"}
                 disabled={readOnly || busy || submission.busy || submission.phase === "held" || submission.phase === "reconnecting" || submission.phase === "paused"}
                 onClick={() => run(true)}
               >
@@ -389,10 +401,10 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
           </div>
           <div className="console" ref={consoleRef}>
             <div className="console-title">
-              <b>Консоль</b>
+              <b>Что напечатает программа</b>
               <span>Результат запуска и проверки</span>
             </div>
-            <details className="stdin-details" open={inputsExpanded} onToggle={e=>setInputsExpanded(e.currentTarget.open)}>
+            {usesInput && <details className="stdin-details" open={inputsExpanded} onToggle={e=>setInputsExpanded(e.currentTarget.open)}>
               <summary>Ввод для пробного запуска</summary>
               <label className="stdin">
                 Ввод для пробного запуска
@@ -400,10 +412,10 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                   value={inputs}
                   onChange={(e) => setInputs(e.target.value)}
                   rows={2}
-                  placeholder="Каждая строка — отдельный ввод"
+                  placeholder="Каждая строка — это один ответ для input()"
                 />
               </label>
-            </details>
+            </details>}
             {(submission.busy || submission.waiting) && (
               <div className="submission-state" role="status" data-testid="submission-state" data-phase={submission.phase}>
                 {submission.label}
@@ -433,24 +445,27 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
             {result ? (
               <div
                 role="status"
-                className={`result-box ${result.status || ""}`}
+                ref={resultRef}
+                className={`result-box ${resultTone}`}
               >
-                <b>{result.message || result.error || "Программа выполнена"}</b>
+                {result.status === "passed" && <span className="celebrate" aria-hidden="true">🎉</span>}<b>{result.message || result.error || "Программа выполнена"}</b>
+                {failedCase && <p className="difference">{explainDifference(failedCase.expected, failedCase.output)}</p>}
+                {!previewMode && streak >= 2 && result.status !== "passed" && hints.length > hintsShown && <button type="button" className="small hint-offer" onClick={() => { setHintsShown(hintsShown + 1); setTab("hints"); }}>Открыть подсказку {hintsShown + 1}</button>}
                 {result.output && (
                   <pre>{result.output.join("\n") || "(нет вывода)"}</pre>
                 )}
                 {result.cases?.map((c: Row) => (
                   <div className="case-result" key={c.index}>
                     <span>
-                      {c.passed ? "✓" : "×"} Тест {c.index}
-                      {c.hidden ? " · скрытый" : ""}
+                      {c.passed ? "✓" : "×"} Проверка {c.index}
+                      {c.hidden ? " · скрытая" : ""}
                     </span>
                     {!c.hidden && !c.passed && (
                       <>
                         <small>Ожидается</small>
                         <pre>{c.expected || "(пусто)"}</pre>
-                        <small>Ваш вывод</small>
-                        <pre>{c.output || "(пусто)"}</pre>
+                        <small>Твоя программа напечатала</small>
+                        <pre>{c.output || "(ничего)"}</pre>
                       </>
                     )}
                   </div>
@@ -458,7 +473,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               </div>
             ) : (
               <p className="console-empty">
-                Здесь появится результат вашей программы.
+                Нажми «Запустить» — здесь появится то, что напечатает программа.
               </p>
             )}
           </div>
@@ -495,9 +510,16 @@ function ModeBar({ modes, readOnly = false }: { modes: SolvingModes; readOnly?: 
   const others = (["blocks", "mixed", "python"] as Mode[]).filter((m) => modes.modes?.supported.includes(m) && !modes.available.includes(m));
   return (
     <div className="mode-bar">
-      <div className="mode-switch" role="radiogroup" aria-label="Способ решения">
+      <div className="mode-switch" role="radiogroup" aria-label="Способ решения" onKeyDown={(e) => {
+        // Arrow keys move between the modes the learner may open; Tab leaves the group (one stop).
+        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+        e.preventDefault();
+        const open = modes.available.filter((m) => m === modes.mode || (!readOnly && modes.canSwitch(m)));
+        const at = open.indexOf(modes.mode), next = open[(at + (e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1) + open.length) % open.length];
+        if (next && next !== modes.mode) { void modes.switchTo(next); requestAnimationFrame(() => (e.currentTarget.querySelector(`.mode-${next}`) as HTMLElement | null)?.focus()); }
+      }}>
         {modes.available.map((m) => (
-          <button key={m} role="radio" aria-checked={modes.mode === m} className={`mode-${m}`} disabled={modes.mode !== m && (readOnly || !modes.canSwitch(m))} onClick={() => void modes.switchTo(m)}>
+          <button key={m} role="radio" tabIndex={modes.mode === m ? 0 : -1} aria-checked={modes.mode === m} className={`mode-${m}`} disabled={modes.mode !== m && (readOnly || !modes.canSwitch(m))} onClick={() => void modes.switchTo(m)}>
             {MODE_LABEL[m]}
           </button>
         ))}

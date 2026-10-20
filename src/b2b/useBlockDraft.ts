@@ -13,7 +13,7 @@ export function useBlockDraft(learner: { id: string; org_id: string }, task: Row
   const [backup] = useState(() => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } });
   const initial = backup?.workspace ?? serverDraft?.workspace ?? task.learning?.starter_blocks ?? null;
   const [workspace, setWorkspace] = useState<unknown>(initial),
-    [saved, setSaved] = useState(backup ? "Блоки восстановлены с этого компьютера" : serverDraft ? "Блоки сохранены на сервере" : "Начало задания"),
+    [saved, setSaved] = useState(backup ? "Работа восстановлена на этом компьютере" : serverDraft ? "✓ Сохранено" : "Начни с первого блока"),
     [error, setError] = useState(""),
     [conflict, setConflict] = useState<Row | null>(null);
   const latest = useRef<string>(JSON.stringify(initial)), lastSaved = useRef<string>(JSON.stringify(serverDraft?.workspace ?? task.learning?.starter_blocks ?? null)),
@@ -24,7 +24,7 @@ export function useBlockDraft(learner: { id: string; org_id: string }, task: Row
     const text = JSON.stringify(value);
     if (text === latest.current) return;
     latest.current = text; generation.current++;
-    cache(); setWorkspace(value); setSaved("Сохранено на компьютере");
+    cache(); setWorkspace(value); setSaved("Сохраняем…");
   };
   const persist = () => {
     if (!enabled) return Promise.resolve(true);
@@ -33,19 +33,19 @@ export function useBlockDraft(learner: { id: string; org_id: string }, task: Row
       const value = latest.current, gen = generation.current;
       if (value === lastSaved.current) return true;
       cache();
-      if (mounted.current) setSaved("Сохраняем блоки…");
+      if (mounted.current) setSaved("Сохраняем…");
       try {
         const result = await api(`/tasks/${task.id}/draft`, { mode: "blocks", workspace: JSON.parse(value), revision: serverRevision.current, assignment_id: task.assignment_id }, "PUT", undefined, { owner });
         serverRevision.current = result.revision; lastSaved.current = value;
         if (value === latest.current) { try { localStorage.removeItem(key); } catch { /* storage unavailable */ } } else cache();
-        if (mounted.current && gen === generation.current) { setSaved("Блоки сохранены на сервере"); setError(""); }
+        if (mounted.current && gen === generation.current) { setSaved("✓ Сохранено"); setError(""); }
         return true;
       } catch (e) {
         cache();
         if (isOwnerMismatch(e)) { blocked.current = true; return false; }
         if (e instanceof ApiError && e.status === 409 && e.details.current) { blocked.current = true; if (mounted.current) setConflict(e.details.current as Row); }
         if (mounted.current) {
-          setSaved(blocked.current ? "Конфликт двух вкладок" : "Сохранено на компьютере");
+          setSaved(blocked.current ? "Конфликт двух вкладок" : "Нет связи — сохранено на этом компьютере");
           setError(e instanceof ApiError ? e.message : "Нет связи с сервером. Блоки сохранены только для вашего аккаунта на этом компьютере.");
         }
         return false;
@@ -55,17 +55,22 @@ export function useBlockDraft(learner: { id: string; org_id: string }, task: Row
   };
   useEffect(() => {
     if (!enabled || latest.current === lastSaved.current) return;
-    const timer = setTimeout(() => void persist(), 700);
+    const timer = setTimeout(() => void persist(), 300);
     return () => clearTimeout(timer);
   }, [workspace, enabled]);
   useEffect(() => {
     mounted.current = true;
     const retry = () => { if (latest.current !== lastSaved.current) void persist(); };
     const beforeUnload = (e: BeforeUnloadEvent) => { if (latest.current !== lastSaved.current && !cache()) { e.preventDefault(); e.returnValue = ""; } };
+    // Closing the tab right after a change: the last blocks still reach the server (a shared computer).
+    const hide = () => { if (enabled && !blocked.current && latest.current !== lastSaved.current) { cache(); void api(`/tasks/${task.id}/draft`, { mode: "blocks", workspace: JSON.parse(latest.current), revision: serverRevision.current, assignment_id: task.assignment_id }, "PUT", undefined, { owner, keepalive: true }).catch(() => {}); } };
+    const hidden = () => { if (document.visibilityState === "hidden") retry(); };
     window.addEventListener("online", retry);
     window.addEventListener("beforeunload", beforeUnload);
+    window.addEventListener("pagehide", hide);
+    document.addEventListener("visibilitychange", hidden);
     const timer = setInterval(retry, 15000);
-    return () => { mounted.current = false; window.removeEventListener("online", retry); window.removeEventListener("beforeunload", beforeUnload); clearInterval(timer); if (latest.current !== lastSaved.current) { cache(); void persist(); } };
+    return () => { mounted.current = false; window.removeEventListener("online", retry); window.removeEventListener("beforeunload", beforeUnload); window.removeEventListener("pagehide", hide); document.removeEventListener("visibilitychange", hidden); clearInterval(timer); if (latest.current !== lastSaved.current) { cache(); void persist(); } };
   }, []);
   const resolve = async (choice: "mine" | "server") => {
     if (!conflict) return;
@@ -75,7 +80,7 @@ export function useBlockDraft(learner: { id: string; org_id: string }, task: Row
       latest.current = text; lastSaved.current = text; generation.current++;
       setWorkspace(conflict.workspace);
       try { localStorage.removeItem(key); } catch { /* storage unavailable */ }
-      setSaved("Блоки сохранены на сервере");
+      setSaved("✓ Сохранено");
       return;
     }
     cache(); await persist();

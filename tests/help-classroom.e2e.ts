@@ -45,13 +45,13 @@ test("help screen: waiting first with context, answer survives refresh, history 
   expect(wy!.y).toBeLessThan(hy!.y);
 
   // Typing an answer, then a refresh round: the text stays.
-  const answer = card.getByLabel(/Короткий ответ/);
+  const answer = card.getByLabel(/Ответ ученику/);
   await answer.focus(); await page.keyboard.type("Ты сложил строки, а не числа");
   await page.waitForTimeout(5600);
   await expect(page.getByTestId("live-freshness")).toContainText("Запросы обновлены");
   await expect(answer).toHaveValue("Ты сложил строки, а не числа");
   await answer.press("Enter");
-  await expect(page.getByRole("status").filter({ hasText: "Помощь ученику Вася отмечена" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Помощь отмечена: Вася" })).toBeVisible();
   await expect(waiting.getByRole("heading", { name: "Ждут помощи: 0" })).toBeVisible();
   await expect(waiting).toContainText("Сейчас никто не ждёт помощи.");
 
@@ -73,7 +73,7 @@ test("help screen: waiting first with context, answer survives refresh, history 
   await learnerPage.getByRole("button", { name: "Войти в Kodik" }).click();
   await expect(learnerPage.getByRole("heading", { name: "Привет, Вася!" })).toBeVisible();
   await learnerPage.goto(`/#assignment/${assignment.id}`);
-  await learnerPage.getByText("Нужна помощь").click();
-  await expect(learnerPage.getByRole("status").filter({ hasText: "Ответ учителя: Ты сложил строки, а не числа" })).toBeVisible();
+  await expect(learnerPage.getByRole("status", { name: "Ответ учителя" })).toContainText("Учитель ответил");
+  await expect(learnerPage.getByRole("status", { name: "Ответ учителя" })).toContainText("Ты сложил строки, а не числа");
   await r.dispose(); await kid.dispose();
 });
