@@ -298,7 +298,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
           onKeyDown={(e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
               e.preventDefault();
-              if (!busy && !submission.busy) void run(!e.shiftKey);
+              if (!busy && !submission.busy && (e.shiftKey || !submission.waiting || submission.phase === "unconfirmed")) void run(!e.shiftKey);
             }
           }}
         >
@@ -371,11 +371,13 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               </button>
               <button
                 className="primary"
-                disabled={readOnly || busy || submission.busy}
+                disabled={readOnly || busy || submission.busy || submission.phase === "held" || submission.phase === "reconnecting"}
                 onClick={() => run(true)}
               >
-                {submission.busy
+                {submission.busy || submission.phase === "held" || submission.phase === "reconnecting"
                   ? submission.label
+                  : submission.phase === "unconfirmed"
+                    ? "Отправить то же решение ещё раз"
                   : busy
                     ? "Запускаем…"
                     : task.check_mode === "manual"
@@ -402,8 +404,8 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 />
               </label>
             </details>
-            {submission.busy && (
-              <div className="submission-state" role="status">
+            {(submission.busy || submission.waiting) && (
+              <div className="submission-state" role="status" data-testid="submission-state" data-phase={submission.phase}>
                 {submission.label}
                 {submission.canCancel && (
                   <button onClick={() => void submission.cancel()}>
@@ -412,9 +414,10 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 )}
               </div>
             )}
-            {submission.error && (
-              <p role="alert" className="error">
-                {submission.error}
+            {submission.notice && (
+              <p role={submission.notice.kind === "refused" ? "alert" : "status"} className={submission.notice.kind === "refused" ? "error submission-refused" : "notice submission-note"} data-testid="submission-notice" data-kind={submission.notice.kind}>
+                {submission.notice.text}
+                {submission.notice.kind === "held" && submission.sentAt && <> Отправлено в {new Date(submission.sentAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}. В редакторе сейчас черновик: его можно менять, а отправить — после результата.</>}
               </p>
             )}
             {error && (

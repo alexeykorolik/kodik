@@ -404,9 +404,9 @@ test("session expiry keeps the offline draft with its owner; lost submit respons
     await page
       .getByRole("button", { name: "Проверить решение", exact: true })
       .click();
-    await expect(
-      page.getByRole("button", { name: /Восстанавливаем связь/ }),
-    ).toBeVisible();
+    // The answer was lost after the server accepted it: the result of acceptance is unknown, not refused.
+    await expect(page.getByTestId("submission-notice")).toHaveAttribute("data-kind", "unconfirmed");
+    await expect(page.getByRole("button", { name: "Отправить то же решение ещё раз", exact: true })).toBeVisible();
     await page.reload();
     await expect(
       page.getByText("Отлично! Все тесты пройдены.", { exact: true }),
