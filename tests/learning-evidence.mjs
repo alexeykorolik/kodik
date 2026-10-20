@@ -15,7 +15,7 @@ test('learning conclusions and recommendations use eligible, fresh, on-topic evi
       if(mode!=='blocks'){const s=(await h.request('/state',undefined,child)).tasks.find(x=>x.assignment_id===a.id);if(s.modes.current!==mode){await h.request(`/assignments/${a.id}/students/${user.id}/mode`,{offer:mode,reason:'Проверка перехода'},admin,200,'PUT');await h.request(`/assignments/${a.id}/mode`,{mode},child)}}
       program=program??(mode==='python'?{mode,code:'print(99)'}:{mode,workspace:tk.workspace});let job=await h.request(`/tasks/${tk.id}/submissions`,{...program,assignment_id:a.id,request_key:randomUUID()},child);for(let i=0;i<100&&job.status!=='completed';i++){await new Promise(r=>setTimeout(r,25));job=await h.request(`/submissions/${job.id}`,undefined,child)}return job.result.status;
     }
-    const proposed=async()=>(await h.request('/recommendations',undefined,admin)).items.filter(r=>r.status==='proposed');
+    const proposed=async()=>(await h.request('/recommendations',undefined,admin)).active.items.filter(r=>r.status==='proposed');
     const check=async(a)=>h.request(`/assignments/${a.id}/students/${user.id}/recommendation-check`,undefined,admin);
     const failing=c=>c.checks.filter(x=>!x.ok).map(x=>x.rule);
 
@@ -67,7 +67,7 @@ test('learning conclusions and recommendations use eligible, fresh, on-topic evi
       await h.request(`/recommendations/${rec.id}/approve`,{},admin);await h.request(`/recommendations/${rec.id}/approve`,{},admin);
       const offered=(await h.request('/state',undefined,child)).tasks.find(x=>x.assignment_id===rec.assignment_id);assert.equal(offered.modes.current,'blocks');assert.equal(offered.modes.offered,'mixed');
       await h.request(`/assignments/${rec.assignment_id}/mode`,{mode:'mixed'},child);
-      assert.equal((await h.request('/recommendations',undefined,child)).items.find(r=>r.id===rec.id).status,'accepted');
+      assert.equal((await h.request('/recommendations',undefined,child)).history.items.find(r=>r.id===rec.id).status,'accepted');
       assert.equal(h.db.prepare('SELECT COUNT(*) n FROM recommendation_events WHERE recommendation_id=?').get(rec.id).n,2);
       await h.request(`/assignments/${cur.id}/students/${user.id}/recommendation-check`,undefined,other.admin,404);
     });

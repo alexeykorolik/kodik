@@ -240,6 +240,32 @@ const migrations = [
     db.exec(`ALTER TABLE recommendations ADD COLUMN reason TEXT;
       ALTER TABLE recommendation_events ADD COLUMN reason TEXT;`);
     if(db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Foreign keys broken; migration 16 refused.');
+  }},
+  // A sent recommendation owns its invitation (assignment_mode_state.offer_recommendation_id; NULL is
+  // the teacher's own offer), may be replaced by a teacher's decision, and records when it was closed
+  // so that closed history can be paged apart from live offers. Removing an invitation is a mode event.
+  {version:17,name:'recommendation_offers_and_history',foreignKeysOff:true,up(db){
+    const rebuild=(name,old,next)=>{
+      const table=db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(name).sql;
+      if(!table.includes(old))throw new Error(`Unexpected ${name} schema; migration 17 refused.`);
+      const indexes=db.prepare("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=? AND sql IS NOT NULL").all(name).map(r=>r.sql);
+      const columns=db.prepare(`PRAGMA table_info(${name})`).all().map(c=>c.name).join(',');
+      db.exec(`${table.replace(old,next).replace(new RegExp(`^CREATE TABLE "?${name}"?`),`CREATE TABLE ${name}_new`)};
+        INSERT INTO ${name}_new(${columns}) SELECT ${columns} FROM ${name};
+        DROP TABLE ${name};ALTER TABLE ${name}_new RENAME TO ${name};`);
+      for(const sql of indexes)db.exec(sql);
+    };
+    rebuild('recommendations',"CHECK(status IN ('proposed','offered','accepted','declined','dismissed','withdrawn','expired'))","CHECK(status IN ('proposed','offered','accepted','declined','dismissed','withdrawn','replaced','expired'))");
+    rebuild('mode_events',"CHECK(kind IN ('policy_changed','override_changed','offered','offer_accepted','offer_declined','switched','teacher_set'))","CHECK(kind IN ('policy_changed','override_changed','offered','offer_accepted','offer_declined','offer_withdrawn','switched','teacher_set'))");
+    db.exec(`ALTER TABLE recommendations ADD COLUMN closed_at TEXT;
+      UPDATE recommendations SET closed_at=COALESCE((SELECT MAX(e.created_at) FROM recommendation_events e WHERE e.recommendation_id=recommendations.id),created_at) WHERE status NOT IN ('proposed','offered');
+      ALTER TABLE assignment_mode_state ADD COLUMN offer_recommendation_id TEXT REFERENCES recommendations(id);
+      UPDATE assignment_mode_state SET offer_recommendation_id=(SELECT r.id FROM recommendations r WHERE r.assignment_id=assignment_mode_state.assignment_id AND r.user_id=assignment_mode_state.user_id AND r.status='offered' AND r.target_mode=assignment_mode_state.offered_mode
+        AND r.id=(SELECT json_extract(e.details,'$.recommendation_id') FROM mode_events e WHERE e.assignment_id=assignment_mode_state.assignment_id AND e.user_id=assignment_mode_state.user_id AND e.kind='offered' ORDER BY e.created_at DESC,e.rowid DESC LIMIT 1))
+        WHERE offered_mode IS NOT NULL;
+      CREATE INDEX recommendations_school ON recommendations(org_id,status,created_at,id);
+      CREATE INDEX recommendations_learner ON recommendations(user_id,status,assignment_id);`);
+    if(db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Foreign keys broken; migration 17 refused.');
   }}
 ];
 export const schemaVersion = migrations.at(-1).version;

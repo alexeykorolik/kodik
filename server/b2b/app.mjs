@@ -135,21 +135,26 @@ export function createApp({
   const admin = (u) => {
     if (u.role !== "admin") fail(403, "Доступно только администратору школы.");
   };
-  function availableTask(id, user, assignmentId,writing=false) {
+  /**
+   * The learner's issued task. `writing` = a new learning action (run, check). In an archived group those
+   * are refused with code group_archived; saving one's own draft (`draft`) stays possible so that unsaved
+   * work is not lost when access changes.
+   */
+  function availableTask(id, user, assignmentId,writing=false,{draft=false}={}) {
     const task = own("tasks", id, user);
     if(user.role!=="student")return task;
     const assignments=all("SELECT a.* FROM assignments a JOIN group_members gm ON gm.group_id=a.group_id WHERE a.task_id=? AND gm.user_id=? AND a.org_id=? AND a.archived=0",id,user.id,user.org_id).filter(a=>(!assignmentId||a.id===assignmentId)&&curriculum.canAccessAssignment(a,user,writing));
     if(!assignments.length)fail(404,"Назначение не найдено.");
     if(assignments.length!==1)fail(409,"Выберите конкретное назначение задания.",{assignment_required:true});
     const assignment=assignments[0],version=get("SELECT * FROM task_versions WHERE id=? AND org_id=?",assignment.version_id,user.org_id);
-    if(writing&&get('SELECT archived FROM groups_ WHERE id=?',assignment.group_id)?.archived)fail(409,'Группа архивирована. Работы сохранены для просмотра.');
+    if(writing&&!draft&&get('SELECT archived FROM groups_ WHERE id=?',assignment.group_id)?.archived)fail(409,'Группа в архиве: новые запуски и проверки недоступны. Работы и результаты сохранены для просмотра.',{code:'group_archived'});
     if(!version)fail(409,"У назначения отсутствует опубликованная версия. Обратитесь к преподавателю.");
     return {...JSON.parse(version.snapshot),id:task.id,published:1,assignment_id:assignment.id,version_id:version.id,run_id:assignment.run_id,lesson_run_id:assignment.lesson_run_id,step_id:assignment.step_id};
   }
   function safeTask(task, user) {
     const { tests,reference_solution,wrong_solutions,preview_solution,template_id,block_solution,learning_config, ...rest } = task;
     const learning=adaptive.parseLearningConfig(learning_config||'{}');
-    const publicFields=new Set(['id','org_id','modes','lesson_id','title','description','goal','theory','instruction','difficulty','starter','check_mode','manual_criteria','published','position','revision','updated_at','assignment_id','version_id','run_id','lesson_run_id','step_id','group_id','group_title','due_at','assigned_at','order_snapshot']);
+    const publicFields=new Set(['id','org_id','modes','lesson_id','title','description','goal','theory','instruction','difficulty','starter','check_mode','manual_criteria','published','position','revision','updated_at','assignment_id','version_id','run_id','lesson_run_id','step_id','group_id','group_title','group_archived','due_at','assigned_at','order_snapshot']);
     return {
       ...(user.role==='student'?Object.fromEntries(Object.entries(rest).filter(([key])=>publicFields.has(key))):rest),
       learning_rules:JSON.parse(task.learning_rules||'[]'),
@@ -322,9 +327,11 @@ export function createApp({
       now(),
     );
   const taskQuality=createTaskQuality({db,own,teacher,fail,tx,validateTask,limit});
-  const modes=createModes({db,own,teacher,fail,tx,onResponse:(...args)=>learningEvidence.respond(...args)});
-  const curriculum=createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion:taskQuality.assertPublishedVersion,groupManager:(u,id)=>pilot.groupManager(u,id),modePolicyFor:modes.policyForNewAssignment,modesFor:(a,id,t)=>{const e=modes.effectiveFor(a,id,t);return modes.publicModes(e.supported,e.eff)}});
-  const pilot=createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordText,publicUser,makeSession,availableTask,curriculum,modes,adaptive});
+  // Recommendations follow every change of their context inside the same transaction.
+  const contextChanged=(orgId,scope)=>learningEvidence.reconcile(orgId,scope);
+  const modes=createModes({db,own,teacher,fail,tx,hooks:{respond:(...args)=>learningEvidence.respond(...args),replace:(...args)=>learningEvidence.replace(...args),reconcile:contextChanged}});
+  const curriculum=createCurriculum({db,own,teacher,fail,tx,contextChanged,safeTask,assertPublishedVersion:taskQuality.assertPublishedVersion,groupManager:(u,id)=>pilot.groupManager(u,id),modePolicyFor:modes.policyForNewAssignment,modesFor:(a,id,t)=>{const e=modes.effectiveFor(a,id,t);return modes.publicModes(e.supported,e.eff)}});
+  const pilot=createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordText,publicUser,makeSession,availableTask,curriculum,modes,adaptive,contextChanged});
   const learningEvidence=createLearningEvidence({db,own,teacher,fail,tx,modes,adaptive,groupAllowed:pilot.groupAllowed});
   function makeSession(user, res) {
     const token = randomBytes(32).toString("hex");
@@ -460,7 +467,7 @@ export function createApp({
     if(path==='/api/starter-course/install'&&method==='POST')return await createStarterCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user);
     const pilotResult=await pilot.handle(path,method,b,user,req,res);
     if(pilotResult!==undefined)return pilotResult;
-    const learningResult=await learningEvidence.handle(path,method,b,user);
+    const learningResult=await learningEvidence.handle(path,method,b,user,req);
     if(learningResult!==undefined)return learningResult;
     const qualityResult=await taskQuality.handle(path,method,b,user);
     if(qualityResult!==undefined)return qualityResult;
@@ -475,12 +482,13 @@ export function createApp({
         user.org_id,
       );
       if (user.role === "student") {
-        const assignments=all("SELECT a.*,g.title AS group_title FROM assignments a JOIN group_members gm ON gm.group_id=a.group_id JOIN groups_ g ON g.id=a.group_id WHERE gm.user_id=? AND a.org_id=? AND a.archived=0 ORDER BY a.created_at,a.id",user.id,user.org_id);
+        tx(()=>learningEvidence.reconcile(user.org_id,{user_id:user.id}));
+        const assignments=all("SELECT a.*,g.title AS group_title,g.archived AS group_archived FROM assignments a JOIN group_members gm ON gm.group_id=a.group_id JOIN groups_ g ON g.id=a.group_id WHERE gm.user_id=? AND a.org_id=? AND a.archived=0 ORDER BY a.created_at,a.id",user.id,user.org_id);
         tasks=assignments.filter(a=>curriculum.canAccessAssignment(a,user)).map(a=>{
           const task=availableTask(a.task_id,user,a.id),lesson=get('SELECT * FROM lessons WHERE id=? AND org_id=?',task.lesson_id,user.org_id),module=lesson&&get('SELECT * FROM modules WHERE id=? AND org_id=?',lesson.module_id,user.org_id);
           const frozen=JSON.parse(a.order_snapshot);
           const effective=modes.effectiveFor(a,user.id,task);
-          return {...task,modes:modes.publicModes(effective.supported,effective.eff),group_id:a.group_id,group_title:a.group_title,due_at:a.due_at,assigned_at:a.created_at,order_snapshot:Object.keys(frozen).length?frozen:{course_id:module?.course_id,module_position:module?.position??0,lesson_position:lesson?.position??0,task_position:task.position,legacy:true}};
+          return {...task,modes:modes.publicModes(effective.supported,effective.eff),group_id:a.group_id,group_title:a.group_title,group_archived:!!a.group_archived,due_at:a.due_at,assigned_at:a.created_at,order_snapshot:Object.keys(frozen).length?frozen:{course_id:module?.course_id,module_position:module?.position??0,lesson_position:lesson?.position??0,task_position:task.position,legacy:true}};
         }).sort((a,b)=>{
           if(a.run_id!==b.run_id&&(a.run_id||b.run_id))return !a.run_id?-1:!b.run_id?1:a.assigned_at.localeCompare(b.assigned_at)||a.run_id.localeCompare(b.run_id);
           if(a.run_id&&a.run_id===b.run_id){const delta=(a.order_snapshot.program_position??0)-(b.order_snapshot.program_position??0);if(delta)return delta}
@@ -1035,6 +1043,7 @@ export function createApp({
           student.id,
         );
       pilot.audit(user,method==='POST'?'group.member_added':'group.member_removed',group.id,{user_id:student.id});
+      if(method==='DELETE')tx(()=>contextChanged(user.org_id,{user_id:student.id}));
       return { ok: true };
     }
     if (path === "/api/assignments" && method === "POST") {
@@ -1104,6 +1113,7 @@ export function createApp({
       tx(()=>{
         run("UPDATE assignments SET archived=1 WHERE id=?", match[1]);
         run('INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)',randomUUID(),user.org_id,user.id,'assignment.archived',match[1],'{}',now());
+        contextChanged(user.org_id,{assignment_id:match[1]});
       });
       return { ok: true };
     }
@@ -1111,7 +1121,7 @@ export function createApp({
       (match = /^\/api\/tasks\/([^/]+)\/(draft|run|submit)$/.exec(path)) &&
       ["POST", "PUT"].includes(method)
     ) {
-      const task = availableTask(match[1], user, b.assignment_id,match[2]!=='submit'),
+      const task = availableTask(match[1], user, b.assignment_id,match[2]!=='submit',{draft:match[2]==='draft'}),
         action = match[2],
         mode = b.mode ?? "python";
       if (action === "draft") {

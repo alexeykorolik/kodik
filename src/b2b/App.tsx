@@ -740,7 +740,7 @@ export default function B2BApp() {
   else if(page==='journal'&&!student)content=<Journal state={s} onAttempt={openAttempt} refreshedAt={refreshedAt}/>;
   else if(page==='preview'&&!student){const task=s.tasks.find(t=>t.id===id);content=task?<TaskPreview key={id} task={task} state={s} refresh={refresh} onBack={()=>go(`builder/${id}?step=3`)} onPublish={()=>go(`builder/${id}?step=5`)}/>:<Empty title="Черновик недоступен" text="Откройте конструктор и сохраните задание."/>}
   else if(page==='lesson-editor'&&!student&&s.lessons.some(l=>l.id===id))content=<LessonEditor key={id} state={s} lessonId={id} refresh={refresh} onBack={()=>{const lesson=s.lessons.find(l=>l.id===id),module=s.modules.find(m=>m.id===lesson?.module_id);go(`courses/${module?.course_id||''}`)}}/>;
-  else if(page==='lesson-run')content=<LessonRun key={`${s.user.id}:${id}`} id={id} state={s} refresh={refresh} onBack={()=>go('courses')} onAttempt={openAttempt}/>;
+  else if(page==='lesson-run')content=<LessonRun key={`${s.user.id}:${id}`} id={id} state={s} refresh={refresh} onBack={()=>go('courses')} onAttempt={openAttempt} refreshedAt={refreshedAt}/>;
   else if(page==='program') {const program=s.programs.find(r=>r.id===id);content=program?<ProgramOverview program={program} state={s} refresh={refresh} onGo={go}/>:<Empty title="Программа недоступна" text="Вернитесь к своим занятиям."/>}
   else if (page === "builder" && !student)
     content = (

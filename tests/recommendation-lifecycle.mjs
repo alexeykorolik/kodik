@@ -14,7 +14,7 @@ test('recommendation lifecycle: stale proposals are closed with a reason and fre
     async function task(){n++;const t=await h.task(admin,content.lesson,{title:`Вывод ${n}`,instruction:`Выведи число ${n}`,tests:[{inputs:[],expected:String(n),hidden:false}],reference_solution:`print(${n})`,learning_config:{modes:['blocks','mixed'],palette:['text_print','math_number'],skills:['output']},block_solution:printWs(n)});await h.request(`/tasks/${t.id}/publish`,{published:true},admin);return {...t,n}}
     const assign=tk=>h.request('/assignments',{group_id:group.id,task_id:tk.id,mode_policy:{allowed:['blocks','mixed','python'],start:'blocks',switching:'teacher'}},admin);
     async function solve(tk,a,num=tk.n){let job=await h.request(`/tasks/${tk.id}/submissions`,{mode:'blocks',workspace:printWs(num),assignment_id:a.id,request_key:randomUUID()},child);for(let i=0;i<100&&job.status!=='completed';i++){await new Promise(r=>setTimeout(r,25));job=await h.request(`/submissions/${job.id}`,undefined,child)}return job.result.status}
-    const recs=async()=> (await h.request('/recommendations',undefined,admin)).items;
+    const recs=async()=>{const r=await h.request('/recommendations',undefined,admin);return [...r.active.items,...r.history.items]};
     const active=async()=> (await recs()).filter(r=>['proposed','offered'].includes(r.status));
     const row=id=>h.db.prepare('SELECT status,reason FROM recommendations WHERE id=?').get(id);
     const events=(id,kind)=>h.db.prepare('SELECT COUNT(*) n FROM recommendation_events WHERE recommendation_id=?'+(kind?' AND kind=?':'')).get(...[id,...(kind?[kind]:[])]).n;
@@ -60,7 +60,8 @@ test('recommendation lifecycle: stale proposals are closed with a reason and fre
     await t.test('a teacher’s own manual permission is independent of a withdrawn recommendation',async()=>{
       const G=await nextProposal();await h.request(`/recommendations/${G.rec.id}/approve`,{},admin);
       await h.request(`/assignments/${G.a.id}/students/${user.id}/mode`,{offer:'mixed',reason:'Решение преподавателя'},admin,200,'PUT');
-      await h.request(`/recommendations/${G.rec.id}/dismiss`,{},admin);assert.equal(row(G.rec.id).status,'withdrawn');
+      // The teacher's own offer replaces the sent recommendation; a later withdrawal changes nothing.
+      assert.equal(row(G.rec.id).status,'replaced');assert.equal((await h.request(`/recommendations/${G.rec.id}/dismiss`,{},admin)).status,'replaced');
       assert.equal((await h.request('/state',undefined,child)).tasks.find(x=>x.assignment_id===G.a.id).modes.offered,'mixed','the manual offer stays');
     });
     await t.test('expiry closes the proposal and frees the next one',async()=>{

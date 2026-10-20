@@ -1,7 +1,7 @@
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
 const now=()=>new Date().toISOString();
 const stages=['new','demo','pilot','agreement','active','paused','lost'];
-export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordText,publicUser,makeSession,availableTask,curriculum,modes,adaptive}){
+export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordText,publicUser,makeSession,availableTask,curriculum,modes,adaptive,contextChanged}){
   const get=(q,...a)=>db.prepare(q).get(...a),all=(q,...a)=>db.prepare(q).all(...a),run=(q,...a)=>db.prepare(q).run(...a);
   const field=(v,label,max=200,optional=false)=>{if(optional&&(v===undefined||v===null))return '';if(typeof v!=='string'||v.length>max||(!optional&&!v.trim()))fail(400,`${label}: до ${max} символов.`);return v.trim()};
   const date=v=>{if(!v)return null;if(typeof v!=='string'||!Number.isFinite(Date.parse(v)))fail(400,'Проверьте дату.');return new Date(v).toISOString()};
@@ -112,7 +112,7 @@ export function createPilot({db,fail,tx,own,teacher,admin,passwordHash,passwordT
       if(b.expected!==undefined&&(!Array.isArray(b.expected)||norm(b.expected)!==norm(current)))fail(409,'Состав преподавателей уже изменил другой администратор. Ваши изменения не сохранены — показан актуальный состав.',{code:'revision_conflict',items:current});
       tx(()=>{run('DELETE FROM group_teachers WHERE group_id=?',m[1]);for(const i of b.items)run('INSERT INTO group_teachers VALUES(?,?,?)',m[1],i.user_id,i.kind);audit(u,'group.teachers_changed',m[1],{before:current,after:b.items})});return {ok:true,items:b.items};
     }
-    if((m=/^\/api\/groups\/([^/]+)\/archive$/.exec(path))&&method==='POST'){admin(u);own('groups_',m[1],u);if(typeof b.archived!=='boolean')fail(400,'Укажите состояние.');tx(()=>{run('UPDATE groups_ SET archived=? WHERE id=?',Number(b.archived),m[1]);audit(u,'group.archived',m[1],b)});return {ok:true}}
+    if((m=/^\/api\/groups\/([^/]+)\/archive$/.exec(path))&&method==='POST'){admin(u);own('groups_',m[1],u);if(typeof b.archived!=='boolean')fail(400,'Укажите состояние.');tx(()=>{run('UPDATE groups_ SET archived=? WHERE id=?',Number(b.archived),m[1]);audit(u,'group.archived',m[1],b);contextChanged?.(u.org_id)});return {ok:true}}
     if((m=/^\/api\/groups\/([^/]+)\/import(?:\/(preview))?$/.exec(path))&&method==='POST'){
       admin(u);const g=own('groups_',m[1],u);if(g.archived)fail(409,'Группа архивирована.');
       const rows=b.rows;if(!Array.isArray(rows)||!rows.length||rows.length>100||rows.some(r=>!r||typeof r!=='object'))fail(400,'Список: от 1 до 100 учеников.');

@@ -16,7 +16,7 @@ function useWorkspaceController({
   onBack,
   nextTask,
   onNext,
-  backLabel='← К моим курсам',readOnly=false,lessonContext,onLessonOverview,
+  backLabel='← К моим курсам',readOnly:closedLesson=false,lessonContext,onLessonOverview,
 }: {
   task: Row;
   state: State;
@@ -26,6 +26,9 @@ function useWorkspaceController({
   onNext?:()=>void;
   backLabel?:string;readOnly?:boolean;lessonContext?:string;onLessonOverview?:()=>void;
 }) {
+  // An archived group turns the task into a view: the server refuses new runs and checks anyway.
+  const archived = !!task.group_archived, readOnly = closedLesson || archived;
+  const viewNote = archived ? "Группа в архиве: можно смотреть условие, свой код и результаты. Новые запуски и проверки недоступны, черновик сохранён." : closedLesson ? "Занятие завершено. Работа доступна для просмотра." : "";
   const draft = state.drafts.find((d) => d.assignment_id === task.assignment_id),
     attempts = state.attempts.filter((a) => a.assignment_id === task.assignment_id);
   const studentDraft = useStudentDraft(
@@ -52,7 +55,7 @@ function useWorkspaceController({
     task.assignment_id,
   );
   async function run(submit: boolean) {
-    if(readOnly){setError('Занятие завершено. Работа доступна для просмотра.');return}
+    if(readOnly){setError(viewNote);return}
     setBusy(true);
     setError("");
     setResult(null);
@@ -82,12 +85,12 @@ function useWorkspaceController({
       setBusy(false);
     }
   }
-  return {modes:modes as SolvingModes|undefined,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode:false,checkLabel:'Проверить решение',nextLabel:'Следующее задание →',referenceAction:undefined as undefined|(()=>void)};
+  return {modes:modes as SolvingModes|undefined,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,viewNote,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode:false,checkLabel:'Проверить решение',nextLabel:'Следующее задание →',referenceAction:undefined as undefined|(()=>void)};
 }
 export type WorkspaceModel=Omit<ReturnType<typeof useWorkspaceController>,'studentDraft'>&{studentDraft:Pick<ReturnType<typeof useStudentDraft>,'change'|'error'|'conflict'|'resolve'>};
 export function Workspace(props:Parameters<typeof useWorkspaceController>[0]){return <WorkspaceView model={useWorkspaceController(props)}/>;}
 export function WorkspaceView({model}:{model:WorkspaceModel}){
-  const {modes,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode,checkLabel,nextLabel,referenceAction}=model;
+  const {modes,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,viewNote,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode,checkLabel,nextLabel,referenceAction}=model;
   const [inputsExpanded,setInputsExpanded]=useState(false),consoleRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{if(result){setInputsExpanded(false);if(consoleRef.current)consoleRef.current.scrollTop=0}},[result]);
   return (
@@ -117,6 +120,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
         <h1>{task.title}</h1>
         {lessonContext&&<button className="link" onClick={onLessonOverview}>{lessonContext} · шаги урока</button>}
         {!previewMode&&<HelpButton assignmentId={task.assignment_id}/>}
+        {readOnly&&viewNote&&<p className="notice view-only-note" role="status" data-testid="view-only-note">{viewNote}</p>}
         {task.due_at&&<p className="workspace-deadline">{Date.parse(task.due_at)<Date.now()?'Срок прошёл:':'Срок:'} {new Date(task.due_at).toLocaleDateString('ru')}</p>}
       </div>
       {studentDraft.error && (
@@ -298,7 +302,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
             }
           }}
         >
-          {modes?.enabled && <ModeBar modes={modes} />}
+          {modes?.enabled && <ModeBar modes={modes} readOnly={readOnly} />}
           <div className="editor-toolbar">
             <span>
               <Glyph name="code" />
@@ -479,13 +483,13 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
 }
 
 /** Mode switcher: only allowed modes; says who opens the others and that work is kept. */
-function ModeBar({ modes }: { modes: SolvingModes }) {
+function ModeBar({ modes, readOnly = false }: { modes: SolvingModes; readOnly?: boolean }) {
   const others = (["blocks", "mixed", "python"] as Mode[]).filter((m) => modes.modes?.supported.includes(m) && !modes.available.includes(m));
   return (
     <div className="mode-bar">
       <div className="mode-switch" role="radiogroup" aria-label="Способ решения">
         {modes.available.map((m) => (
-          <button key={m} role="radio" aria-checked={modes.mode === m} className={`mode-${m}`} disabled={modes.mode !== m && !modes.canSwitch(m)} onClick={() => void modes.switchTo(m)}>
+          <button key={m} role="radio" aria-checked={modes.mode === m} className={`mode-${m}`} disabled={modes.mode !== m && (readOnly || !modes.canSwitch(m))} onClick={() => void modes.switchTo(m)}>
             {MODE_LABEL[m]}
           </button>
         ))}
@@ -494,7 +498,7 @@ function ModeBar({ modes }: { modes: SolvingModes }) {
         {modes.modes?.switching === "free" ? "Переключайся сам: работа в каждом режиме сохраняется." : modes.modes?.switching === "teacher" ? "Другие режимы открывает учитель." : "Режим выбрал учитель."}
         {others.length > 0 && ` Пока закрыто: ${others.map((m) => MODE_LABEL[m]).join(", ")}.`}
       </small>
-      {modes.offered && (
+      {modes.offered && !readOnly && (
         <div className="mode-offer" role="status">
           <span>Учитель предлагает перейти в режим «{MODE_LABEL[modes.offered]}».</span>
           {modes.recommendation&&<span>{modes.recommendation.basis.reason}</span>}

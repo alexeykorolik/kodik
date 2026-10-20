@@ -60,5 +60,19 @@ try{
   await call(borya,'/help',{assignment_id:a1.id,message:'Не получается удвоить'});
   // A pending recommendation in the shape this release stores (normally produced by the evidence rule).
   db.prepare("INSERT INTO recommendations(id,org_id,assignment_id,user_id,target_mode,rule_version,basis,status,expires_at,created_at,teacher_id) VALUES(?,?,?,?,?,?,?,'proposed',?,?,NULL)").run(randomUUID(),school.org_id,a1.id,kids[2].id,'python','pilot-transition/1',JSON.stringify({reason:'Свежие успешные решения двух заданий',families:2}),new Date(Date.now()+7*86400000).toISOString(),new Date().toISOString());
+  // A SENT recommendation (Боря) as the release stores it: status, invitation and its 'offered' event;
+  // closed history (dismissed, withdrawn); a teacher's own manual offer (Аня). Statuses of schema 16.
+  const at=new Date().toISOString(),rec=(id,user,mode,version,status,reason=null)=>db.prepare("INSERT INTO recommendations(id,org_id,assignment_id,user_id,target_mode,rule_version,basis,status,expires_at,created_at,teacher_id,reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)").run(id,school.org_id,a1.id,user,mode,version,JSON.stringify({reason:'Свежие успешные решения двух заданий',families:['f1','f2'],checks:[],attempts:[]}),status,new Date(Date.now()+7*86400000).toISOString(),at,status==='proposed'?null:teacher.id,reason);
+  const sent=randomUUID();rec(sent,kids[1].id,'mixed','pilot-transition/2','offered');
+  db.prepare("INSERT INTO assignment_mode_state(assignment_id,user_id,org_id,mode,offered_mode,override,revision,updated_at,updated_by) VALUES(?,?,?,NULL,'mixed',NULL,1,?,?)").run(a1.id,kids[1].id,school.org_id,at,teacher.id);
+  db.prepare("INSERT INTO mode_events VALUES(?,?,?,?,?,'offered','blocks','mixed',?,?,?)").run(randomUUID(),school.org_id,a1.id,kids[1].id,teacher.id,`Рекомендация ${sent}: основание`,JSON.stringify({recommendation_id:sent}),at);
+  db.prepare('INSERT INTO recommendation_events(id,recommendation_id,actor_id,kind,created_at,reason) VALUES(?,?,?,?,?,?)').run(randomUUID(),sent,teacher.id,'approve',at,null);
+  for(const [status,reason,version] of [['dismissed','Преподаватель отклонил предложение.','pilot-transition/0.1'],['withdrawn','Преподаватель закрепил режим ученика.','pilot-transition/0.2']]){const id=randomUUID();rec(id,kids[0].id,'mixed',version,status,reason);db.prepare('INSERT INTO recommendation_events(id,recommendation_id,actor_id,kind,created_at,reason) VALUES(?,?,?,?,?,?)').run(randomUUID(),id,teacher.id,status,at,reason)}
+  await call(teacherClient,`/assignments/${a1.id}/students/${kids[0].id}/mode`,{offer:'mixed',reason:'Решение преподавателя'},'PUT');
+  // An archived group with an issued task and Аня's draft in it.
+  const archived=await call(admin,'/groups',{title:'Архив 6В'});await call(admin,`/groups/${archived.id}/members`,{user_id:kids[0].id});
+  const a3=await call(admin,'/assignments',{request_key:randomUUID(),group_id:archived.id,task_id:manual.id});
+  await call(anya,`/tasks/${manual.id}/draft`,{code:'print("черновик в архиве")',revision:0,assignment_id:a3.id},'PUT');
+  await call(admin,`/groups/${archived.id}/archive`,{archived:true});
   console.log(JSON.stringify({filled:resolve(target),schema:db.prepare('PRAGMA user_version').get().user_version,org:school.org_id,task:task.id,assignment:a1.id}));
 }finally{await new Promise(r=>server.close(r))}

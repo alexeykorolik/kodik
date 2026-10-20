@@ -2377,3 +2377,16 @@ body {
 .state-tag.waiting{background:#f6e4dc;color:#7d3f27}
 .state-tag.done{background:var(--green-light);color:var(--green)}
 .help-waiting,.help-history{padding:1rem 1.25rem}
+/* Recommendations: live offers apart from history; every card names learner, group, assignment and transition. */
+.rec-list{list-style:none;margin:.5rem 0;padding:0;display:grid;gap:.75rem}
+.rec-card{border:1px solid var(--line,#d9ddd3);border-left:5px solid #a85b40;border-radius:12px;padding:.75rem 1rem;background:#fff}
+.rec-card.done{border-left-color:var(--green)}
+.rec-card.current{box-shadow:0 0 0 2px #2462a0 inset}
+.rec-card h3{margin:0 0 .25rem;font-size:1.05rem}
+.rec-transition{margin:.25rem 0}
+.rec-context{display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:.25rem 1rem;margin:.25rem 0}
+.rec-context div{min-width:0}.rec-context dt{font-size:.8rem;color:#5d6457}.rec-context dd{margin:0;overflow-wrap:anywhere}
+.rec-basis,.rec-reason{margin:.35rem 0}
+.rec-card .actions{align-items:center;flex-wrap:wrap}
+.pager span{align-self:center}
+.view-only-note{border-left:5px solid #7d6a2a}

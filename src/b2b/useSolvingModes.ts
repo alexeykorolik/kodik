@@ -22,7 +22,7 @@ export function useSolvingModes(task: Row, state: State, refresh: () => Promise<
   // The mirror shows the Python of the learner's own current blocks — never the teacher's solution.
   const mirror = useMemo(() => translateWorkspace(blocks.workspace ?? { blocks: { blocks: [] } }, { allowed: palette }), [blocks.workspace, palette.join()]);
   const serverCurrent = modes?.current ?? "python";
-  useEffect(()=>{if(preview||!task.assignment_id||!modes?.offered){setRecommendation(null);return;}let live=true;api('/recommendations').then(r=>{if(live)setRecommendation(r.items.find((r:Row)=>r.assignment_id===task.assignment_id&&r.status==='offered')??null)}).catch(()=>{});return()=>{live=false}},[task.assignment_id,modes?.offered]);
+  useEffect(()=>{if(preview||!task.assignment_id||!modes?.offered){setRecommendation(null);return;}let live=true;api(`/recommendations?assignment_id=${encodeURIComponent(task.assignment_id)}&limit=1`).then(r=>{if(live)setRecommendation(r.active.items.find((r:Row)=>r.status==='offered'&&r.target_mode===modes.offered)??null)}).catch(()=>{});return()=>{live=false}},[task.assignment_id,modes?.offered]);
   useEffect(() => {
     if (!modes) return;
     if (!modes.allowed.includes(mode)) setNotice(`Учитель изменил способ решения. Сейчас доступно: ${modes.allowed.map((m) => `«${MODE_LABEL[m]}»`).join(", ")}. Твоя работа сохранена.`);

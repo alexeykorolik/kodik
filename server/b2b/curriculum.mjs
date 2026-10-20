@@ -3,7 +3,7 @@ const now=()=>new Date().toISOString();
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const kinds=new Set(['text','code','practice','question','final','summary']);
 const practical=s=>s.type==='practice'||s.type==='final';
-export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishedVersion,modePolicyFor,modesFor,groupManager}){
+export function createCurriculum({db,own,teacher,fail,tx,contextChanged=()=>{},safeTask,assertPublishedVersion,modePolicyFor,modesFor,groupManager}){
   const get=(sql,...args)=>db.prepare(sql).get(...args),all=(sql,...args)=>db.prepare(sql).all(...args),run=(sql,...args)=>db.prepare(sql).run(...args);
   const audit=(u,action,id,details={})=>run('INSERT INTO audit_log VALUES(?,?,?,?,?,?,?)',randomUUID(),u.org_id,u.id,action,id,JSON.stringify(details),now());
   const field=(value,label,max=12000)=>{if(typeof value!=='string'||value.length>max)fail(400,`${label}: не более ${max} символов.`);return value};
@@ -42,6 +42,9 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
     return value;
   }
   const history=(u,l,base,accepted,conflict)=>{const id=randomUUID();run('INSERT INTO lesson_revisions VALUES(?,?,?,?,?,?,?,?,?)',id,u.org_id,l.id,u.id,base,accepted,JSON.stringify(l),Number(conflict),now());return id};
+  /** Archive of the parent group: materials and results stay readable, new learning actions are refused. */
+  const groupArchived=groupId=>!!get('SELECT archived FROM groups_ WHERE id=?',groupId)?.archived;
+  const archivedRefusal=()=>fail(409,'Группа в архиве: новые действия в занятии недоступны. Материалы, ответы и результаты сохранены для просмотра.',{code:'group_archived'});
   function enrolled(runId,u){return get('SELECT e.* FROM run_enrollments e JOIN teaching_runs r ON r.id=e.run_id JOIN group_members gm ON gm.group_id=r.group_id AND gm.user_id=e.user_id WHERE e.run_id=? AND e.user_id=? AND r.org_id=? AND r.archived=0',runId,u.id,u.org_id)}
   function canAccessAssignment(a,u,writing=false){
     if(!a.run_id)return true;
@@ -61,6 +64,7 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
     if(u.role==='student'){
       const e=enrolled(r.id,u);
       if(!e||l.position<e.start_position||r.archived||l.state==='scheduled')fail(404,'Занятие ещё не открыто преподавателем.');
+      if(writing&&groupArchived(r.group_id))archivedRefusal();
       if(writing&&l.state!=='open')fail(409,'Занятие завершено. Результаты доступны для просмотра.');
     }
     return {row:l,program:r,content:JSON.parse(own('lesson_versions',l.version_id,u).snapshot)};
@@ -80,9 +84,9 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
   function details(id,u){
     const {row,program,content}=lessonRun(id,u),assignments=all('SELECT * FROM assignments WHERE lesson_run_id=? AND archived=0 ORDER BY rowid',id);
     const students=u.role==='student'?undefined:all('SELECT u.id,u.name,u.org_id,e.start_position FROM users u JOIN run_enrollments e ON e.user_id=u.id WHERE e.run_id=? AND u.org_id=?',program.id,u.org_id).filter(s=>s.start_position<=row.position).map(s=>({id:s.id,name:s.name,progress:progress(id,s,content.steps)}));
-    return {id:row.id,run_id:row.run_id,state:row.state,state_revision:row.revision,group_title:own('groups_',program.group_id,u).title,due_at:program.due_at,lesson:u.role==='student'?publicLesson(content):content,progress:u.role==='student'?progress(id,u,content.steps):[],...(students?{students}:{}),assignments:assignments.map(a=>{
+    return {id:row.id,run_id:row.run_id,state:row.state,state_revision:row.revision,group_title:own('groups_',program.group_id,u).title,group_archived:groupArchived(program.group_id),program_archived:!!program.archived,due_at:program.due_at,lesson:u.role==='student'?publicLesson(content):content,progress:u.role==='student'?progress(id,u,content.steps):[],...(students?{students}:{}),assignments:assignments.map(a=>{
       const task=JSON.parse(own('task_versions',a.version_id,u).snapshot);
-      return {id:a.id,step_id:a.step_id,task:safeTask({...task,...(u.role==='student'?{modes:modesFor(a,u.id,task)}:{}),assignment_id:a.id,version_id:a.version_id,group_id:program.group_id,group_title:own('groups_',program.group_id,u).title,due_at:a.due_at,lesson_run_id:id,run_id:program.id,published:1},u)};
+      return {id:a.id,step_id:a.step_id,task:safeTask({...task,...(u.role==='student'?{modes:modesFor(a,u.id,task)}:{}),assignment_id:a.id,version_id:a.version_id,group_id:program.group_id,group_title:own('groups_',program.group_id,u).title,group_archived:groupArchived(program.group_id),due_at:a.due_at,lesson_run_id:id,run_id:program.id,published:1},u)};
     })};
   }
   function plan(b,u){
@@ -120,7 +124,7 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
         return {id:l.id,lesson_id:l.lesson_id,version_id:l.version_id,revision:l.revision,position:l.position,state:l.state,title:content.title,duration:content.duration,goal:content.goal,total:content.steps.length,completed:p.filter(s=>s.status==='completed').length};
       });
       const tasks=r.scope==='selection'?all('SELECT a.id,v.snapshot FROM assignments a JOIN task_versions v ON v.id=a.version_id WHERE a.run_id=? ORDER BY a.rowid',r.id).map(a=>({id:a.id,title:JSON.parse(a.snapshot).title,completed:u.role==='student'?Boolean(get("SELECT id FROM attempts WHERE assignment_id=? AND user_id=? AND status='passed'",a.id,u.id)):false})):[];
-      return {id:r.id,title:r.title,group_id:r.group_id,group_title:own('groups_',r.group_id,u).title,scope:r.scope,due_at:r.due_at,archived:r.archived,created_at:r.created_at,lessons,tasks,...(u.role==='student'?{}:{enrollments:all('SELECT user_id,start_position FROM run_enrollments WHERE run_id=?',r.id)})};
+      return {id:r.id,title:r.title,group_id:r.group_id,group_title:own('groups_',r.group_id,u).title,group_archived:groupArchived(r.group_id),scope:r.scope,due_at:r.due_at,archived:r.archived,created_at:r.created_at,lessons,tasks,...(u.role==='student'?{}:{enrollments:all('SELECT user_id,start_position FROM run_enrollments WHERE run_id=?',r.id)})};
     });
   }
   function state(u,base){
@@ -168,7 +172,7 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
       return {id};
     }
     if((match=/^\/api\/programs\/([^/]+)\/enroll$/.exec(path))&&method==='POST'){
-      teacher(u);const r=own('teaching_runs',match[1],u);groupManager(u,r.group_id);if(r.archived)fail(409,'Прохождение архивировано.');
+      teacher(u);const r=own('teaching_runs',match[1],u);groupManager(u,r.group_id);if(r.archived)fail(409,'Прохождение архивировано.');if(groupArchived(r.group_id))fail(409,'Группа в архиве: участников программы не добавляют.',{code:'group_archived'});
       if(!['from_start','current'].includes(b.mode)||!Array.isArray(b.user_ids)||!b.user_ids.length||b.user_ids.length>100||new Set(b.user_ids).size!==b.user_ids.length)fail(400,'Выберите участников и начало программы.');
       const start=b.mode==='from_start'?0:get("SELECT MIN(position) AS n FROM lesson_runs WHERE run_id=? AND state='open'",r.id)?.n;
       if(start===null||start===undefined)fail(409,'Сначала откройте текущее занятие.');
@@ -176,12 +180,15 @@ export function createCurriculum({db,own,teacher,fail,tx,safeTask,assertPublishe
       tx(()=>{for(const id of b.user_ids){const added=run('INSERT OR IGNORE INTO run_enrollments VALUES(?,?,?,?)',r.id,id,start,now());if(added.changes)audit(u,'program.enrolled',r.id,{user_id:id,start_position:start})}});return {ok:true};
     }
     if((match=/^\/api\/programs\/([^/]+)$/.exec(path))&&method==='DELETE'){
-      teacher(u);const r=own('teaching_runs',match[1],u);groupManager(u,r.group_id);tx(()=>{run('UPDATE teaching_runs SET archived=1 WHERE id=?',r.id);audit(u,'program.archived',r.id)});return {ok:true};
+      teacher(u);const r=own('teaching_runs',match[1],u);groupManager(u,r.group_id);tx(()=>{run('UPDATE teaching_runs SET archived=1 WHERE id=?',r.id);audit(u,'program.archived',r.id);contextChanged(u.org_id)});return {ok:true};
     }
     if((match=/^\/api\/lesson-runs\/([^/]+)$/.exec(path))&&method==='GET')return details(match[1],u);
     if((match=/^\/api\/lesson-runs\/([^/]+)\/state$/.exec(path))&&method==='POST'){
-      teacher(u);const {row,program}=lessonRun(match[1],u);if(program.archived)fail(409,'Программа архивирована.');if(!['open','closed'].includes(b.state)||b.revision!==row.revision)fail(409,'Состояние занятия изменилось. Обновите экран.');
-      tx(()=>{run('UPDATE lesson_runs SET state=?,revision=revision+1 WHERE id=?',b.state,row.id);audit(u,'lesson_run.state_changed',row.id,{previous:row.state,current:b.state})});return {ok:true};
+      teacher(u);const {row,program}=lessonRun(match[1],u);if(program.archived)fail(409,'Программа архивирована.');
+      // Lessons of an archived group are not opened (closing an open one stays possible).
+      if(b.state==='open'&&groupArchived(program.group_id))fail(409,'Группа в архиве: занятия этой группы нельзя открыть. Журнал и результаты доступны для просмотра; чтобы продолжить, администратор возвращает группу из архива.',{code:'group_archived'});
+      if(!['open','closed'].includes(b.state)||b.revision!==row.revision)fail(409,'Состояние занятия изменилось. Обновите экран.');
+      tx(()=>{run('UPDATE lesson_runs SET state=?,revision=revision+1 WHERE id=?',b.state,row.id);audit(u,'lesson_run.state_changed',row.id,{previous:row.state,current:b.state});contextChanged(u.org_id)});return {ok:true};
     }
     if((match=/^\/api\/lesson-runs\/([^/]+)\/steps\/([^/]+)$/.exec(path))&&method==='POST'){
       if(u.role!=='student')fail(403,'Шаг завершает ученик.');
