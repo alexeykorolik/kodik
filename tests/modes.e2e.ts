@@ -51,7 +51,7 @@ for(const width of [1366,1920]) test(`learner: keyboard blocks, restore, mirror 
   await page.getByText("Добавить блок с клавиатуры").focus(); await page.keyboard.press("Enter");
   await add("напечатать");
   await expect(mirror).toContainText("пустое место");
-  await page.getByRole("button", { name: "▷ Запустить" }).click();
+  await page.getByRole("button", { name: "Запустить", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "пустое место" })).toBeVisible();
   await add("значение переменной");
   await expect(mirror).toContainText("print(");
@@ -70,7 +70,7 @@ for(const width of [1366,1920]) test(`learner: keyboard blocks, restore, mirror 
   await page.reload();
   await modeSwitch.getByRole("radio", { name: "Блоки + Python" }).click();
   await expect(page.getByRole("region", { name: "Python из твоих блоков" })).toContainText("int(input())");
-  for(const name of ["▷ Запустить","Проверить решение"]){const button=page.getByRole("button",{name,exact:true}),r=await button.boundingBox();expect(r!.y+r!.height).toBeLessThanOrEqual(width===1366?768:1080);expect(await button.evaluate(e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})).toBeTruthy()}
+  for(const name of ["Запустить","Проверить решение"]){const button=page.getByRole("button",{name,exact:true}),r=await button.boundingBox();expect(r!.y+r!.height).toBeLessThanOrEqual(width===1366?768:1080);expect(await button.evaluate(e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})).toBeTruthy()}
   await page.screenshot({path:"work/modes-"+width+".png"});
   const attempts = (await call(page, "/state")).attempts.filter((a: { assignment_id: string }) => a.assignment_id === assignment.id).map((a: { mode: string }) => a.mode).sort();
   expect(attempts).toEqual(["mixed", "python"]);

@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {api,ApiError,type Row,type State} from './api';
 import {useConfirm} from './confirm';
+import {Icon} from './Icon';
 export function ProgramCards({programs,onGo}:{programs:Row[];onGo:(path:string)=>void}){
   return <div className="course-grid program-cards">{programs.filter(r=>!r.archived).map(r=>{
     const complete=r.lessons.length>0?r.lessons.every((l:Row)=>l.completed===l.total):r.tasks.length>0&&r.tasks.every((t:Row)=>t.completed),next=r.lessons.find((l:Row)=>l.state==='open'&&l.completed<l.total),nextTask=r.tasks.find((t:Row)=>!t.completed);
@@ -18,7 +19,7 @@ export function ProgramOverview({program,state,refresh,onGo}:{program:Row;state:
   const current=program.lessons.find((l:Row)=>l.state==='open')||program.lessons.find((l:Row)=>l.state==='scheduled');
   const openLesson=async(l:Row)=>{try{await api(`/lesson-runs/${l.id}/state`,{state:'open',revision:l.revision});await refresh()}catch(e){setError((e as Error).message)}};
   const archive=async()=>{if(!await confirm.ask({title:'Архивировать выдачу программы?',text:<><p>Программа «{program.title}» исчезнет у учеников группы {program.group_title}. Занятия больше нельзя будет проводить.</p><p>Результаты, работы и журнал сохранятся и останутся доступны для просмотра.</p></>,confirm:'Архивировать выдачу',danger:true}))return;try{await api(`/programs/${program.id}`,{},'DELETE');await refresh()}catch(e){setError((e as Error).message)}};
-  const lessonState=(l:Row)=>l.state==='scheduled'?(teacher?'Ещё не открыто':'🔒 Откроет учитель'):l.state==='closed'?'Занятие завершено':'Открыто для учеников';
+  const lessonState=(l:Row)=>l.state==='scheduled'?(teacher?'Ещё не открыто':<><Icon name="lock" size="sm" />Откроет учитель</>):l.state==='closed'?'Занятие завершено':'Открыто для учеников';
   return <><div className="page-heading"><div><div className="eyebrow">{teacher?'ВЫДАННАЯ ПРОГРАММА':'МОЯ ПРОГРАММА'} · {program.group_title}</div><h1>{program.title}</h1>{teacher&&<p>Состав зафиксирован при выдаче: правки курса в каталоге его не меняют.</p>}</div>{teacher&&<div className="actions"><details className="more-menu"><summary>Ещё действия</summary><div className="more-menu-items"><button className="danger-text" onClick={()=>void archive()}>Архивировать выдачу…</button></div></details></div>}</div>
   {!!program.group_archived&&<p className="notice view-only-note" role="status">Группа в архиве: занятия и результаты доступны для просмотра; новые занятия не открываются.</p>}{error&&<p className="error" role="alert">{error}</p>}
   {program.lessons.map((l:Row,i:number)=>{const passed=!teacher&&l.total>0&&l.completed===l.total,isCurrent=current?.id===l.id&&!program.group_archived;return <section className={`panel spaced program-lesson${isCurrent?' current':''}${passed?' passed':''}`} key={l.id}><div className="program-lesson-head"><div><span className="overline">ЗАНЯТИЕ {i+1}{teacher?` · ${l.duration} МИНУТ`:''}</span><h2>{l.title}</h2><p>{l.goal}</p></div><span className={`state-chip ${l.state}`}>{passed?'Пройден ✓':lessonState(l)}{!teacher&&l.state!=='scheduled'&&!passed?` · ${l.completed} из ${l.total} шагов`:''}</span></div>

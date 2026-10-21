@@ -11,6 +11,7 @@ import { MODE_LABEL, type Mode } from "../adaptive/modePolicy";
 import {HelpButton} from './PilotPanels';
 import { explainDifference, learnerStatus } from "./feedback";
 import { PlaybackBar, SceneView, WorldPreview, usePlayback } from "./SceneView";
+import { Icon } from "./Icon";
 function useWorkspaceController({
   task,
   state,
@@ -44,7 +45,7 @@ function useWorkspaceController({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [tab, setTab] = useState("task"),
-    [pane, setPane] = useState(35),
+    [pane, setPane] = useState(32),
     [fontSize, setFontSize] = useState(16);
   const modes = useSolvingModes(task, state, refresh);
   const submission = useSubmission(
@@ -126,7 +127,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
         </button>
         {previewMode&&<span className="muted">{task.group_title}</span>}
         {(previewMode||passedBefore)&&<Badge status={previewMode?result?.status:'passed'}>
-          {previewMode?(result?.status?statusNames[result.status]||'Пробная проверка':result?.error?'Ошибка выполнения':'Пробное прохождение'):"✓ Выполнено"}
+          {previewMode?(result?.status?statusNames[result.status]||'Пробная проверка':result?.error?'Ошибка выполнения':'Пробное прохождение'):<><Icon name="check" size="sm" />Выполнено</>}
         </Badge>}
         {previewMode&&onNext&&<button className="primary small" title={nextTask?.title} onClick={async()=>{if(await persist(code,revision.current))onNext()}}>{nextLabel}</button>}
         {previewMode&&referenceAction&&<button className="small" onClick={referenceAction}>Вставить эталон в предпросмотр</button>}
@@ -134,7 +135,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
       <div className="workspace-title">
         <span className="overline">{previewMode?"ПРЕДПРОСМОТР УЧЕНИКА":lessonContext?lessonContext.toUpperCase():"ПРАКТИКА"}</span>
         <h1>{task.title}</h1>
-        {lessonContext&&<button className="steps-link" onClick={onLessonOverview}>☰ Все шаги урока</button>}
+        {lessonContext&&<button className="steps-link" onClick={onLessonOverview}><Icon name="list" size="sm" />Все шаги урока</button>}
         {!previewMode&&<HelpButton assignmentId={task.assignment_id}/>}
         {readOnly&&viewNote&&<p className="notice view-only-note" role="status" data-testid="view-only-note">{viewNote}</p>}
         {task.due_at&&<p className="workspace-deadline">{Date.parse(task.due_at)<Date.now()?'Срок прошёл:':'Срок:'} {new Date(task.due_at).toLocaleDateString('ru')}</p>}
@@ -226,14 +227,6 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 {task.description && (
                   <p className="muted preserve">{task.description}</p>
                 )}
-                <div className="practice-tip">
-                  <span>✦</span>
-                  <p>
-                    Пробуй, запускай, исправляй.
-                    <br />
-                    Так рождается работающий код.
-                  </p>
-                </div>
                 {task.check_mode === "manual" && (
                   <p className="info-box">
                     Это решение проверит преподаватель. {task.manual_criteria}
@@ -306,7 +299,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
           }}
         />
         <section
-          className="coding-panel"
+          className={`coding-panel mode-${modes?.enabled ? modes.mode : "python"}`}
           style={{ "--code-size": `${fontSize}px` } as CSSProperties}
           onKeyDown={(e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -382,7 +375,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 disabled={readOnly || busy || submission.busy || submission.phase === "paused"}
                 onClick={() => run(false)}
               >
-                ▷ Запустить
+                <Icon name="play" size="sm" />Запустить
               </button>
               {canGoOn && (
                 <button className="primary next-button" title={nextTask?.title} onClick={async () => { if (await persist(code, revision.current)) onNext!(); }}>
@@ -456,7 +449,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 ref={resultRef}
                 className={`result-box ${resultTone}`}
               >
-                {result.status === "passed" && <span className="celebrate" aria-hidden="true">🎉</span>}<b>{result.message || result.error || "Программа выполнена"}</b>
+                {result.status === "passed" && <span className="celebrate"><Icon name="check-circle" size="lg" /></span>}<b>{result.message || result.error || "Программа выполнена"}</b>
                 {failedCase && failedCase.text_checked !== false && !failedCase.scene_message && <p className="difference">{explainDifference(failedCase.expected, failedCase.output)}</p>}
                 {!previewMode && streak >= 2 && result.status !== "passed" && hints.length > hintsShown && <button type="button" className="small hint-offer" onClick={() => { setHintsShown(hintsShown + 1); setTab("hints"); }}>Открыть подсказку {hintsShown + 1}</button>}
                 {result.scene && <><PlaybackBar playback={playback} /><SceneView scene={result.scene} t={playback.t} /></>}
@@ -466,7 +459,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 {result.cases?.map((c: Row) => (
                   <div className="case-result" key={c.index}>
                     <span>
-                      {c.passed ? "✓" : "×"} Проверка {c.index}
+                      <Icon name={c.passed ? "check" : "x"} size="sm" className={c.passed ? "ok" : "bad"} /> Проверка {c.index}
                       {c.hidden ? " · скрытая" : ""}
                     </span>
                     {!c.hidden && !c.passed && (

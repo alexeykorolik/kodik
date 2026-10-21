@@ -134,7 +134,7 @@ test('repeat assignment opens a fresh workspace and leaves the previous result i
     await learner.goto(`/#assignment/${first.id}`);
     await expect(learner.locator('#python-answer')).toHaveValue('print(42)');
     await expect(learner.getByRole('heading',{name:'Safe draft',exact:true})).toBeVisible();
-    await expect(learner.getByText('✓ Выполнено',{exact:true})).toBeVisible();
+    await expect(learner.locator('.workspace-heading .badge.passed',{hasText:'Выполнено'})).toBeVisible();
   }finally{await learnerContext.close()}
 });
 
@@ -271,7 +271,7 @@ test("student actions remain reachable at school laptop resolutions, long code a
         name: "Проверить решение",
         exact: true,
       }),
-      run = page.getByRole("button", { name: "▷ Запустить", exact: true });
+      run = page.getByRole("button", { name: "Запустить", exact: true });
     for (const button of [check, run]) {
       await expect(button).toBeVisible();
       const rect = await button.boundingBox();
@@ -313,7 +313,7 @@ test("student actions remain reachable at school laptop resolutions, long code a
     expect(await page.locator(selector).evaluate(e=>parseFloat(getComputedStyle(e).fontSize))).toBe(17);
   }
   await page.locator("#python-answer").fill("print(1 / 0)");
-  await page.getByRole("button", { name: "▷ Запустить", exact: true }).click();
+  await page.getByRole("button", { name: "Запустить", exact: true }).click();
   await expect(page.getByText(/Делить на ноль нельзя/)).toBeVisible();
   await page
     .getByRole("button", { name: "Проверить решение", exact: true })

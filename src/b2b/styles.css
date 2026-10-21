@@ -3145,7 +3145,7 @@ button.primary:active:not(:disabled) { transform: translateY(1px) scale(.985); b
     color-scheme: dark;
     --bg: #121816; --sunken: #0e1311; --surface: #19211d; --raised: #202a25; --hover: #27322c;
     --ink: #e7eee9; --muted: #a3b1a8; --text-2: #b0bdb5; --line: #2d3832; --line-strong: #3d4b43;
-    --paper: var(--surface); --surface-2: var(--bg); --green: #3f8a66; --green-light: #1f3229; --accent: #8fd4a5;
+    --paper: var(--surface); --surface-2: var(--bg); --green: #367a5a; --green-light: #1f3229; --accent: #8fd4a5;
     --success: #9fdcb2; --success-soft: #6fcf971f; --warning: #f2cd7e; --warning-soft: #f0ba541f;
     --danger: #f3a896; --danger-soft: #f080681f; --info: #b2c8f5; --info-soft: #78a0f024;
     --mode-blocks: #7fd6cb; --mode-blocks-soft: #2fb3a224; --attention: #f2cd7e; --attention-soft: #f0ba541f;
@@ -3167,7 +3167,7 @@ button.primary:active:not(:disabled) { transform: translateY(1px) scale(.985); b
   :where(:root:not([data-theme="light"])) button, :where(:root:not([data-theme="light"])) input, :where(:root:not([data-theme="light"])) textarea, :where(:root:not([data-theme="light"])) select, :where(:root:not([data-theme="light"])) .button-link, :where(:root:not([data-theme="light"])) .code-accessory button, :where(:root:not([data-theme="light"])) .sidebar-toggle, :where(:root:not([data-theme="light"])) .steps-link, :where(:root:not([data-theme="light"])) .palette-chip, :where(:root:not([data-theme="light"])) .auth-form input { background-color: var(--raised); color: var(--ink); border-color: var(--line-strong); }
   :where(:root:not([data-theme="light"])) button:hover, :where(:root:not([data-theme="light"])) .button-link:hover, :where(:root:not([data-theme="light"])) .sidebar nav a:hover, :where(:root:not([data-theme="light"])) .activity:hover, :where(:root:not([data-theme="light"])) .attention-row:hover { background-color: var(--hover); }
   :where(:root:not([data-theme="light"])) button.primary, :where(:root:not([data-theme="light"])) .button-link.primary { background-color: var(--green); border-color: var(--green); color: #fff; }
-  :where(:root:not([data-theme="light"])) button.primary:hover { background-color: #4a9a74; }
+  :where(:root:not([data-theme="light"])) button.primary:hover { background-color: #3f8a66; }
   :where(:root:not([data-theme="light"])) button.dark { background-color: #2c3b33; border-color: #3d5045; color: #fff; }
   :where(:root:not([data-theme="light"])) .mode-switch button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px #0006; }
   :where(:root:not([data-theme="light"])) .workspace-divider { background: var(--raised); }
@@ -3242,3 +3242,144 @@ button.primary:active:not(:disabled) { transform: translateY(1px) scale(.985); b
   :where(:root:not([data-theme="light"])) .robot-cell { fill: #1f2924; stroke: #34413a; }
   :where(:root:not([data-theme="light"])) .robot-wall, :where(:root:not([data-theme="light"])) .robot-border { stroke: #d6e0d9; }
 }
+
+/* ==== Icons and controls (21.10, ui-ux pass) ====
+   One outline icon family (src/b2b/Icon.tsx) in three sizes; icons never replace the text of a
+   control except standard ones (menu, logout, undo/redo, reorder), which carry aria-labels. */
+.icon { display: block; flex-shrink: 0; }
+button .icon, .button-link .icon, .badge .icon, .state-chip .icon, .help-count .icon, .attention-row .icon, .art-tag .icon { display: inline-block; vertical-align: -3px; }
+button.primary, .button-link.primary { background-image: none; box-shadow: 0 1px 2px #17352e1f, 0 4px 12px -6px var(--primary-glow); }
+button.primary:hover:not(:disabled), .button-link.primary:hover { box-shadow: 0 2px 4px #17352e1f, 0 8px 18px -8px var(--primary-glow); }
+button.primary:active:not(:disabled) { box-shadow: 0 1px 2px #17352e1f; }
+/* Icon-only controls: a 40px round hit area, a quiet hover and the usual focus ring. */
+.icon-button, .sidebar-toggle { width: 40px; height: 40px; min-width: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; }
+.icon-button { color: var(--text-2); }
+.icon-button:hover { background: #eef3ec; color: var(--ink); }
+.order-controls button, .lesson-step-editor .actions button[aria-label] { width: 32px; height: 32px; min-width: 32px; padding: 0; border-radius: 8px; }
+/* Badges: pill shape, icon + text, never colour alone. */
+.badge { gap: 4px; border-radius: 999px; padding: 4px 10px 4px 9px; }
+.badge .icon { width: 14px; height: 14px; }
+.state-chip { display: inline-flex; align-items: center; gap: 5px; }
+/* Learner workspace details. */
+.help-trigger { gap: 7px; }
+.palette-block { gap: 5px; padding-left: 9px; }
+.palette-block .icon { width: 14px; height: 14px; opacity: .9; }
+.blockly-wrap > .block-tools .tool { width: 36px; min-width: 36px; padding: 0; }
+.blockly-wrap > .block-tools .tool.wide { width: auto; padding: 0 12px 0 10px; gap: 7px; font-size: 14px; }
+@container (max-width: 560px) {
+  .blockly-wrap > .block-tools .tool.wide { width: 36px; padding: 0; font-size: 14px; }
+  .blockly-wrap > .block-tools .tool.wide::before { content: none; }
+  .blockly-wrap > .block-tools .tool.wide > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+.practice-tip > span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #eef3e6; color: #6d8a4e; font-size: 0; }
+.case-result .icon.ok { color: var(--success); }
+.case-result .icon.bad { color: var(--danger); }
+.case-result > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+/* Success: a green check that pops once instead of a party emoji. */
+.celebrate { display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 8px; border-radius: 50%; background: var(--success); color: #fff; vertical-align: middle; animation: kd-pop .45s var(--ease-out) both .1s; }
+.celebrate .icon { width: 18px; height: 18px; stroke-width: 2.2; }
+.finish-mark { display: inline-grid; place-items: center; }
+.progress-mark .icon, .setup-checklist .check .icon { width: 14px; height: 14px; stroke-width: 2.2; }
+.banner-art > span .icon { width: 72px; height: 72px; stroke-width: 1.4; }
+.attention-row > span { display: inline-flex; align-items: center; gap: 8px; }
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) .icon-button:hover { background: var(--hover); color: var(--ink); }
+  :where(:root:not([data-theme="light"])) .practice-tip > span { background: #2b3f33; color: #b9e28a; }
+  :where(:root:not([data-theme="light"])) .celebrate { background: #367a5a; }
+}
+.lesson-finished .finish-mark { display: grid; } .lesson-finished .finish-mark .icon { width: 56px; height: 56px; stroke-width: 1.3; fill: #f4d77a55; }
+@media (min-width: 721px) {
+  .workspace-page .editor-bottom { flex-wrap: nowrap; }
+  .workspace-page .editor-bottom > small { flex: 1 1 0; min-width: 72px; }
+  .workspace-page .editor-bottom .actions { flex-shrink: 0; }
+}
+.workspace-page .editor-bottom .next-button { font-size: 15px; padding: 10px 18px; min-height: 44px; }
+@media (max-width: 720px) { .workspace-page .editor-bottom { flex-wrap: wrap; } }
+
+/* ==== Learner task screen: calm and roomy (children use it) ====
+   One idea per area: the task on the left, the blocks on the right, one main button at a time.
+   Navigation folds to the icon rail on this screen (App.tsx, focus-page); what remains is what a
+   child needs while solving. Nothing is removed for screen readers: hidden hints stay readable. */
+.focus-page .topbar { height: 52px; }
+.focus-page .workspace-page { padding: 12px 16px; }
+@media (min-height: 861px) { .focus-page .workspace-page { height: calc(100dvh - 52px); } }
+@media (max-height: 860px) { .focus-page .workspace-page { min-height: calc(100dvh - 52px); } }
+/* With the lighter chrome a 1366×768 screen holds the whole task: no page scroll, buttons always in view.
+   Lower screens (125% scaling and less) keep the scrolling layout above. */
+@media (min-height: 700px) and (max-height: 860px) and (min-width: 721px) {
+  .focus-page .workspace-page { height: calc(100dvh - 52px); min-height: 0; overflow: hidden; }
+  .focus-page .workspace-page .workspace-grid { flex: 1; height: auto; min-height: 0; align-items: stretch; }
+  .focus-page .workspace-page .material-panel { position: static; max-height: none; }
+  .focus-page .workspace-page .coding-panel { overflow: hidden; }
+  .focus-page .workspace-page .coding-panel > .block-area { flex: 1 1 0; height: auto; min-height: 240px; }
+  .focus-page .workspace-page .coding-panel > fieldset { flex: 1 1 0; height: auto; }
+  .focus-page .workspace-page .coding-panel > .console { flex: 0 1 150px; min-height: 0; max-height: 34%; overflow: auto; }
+  .focus-page .workspace-page .coding-panel > .console:has(> .console-empty) { flex: 0 0 auto; }
+  .focus-page .workspace-page .coding-panel > .editor-bottom { position: static; box-shadow: none; }
+  .focus-page .workspace-page .block-editor .blockly-wrap { min-height: 200px; }
+}
+.focus-page .workspace-head { margin-bottom: 10px; min-height: 40px; }
+.focus-page .workspace-title h1 { font-size: 22px; }
+
+/* Task panel: big readable instruction, the goal as a small chip, no repeated encouragement. */
+.workspace-page .material-panel .task-material { padding: 18px 22px 22px; }
+.workspace-page .task-material h2 { font-size: 15px; font-weight: 800; letter-spacing: .02em; color: var(--text-2); text-transform: uppercase; margin: 0 0 10px; }
+.workspace-page .task-material .preserve:not(.muted) { font-size: 18px; line-height: 1.55; color: var(--ink); margin: 0 0 18px; }
+.workspace-page .learning-goal { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px !important; padding: 4px 12px; border: 0; border-radius: 999px; background: var(--green-light); color: var(--green) !important; font-size: 13px !important; font-weight: 800; }
+.workspace-page .learning-goal::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.workspace-page .public-examples h3 { font-size: 15px; margin: 0 0 8px; }
+.workspace-page .material-footer { text-align: center; font-size: 12px; padding: 8px 14px; }
+.workspace-page .tabs { padding: 0 14px; gap: 4px; }
+.workspace-page .tabs button { padding: 0 10px; }
+
+/* Mode bar: only the switch shows; its explanation stays for screen readers.
+   A task with a single allowed way of solving has nothing to switch. */
+.workspace-page .mode-bar { padding: 8px 10px; }
+.workspace-page .mode-bar > small { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.workspace-page .mode-bar:has(.mode-switch > button:only-child):not(:has(.mode-offer, .mode-notice)) { display: none; }
+/* Pure blocks: the code size row has nothing to size. */
+.workspace-page .coding-panel.mode-blocks > .editor-toolbar { display: none; }
+
+/* The field: keyboard entry and notices float over its lower left corner instead of taking rows. */
+.workspace-page .block-editor { position: relative; }
+.workspace-page .block-editor .blockly-wrap { min-height: 300px; }
+.workspace-page .block-keyboard { position: absolute; left: 10px; bottom: 16px; z-index: 5; max-width: min(560px, calc(100% - 110px)); padding: 0; border: 1px solid var(--line); border-radius: 10px; background: #fffefa; box-shadow: var(--shadow-1); }
+.workspace-page .block-keyboard > summary { padding: 6px 12px; font-size: 13px; min-height: 32px; display: flex; align-items: center; gap: 6px; }
+.workspace-page .block-keyboard[open] { max-height: min(60%, 320px); overflow: auto; padding: 0 10px 10px; }
+.workspace-page .block-keyboard[open] > summary { position: sticky; top: 0; z-index: 1; padding: 8px 2px; background: inherit; }
+.workspace-page .block-notice:not(:empty) { position: absolute; left: 10px; bottom: 58px; z-index: 5; max-width: calc(100% - 110px); padding: 6px 10px; border-radius: 8px; background: #17352ee6; color: #fff; font-size: 13px; animation: kd-rise .2s var(--ease-out) both; }
+
+/* Actions: run, check, then "next" at the end of the row — one primary button at a time. */
+.workspace-page .editor-bottom .actions .next-button { order: 2; }
+.workspace-page .editor-bottom .actions button { min-height: 44px; }
+
+/* Output: a short strip while empty, the full area once there is something to show. */
+.workspace-page .console-title > span { display: none; }
+.workspace-page .coding-panel > .console:has(> .console-empty) { flex: 0 0 auto; min-height: 0; padding-top: 10px; padding-bottom: 10px; }
+.workspace-page .console:has(> .console-empty) .console-title { margin-bottom: 4px; }
+.workspace-page .console-empty { padding: 2px 0; }
+
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) .workspace-page .block-keyboard { background: var(--surface); border-color: var(--line-strong); }
+  :where(:root:not([data-theme="light"])) .workspace-page .learning-goal { background: #22332a; color: #a9dcb5 !important; }
+  :where(:root:not([data-theme="light"])) .workspace-page .block-notice:not(:empty) { background: #e7eee9e6; color: #121816; }
+}
+/* With a mode switch on top, the code-size control moves into the free right end of that row:
+   the switch already names the mode, so the separate row (and its label) goes away. */
+.workspace-page .coding-panel { position: relative; }
+@media (min-width: 721px) {
+  .workspace-page .coding-panel:has(> .mode-bar .mode-switch > button + button) > .editor-toolbar { position: absolute; top: 9px; right: 12px; z-index: 2; height: 36px; padding: 0; border: 0; background: transparent; }
+  .workspace-page .coding-panel:has(> .mode-bar .mode-switch > button + button) > .editor-toolbar > span:first-child { display: none; }
+  .workspace-page .coding-panel:has(> .mode-bar .mode-switch > button + button) > .mode-bar { padding-right: 190px; }
+}
+/* Output strip: title and the input switch share one line; the hint sits under them. */
+.workspace-page .console { display: flex; flex-wrap: wrap; align-items: center; column-gap: 18px; align-content: flex-start; }
+.workspace-page .console > * { flex: 1 1 100%; }
+.workspace-page .console > .console-title, .workspace-page .console > .stdin-details:not([open]) { flex: 0 0 auto; margin-bottom: 0; }
+.workspace-page .console > .console-title { margin-bottom: 6px; }
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) .workspace-page .coding-panel:has(> .mode-bar .mode-switch > button + button) > .editor-toolbar { background: transparent; }
+}
+.workspace-page .material-panel, .workspace-page .coding-panel { min-width: 0; }
+.workspace-page .tabs { overflow-x: auto; scrollbar-width: none; }
+@media (max-width: 720px) { .workspace-page .tabs { padding: 0 8px; gap: 0; } .workspace-page .tabs button { padding: 0 8px; } }

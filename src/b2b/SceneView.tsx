@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 import { figuresAt, robotAt, turtleAt, type Figure, type FigureShot, type Pose, type RobotScene, type Scene, type Series, type TurtleScene } from '../python/scene'
 import { parseWorld, type World } from '../python/robotWorld'
 import { cssColor } from '../python/colors'
+import { Icon } from './Icon';
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 export type Playback = { t: number; state: 'playing' | 'stopped' | 'done'; duration: number; stop(): void; finish(): void; replay(): void }
@@ -36,9 +37,9 @@ export function PlaybackBar({ playback, label = 'Анимация' }: { playback
   const shown = Math.min(playback.t, playback.duration)
   return <div className="playback-bar" role="group" aria-label={label}>
     <span className="playback-state" role="status">{playback.state === 'playing' ? `Идёт анимация · ${seconds(shown)} из ${seconds(playback.duration)}` : playback.state === 'stopped' ? `Остановлено на ${seconds(shown)}` : `Анимация · ${seconds(playback.duration)}`}</span>
-    {playback.state === 'playing' && <button type="button" className="small" onClick={playback.stop}>■ Остановить</button>}
+    {playback.state === 'playing' && <button type="button" className="small" onClick={playback.stop}><Icon name="stop" size="sm" />Остановить</button>}
     {playback.state !== 'done' && <button type="button" className="small" onClick={playback.finish}>⏭ Сразу результат</button>}
-    {playback.state !== 'playing' && <button type="button" className="small" onClick={playback.replay}>↻ Показать анимацию снова</button>}
+    {playback.state !== 'playing' && <button type="button" className="small" onClick={playback.replay}><Icon name="replay" size="sm" />Показать анимацию снова</button>}
   </div>
 }
 

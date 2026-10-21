@@ -1,6 +1,7 @@
 import { Component, StrictMode, Suspense, lazy, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
+import { Boot } from "./Boot";
 const legacy =
   Capacitor.isNativePlatform() ||
   (import.meta.env.DEV && import.meta.env.VITE_LEGACY_TEST === "true") ||
@@ -29,9 +30,10 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   }
   render() {
     return this.state.failed ? (
-      <main className="fatal">
-        <h1>Не удалось открыть Kodik</h1>
-        <button onClick={() => location.reload()}>Обновить страницу</button>
+      <main className="boot" role="alert">
+        <span className="boot-mark" aria-hidden="true">k.</span>
+        <h1 className="boot-text">Не удалось открыть Kodik</h1>
+        <button className="boot-action" onClick={() => location.reload()}>Обновить страницу</button>
       </main>
     ) : (
       this.props.children
@@ -41,7 +43,7 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Boundary>
-      <Suspense fallback={<p>Открываем Kodik…</p>}>
+      <Suspense fallback={<Boot />}>
         {legacy ? <Legacy /> : <B2BApp />}
       </Suspense>
     </Boundary>

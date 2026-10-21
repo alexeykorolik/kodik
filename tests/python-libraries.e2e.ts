@@ -41,11 +41,11 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   await page.goto(`/#assignment/${s.turtle.assignment.id}`);
   await expect(page.getByText("Проверяется: рисунок черепахи.")).toBeVisible();
   await page.emulateMedia({colorScheme:'dark'});
-  for(const selector of ['.scene-checks-note','.practice-tip p']){
+  for(const selector of ['.scene-checks-note','.material-footer']){
     const contrast=await page.locator(selector).evaluate(element=>{
       const rgb=(color:string)=>color.match(/[\d.]+/g)!.slice(0,3).map(Number).map(v=>{const c=v/255;return c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4});
       const light=(color:string)=>{const [r,g,b]=rgb(color);return 0.2126*r+0.7152*g+0.0722*b};
-      const wrapper=element.closest('.practice-tip')??element.parentElement!;
+      const wrapper=element.closest('.material-footer')??element.parentElement!;
       const values=[light(getComputedStyle(element).color),light(getComputedStyle(wrapper).backgroundColor)].sort((a,b)=>b-a);
       return (values[0]+0.05)/(values[1]+0.05);
     });
@@ -54,9 +54,9 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   await page.emulateMedia({colorScheme:'light'});
   await page.locator("#python-answer").fill("import turtle\nt = turtle.Turtle()\nt.speed(1)\nfor i in range(4):\n    t.forward(100)\n    t.left(90)\n");
   await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "▷ Запустить" }).click();
-  await expect(page.getByRole("button", { name: "■ Остановить" })).toBeVisible();
-  await page.getByRole("button", { name: "■ Остановить" }).click();
+  await page.getByRole("button", { name: "Запустить", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Остановить", exact: true }).click();
   await expect(page.getByText(/Остановлено на/)).toBeVisible();
   const stoppedLines = await page.locator(".turtle-view line").count();
   await page.waitForTimeout(800);
@@ -67,7 +67,7 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   await expect(page.getByRole("img", { name: /Рисунок черепахи: 4 линий/ })).toBeVisible();
   // A new run of other code replaces the picture with a clean one.
   await page.locator("#python-answer").fill("import turtle\nturtle.speed(0)\nturtle.forward(50)\n");
-  await page.getByRole("button", { name: "▷ Запустить" }).click();
+  await page.getByRole("button", { name: "Запустить", exact: true }).click();
   await expect(page.getByRole("img", { name: /Рисунок черепахи: 1 линий/ })).toBeVisible();
   // ---- a wrong drawing is explained and the target picture is shown ----
   await page.locator("#python-answer").fill("import turtle\nt = turtle.Turtle()\nt.speed(0)\nfor i in range(3):\n    t.forward(100)\n    t.left(90)\n");
@@ -83,7 +83,7 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   await page.goto(`/#assignment/${s.robot.assignment.id}`);
   await expect(page.getByRole("img", { name: /Поле Робота 1×6: Робот в строке 1, столбце 1; нужно закрасить клеток: 1/ })).toBeVisible();
   await page.locator("#python-answer").fill("from pyrob.api import *\nwhile True:\n    move_right()\n");
-  await page.getByRole("button", { name: "▷ Запустить" }).click();
+  await page.getByRole("button", { name: "Запустить", exact: true }).click();
   await page.getByRole("button", { name: "⏭ Сразу результат" }).click();
   await expect(page.locator(".result-box").getByText(/Робот врезался в стену справа/)).toBeVisible();
   await expect(page.getByRole("img", { name: /Робот врезался в стену/ })).toBeVisible();
@@ -93,7 +93,7 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   // ---- help: every example runs in the page ----
   await page.getByRole("link", { name: "Справка Python" }).click();
   await expect(page.getByRole("heading", { name: "Python в Kodik: библиотеки и примеры" })).toBeVisible();
-  const buttons = page.getByRole("button", { name: "▷ Запустить пример" });
+  const buttons = page.getByRole("button", { name: "Запустить пример" });
   const count = await buttons.count();
   expect(count).toBeGreaterThanOrEqual(14);
   for (let i = 0; i < count; i++) await buttons.first().click();

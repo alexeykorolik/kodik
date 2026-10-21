@@ -6,9 +6,26 @@
     <meta name="theme-color" content="#235e51" />
     <meta name="description" content="Kodik Schools — курсы Python, интерактивные задания, учебные группы и прогресс учеников в одном пространстве." />
     <title>Kodik для школ — пространство для обучения</title>
+    <style>
+      /* Loading screen (src/Boot.tsx renders the same markup). Shown only if loading takes over .15s. */
+      .boot { --boot-bg: #f7f8f5; --boot-ink: #5c6d64; --boot-mark: #36765a; position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; background: var(--boot-bg); color: var(--boot-ink); font: 500 14px/1.4 "Segoe UI", system-ui, -apple-system, Arial, sans-serif; animation: boot-in .3s ease-out .15s both; }
+      @media (prefers-color-scheme: dark) { .boot { --boot-bg: #121816; --boot-ink: #b0bdb5; --boot-mark: #3f8a66; } }
+      .boot-mark { display: grid; place-items: center; width: 56px; height: 56px; padding-right: 4px; border-radius: 16px; background: var(--boot-mark); color: #f1f5e8; font: 800 42px/1 "Segoe UI", system-ui, Arial, sans-serif; letter-spacing: -4px; box-shadow: 0 10px 24px -12px var(--boot-mark); animation: boot-breathe 1.8s ease-in-out infinite; }
+      .boot-dots { display: flex; gap: 6px; height: 6px; }
+      .boot-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--boot-mark); opacity: .25; animation: boot-dot 1.2s ease-in-out infinite; }
+      .boot-dots i:nth-child(2) { animation-delay: .15s; }
+      .boot-dots i:nth-child(3) { animation-delay: .3s; }
+      .boot-text { margin: 0; }
+      .boot h1.boot-text { font-size: 18px; font-weight: 700; color: inherit; }
+      .boot .boot-action { margin-top: 6px; padding: 10px 18px; border: 0; border-radius: 10px; background: var(--boot-mark); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+      @keyframes boot-in { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes boot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+      @keyframes boot-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+      @media (prefers-reduced-motion: reduce) { .boot, .boot-mark, .boot-dots i { animation: none; } .boot-dots i { opacity: .6; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot" role="status" aria-live="polite"><span class="boot-mark" aria-hidden="true">k.</span><span class="boot-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="boot-text">Открываем Kodik…</span></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

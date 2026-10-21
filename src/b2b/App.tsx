@@ -21,45 +21,17 @@ import {useConfirm} from './confirm';
 import {learnerStatus} from './feedback';
 import {friendlyPassword} from './passwords';
 import {PythonHelp} from './PythonHelp';
+import { Glyph, Icon } from "./Icon";
+import { Boot } from "../Boot";
 
-export function Glyph({ name = "grid" }: { name?: string }) {
-  const paths: Record<string, string> = {
-    grid: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
-    book: "M4 4h6a3 3 0 0 1 2 2 3 3 0 0 1 2-2h6v16h-6a3 3 0 0 0-2 1 3 3 0 0 0-2-1H4z M12 6v15",
-    edit: "m15 4 5 5 M4 20l5-1L21 7l-5-5L4 14z",
-    users:
-      "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-4 M17 3a4 4 0 0 1 0 8",
-    chart: "M4 20h17 M7 16V9 M12 16V4 M17 16v-5",
-    arrow: "M5 12h14 m-6-6 6 6-6 6",
-    plus: "M12 5v14 M5 12h14",
-    code: "m8 6-6 6 6 6 m8-12 6 6-6 6 M14 3l-4 18",
-    help: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14 M12 17.5v.01",
-    journal: "M6 3h12v18H6z M9 7h6 M9 11h6 M9 15h4",
-    switch: "M4 7h11 m-3-3 3 3-3 3 M20 17H9 m3-3-3 3 3 3",
-    school: "M3 21h18 M5 21V10l7-5 7 5v11 M10 21v-5h4v5",
-    person: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1",
-  };
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="20"
-      height="20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={paths[name] || paths.grid} />
-    </svg>
-  );
-}
+export { Glyph, Icon } from "./Icon";
 /** Russian plural: plural(5, ["модуль", "модуля", "модулей"]) → "5 модулей". */
 export function plural(n: number, [one, few, many]: [string, string, string]) {
   const t = Math.abs(n) % 100, u = t % 10;
   return `${n} ${t > 10 && t < 20 ? many : u === 1 ? one : u >= 2 && u <= 4 ? few : many}`;
 }
+/** Status badges carry an icon as well as colour and text. */
+const STATUS_ICON: Record<string, "check" | "x" | "clock"> = { passed: "check", failed: "x", runtime_error: "x", checker_error: "x", pending_review: "clock" };
 export function Badge({
   status,
   children,
@@ -69,6 +41,7 @@ export function Badge({
 }) {
   return (
     <span className={`badge ${status || ""}`}>
+      {!children && STATUS_ICON[status || ""] && <Icon name={STATUS_ICON[status || ""]} size="sm" />}
       {children || statusNames[status || ""] || status}
     </span>
   );
@@ -287,7 +260,7 @@ function Auth({ onLogin }: { onLogin: (recovery?: string) => Promise<void> }) {
               <br />　 <span>while</span> любопытство:
               <br />　 　 создать_что_нибудь()
             </code>
-            <div className="art-tag">↗ Новые навыки каждый день</div>
+            <div className="art-tag"><Icon name="arrow-up-right" size="sm" /> Новые навыки каждый день</div>
           </div>
         </div>
         <small>Создано для тех, кто учит создавать.</small>
@@ -437,10 +410,13 @@ export default function B2BApp() {
     [refreshedAt, setRefreshedAt] = useState(""),
     [refreshError, setRefreshError] = useState(""),
     [compactSidebar, setCompactSidebar] = useState(false),
+    // Solving a task is a focus screen: the navigation folds to its icon rail until the learner opens it.
+    [focusExpanded, setFocusExpanded] = useState(false),
     [drawer, setDrawer] = useState(false),
     [switched, setSwitched] = useState<{ from: Row; to?: Row; signedOut?: boolean } | null>(null);
   const refreshSequence = useRef(0), shown = useRef<Row | null>(null), switchedRef = useRef(false);
   const confirm = useConfirm();
+  useEffect(() => setFocusExpanded(false), [route]);
   const [narrow, setNarrow] = useState(() => window.matchMedia?.("(max-width: 1023px)").matches ?? false);
   useEffect(() => { const q = window.matchMedia?.("(max-width: 1023px)"); if (!q) return; const on = () => setNarrow(q.matches); q.addEventListener("change", on); return () => q.removeEventListener("change", on); }, []);
   const [helpWaiting, setHelpWaiting] = useState(0), [toast, setToast] = useState<{ text: string; sticky?: boolean; action?: { label: string; path: string } } | null>(null);
@@ -578,7 +554,7 @@ export default function B2BApp() {
   };
   const groupActions: GroupActions = { go, mutate, act, refresh, dialog: (d) => setDialog(d), issueProgram: (g) => setProgramGroup(g), assign: (g, repeat) => setAssignmentDialog({ group: g, repeat }) };
   if (loading)
-    return <main className="fatal">Открываем рабочее пространство…</main>;
+    return <Boot text="Открываем рабочее пространство…" />;
   if (switched)
     return (
       <main className="account-switched" data-testid="account-switched">
@@ -713,7 +689,7 @@ export default function B2BApp() {
           disabled={index === 0}
           onClick={() => move(kind, rows, index, -1)}
         >
-          ↑
+          <Icon name="arrow-up" size="sm" />
         </button>
         <button
           title="Опустить"
@@ -721,7 +697,7 @@ export default function B2BApp() {
           disabled={index === rows.length - 1}
           onClick={() => move(kind, rows, index, 1)}
         >
-          ↓
+          <Icon name="arrow-down" size="sm" />
         </button>
       </span>
     );
@@ -730,7 +706,7 @@ export default function B2BApp() {
     return (
       <div key={t.assignment_id||t.id} className="task-row">
         <span className={`task-symbol ${isPassed(progressKey(t)) ? "done" : ""}`}>
-          {isPassed(progressKey(t)) ? "✓" : <Glyph name="code" />}
+          {isPassed(progressKey(t)) ? <Icon name="check" /> : <Glyph name="code" />}
         </span>
         <div className="grow">
           <button
@@ -1294,7 +1270,7 @@ export default function B2BApp() {
             <ul className="progress-list">
               {lessons.map((l) => (
                 <li key={l.id} className={l.total > 0 && l.completed === l.total ? "done" : ""}>
-                  <span className="progress-mark" aria-hidden="true">{l.total > 0 && l.completed === l.total ? "✓" : l.state === "scheduled" ? "🔒" : "•"}</span>
+                  <span className="progress-mark" aria-hidden="true">{l.total > 0 && l.completed === l.total ? <Icon name="check" size="sm" /> : l.state === "scheduled" ? <Icon name="lock" size="sm" /> : "•"}</span>
                   <span className="grow"><b>{l.title}</b><small>{l.program} · {l.total > 0 && l.completed === l.total ? "пройден" : l.state === "scheduled" ? "откроет учитель" : `шагов: ${l.completed} из ${l.total}`}</small></span>
                   {l.state !== "scheduled" && <a href={`#lesson-run/${l.id}`}>{l.completed === l.total ? "Повторить" : "Открыть"}</a>}
                 </li>
@@ -1310,7 +1286,7 @@ export default function B2BApp() {
                 const done = isPassed(progressKey(t)), tries = s.attempts.filter((a) => matchesTask(a, t));
                 return (
                   <li key={t.assignment_id || t.id} className={done ? "done" : ""}>
-                    <span className="progress-mark" aria-hidden="true">{done ? "✓" : "•"}</span>
+                    <span className="progress-mark" aria-hidden="true">{done ? <Icon name="check" size="sm" /> : "•"}</span>
                     <span className="grow"><b>{t.title}</b><small>{done ? "Решено" : tries.length ? "Пока не решено — можно продолжить" : "Ещё не начато"}</small></span>
                     <a href={`#${taskLink(t)}`}>{done ? "Посмотреть" : "Решать"}</a>
                   </li>
@@ -1494,7 +1470,7 @@ export default function B2BApp() {
             )}
           </div>
           <div className="banner-art" aria-hidden="true">
-            <span>↗</span>
+            <span><Icon name="arrow-up-right" size="lg" /></span>
             <code>{"{ учимся }"}</code>
           </div>
         </section>
@@ -1543,7 +1519,7 @@ export default function B2BApp() {
             <ol>
               {steps.map((x, i) => (
                 <li key={i} className={x.done ? "done" : steps.findIndex((y) => !y.done) === i ? "next" : ""}>
-                  <span className="check" aria-hidden="true">{x.done ? "✓" : i + 1}</span>
+                  <span className="check" aria-hidden="true">{x.done ? <Icon name="check" size="sm" /> : i + 1}</span>
                   <span className="grow">{x.label}</span>
                   {!x.done && <a className={steps.findIndex((y) => !y.done) === i ? "button-link primary" : "link"} href={`#${x.path}`}>{steps.findIndex((y) => !y.done) === i ? "Сделать сейчас" : "Открыть"}</a>}
                   {x.done && <span className="muted">готово</span>}
@@ -1564,7 +1540,7 @@ export default function B2BApp() {
           </section>
           <section className="panel today-attention">
             <div className="panel-heading"><h2>Требует внимания</h2></div>
-            <a className={`attention-row${helpWaiting ? " hot" : ""}`} href="#classroom"><span>✋ Ждут помощи</span><b>{helpWaiting}</b></a>
+            <a className={`attention-row${helpWaiting ? " hot" : ""}`} href="#classroom"><span><Icon name="hand" size="sm" /> Ждут помощи</span><b>{helpWaiting}</b></a>
             <a className={`attention-row${pending ? " hot" : ""}`} href="#journal?status=pending_review"><span>На ручной проверке</span><b>{pending}</b></a>
             <div className="attention-groups">
               <h3>Мои группы</h3>
@@ -1632,9 +1608,11 @@ export default function B2BApp() {
         ["modes", "switch", "Способы решения"],
         ...(s.user.role==='admin'?[["school","school","Управление школой","ШКОЛА"] as [string,string,string,string]]:[]),
       ];
+  const focusPage = (student && ["assignment", "lesson-run"].includes(page)) || page === "preview",
+    collapsed = focusPage ? !focusExpanded : compactSidebar;
   const pageTitle = nav.find((n) => n[0] === page)?.[2] || ({ builder: "Конструктор задания", group: "Учебная группа", program: "Программа", "lesson-run": "Занятие", assignment: "Задание", preview: "Предпросмотр", "python-help": "Справка по Python", "lesson-editor": "Сценарий урока" } as Record<string, string>)[page] || "Kodik";
   return (
-    <div className={`b2b-shell ${compactSidebar ? "sidebar-collapsed" : ""}${drawer ? " drawer-open" : ""}`}>
+    <div className={`b2b-shell ${collapsed ? "sidebar-collapsed" : ""}${focusPage ? " focus-page" : ""}${drawer ? " drawer-open" : ""}`}>
       {drawer && <button className="drawer-backdrop" aria-label="Закрыть меню" onClick={() => setDrawer(false)} />}
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>К содержимому</a>
       <aside className="sidebar" id="sidebar">
@@ -1710,7 +1688,7 @@ export default function B2BApp() {
                 })
               }
             >
-              ↪
+              <Icon name="logout" />
             </button>
           </div>
         </div>
@@ -1719,12 +1697,12 @@ export default function B2BApp() {
         <header className="topbar">
           <button
             className="sidebar-toggle"
-            aria-label={narrow ? (drawer ? "Закрыть меню" : "Открыть меню") : compactSidebar ? "Развернуть навигацию" : "Свернуть навигацию"}
-            aria-expanded={narrow ? drawer : !compactSidebar}
+            aria-label={narrow ? (drawer ? "Закрыть меню" : "Открыть меню") : collapsed ? "Развернуть навигацию" : "Свернуть навигацию"}
+            aria-expanded={narrow ? drawer : !collapsed}
             aria-controls="sidebar"
-            onClick={() => (narrow ? setDrawer((v) => !v) : setCompactSidebar((v) => !v))}
+            onClick={() => (narrow ? setDrawer((v) => !v) : focusPage ? setFocusExpanded((v) => !v) : setCompactSidebar((v) => !v))}
           >
-            ☰
+            <Icon name="menu" />
           </button>
           <nav className="crumbs" aria-label="Навигационная цепочка">
             {s.organization.name}

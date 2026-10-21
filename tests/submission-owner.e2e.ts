@@ -223,7 +223,7 @@ test("a hanging answer frees the workplace in time; the accepted check is recove
   await expect(notice).toContainText("подтверждение пока не получено");
   // The editor is a draft again; the sent snapshot is what will be repeated.
   await page.locator("#python-answer").fill("print(7) # правка после отправки");
-  await expect(page.getByRole("button", { name: "▷ Запустить", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Запустить", exact: true })).toBeEnabled();
   await expect(passed(page)).toBeVisible({ timeout: 20000 });
   // The late answer of the first request arrives after recovery has started: it changes nothing.
   await release?.();

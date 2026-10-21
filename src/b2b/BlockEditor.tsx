@@ -3,6 +3,7 @@ import * as Blockly from "blockly";
 import * as ruModule from "blockly/msg/ru";
 import { BLOCKS, nameProblem } from "../adaptive/blockProgram";
 import "../adaptive/blocklyBlocks";
+import { Icon } from "./Icon";
 
 Blockly.setLocale(Object.fromEntries(Object.entries(ruModule).filter(([k]) => k !== "default")) as Record<string, string>);
 const theme = Blockly.Theme.defineTheme("kodik-b2b", {
@@ -172,10 +173,10 @@ export function BlockEditor({ value, palette, onChange, onSelect, readOnly = fal
 
   return (
     <div className="block-editor">
-      {!readOnly&&<div className="block-toolbar"><div className="block-palette" role="group" aria-label="Палитра блоков">{BLOCKS.filter(b=>palette.includes(b.type)).map(b=><button key={b.type} type="button" className={`palette-block cat-${BLOCKS.findIndex(x=>x.category===b.category)}`} onClick={()=>add(b.type)} title={`Добавить блок «${b.label}»`}>＋ {b.label}</button>)}</div></div>}
+      {!readOnly&&<div className="block-toolbar"><div className="block-palette" role="group" aria-label="Палитра блоков">{BLOCKS.filter(b=>palette.includes(b.type)).map(b=><button key={b.type} type="button" className={`palette-block cat-${BLOCKS.findIndex(x=>x.category===b.category)}`} onClick={()=>add(b.type)} title={`Добавить блок «${b.label}»`} aria-label={`Добавить блок «${b.label}»`}><Icon name="plus" size="sm" />{b.label}</button>)}</div></div>}
       <div className="blockly-wrap">
         <div className="blockly-host" ref={host} role="application" aria-label={label} />
-        {!readOnly&&<div className="block-tools"><button type="button" className="tool" aria-label="Отменить действие" title="Отменить" onClick={() => ws.current?.undo(false)}>↶</button><button type="button" className="tool" aria-label="Вернуть действие" title="Вернуть" onClick={() => ws.current?.undo(true)}>↷</button><button type="button" className="tool wide" onClick={() => { const w = ws.current; if (w) fit(w); }}>Показать мою программу</button></div>}
+        {!readOnly&&<div className="block-tools"><button type="button" className="tool" aria-label="Отменить действие" title="Отменить" onClick={() => ws.current?.undo(false)}><Icon name="undo" /></button><button type="button" className="tool" aria-label="Вернуть действие" title="Вернуть" onClick={() => ws.current?.undo(true)}><Icon name="redo" /></button><button type="button" className="tool wide" onClick={() => { const w = ws.current; if (w) fit(w); }}><Icon name="focus" /><span>Показать мою программу</span></button></div>}
         {!readOnly && blocks.length === 0 && <p className="blockly-empty" aria-hidden="true">Нажми «＋ {label_(palette[0] || "text_print")}» выше — блок появится здесь.<br/>Блоки можно перетаскивать мышкой или пальцем.</p>}
       </div>
       {!readOnly && (

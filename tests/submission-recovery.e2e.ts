@@ -78,12 +78,12 @@ test("blocks: refused empty and unfinished programs free the learner; the fixed 
   // Behaviour first: the refused request is not resent, run and check are free, nothing stays stored.
   await page.waitForTimeout(6500);
   expect(sent, "the refused request is not resent in the background").toHaveLength(1);
-  await expect(page.getByRole("button", { name: "▷ Запустить", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Запустить", exact: true })).toBeEnabled();
   expect(await storedOp(page, s), "no stuck operation is kept").toBeNull();
   await expect(page.getByTestId("submission-notice")).toHaveAttribute("data-kind", "refused");
   expect(counts(s.kids[0].id)).toEqual({ jobs: 0, attempts: 0 });
   await expect(checkButton(page)).toBeEnabled();
-  await expect(page.getByRole("button", { name: "▷ Запустить", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Запустить", exact: true })).toBeEnabled();
 
   // An unfinished program (print without a value): 422 translation, explained, nothing repeats in the background.
   await buildPrint(page);

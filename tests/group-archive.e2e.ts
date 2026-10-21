@@ -87,7 +87,7 @@ test("archiving the group during an open lesson: view for the learner and teache
   await expect(child.getByTestId("view-only-note")).toBeVisible({ timeout: 12000 });
   await expect(child.locator("#python-answer")).toHaveValue("print(42) # моё решение");
   await expect(child.getByRole("button", { name: "Проверить решение", exact: true })).toBeDisabled();
-  await expect(child.getByRole("button", { name: "▷ Запустить", exact: true })).toBeDisabled();
+  await expect(child.getByRole("button", { name: "Запустить", exact: true })).toBeDisabled();
   await child.reload();
   await call(r, `/groups/${group.id}/archive`, { archived: false });
   await child.reload();

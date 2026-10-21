@@ -3,6 +3,7 @@ import {api,statusNames,type Row,type State} from './api';
 import {Header,Badge,plural} from './App';
 import {useConfirm} from './confirm';
 import {MODE_LABEL,type Mode} from '../adaptive/modePolicy';
+import {Icon} from './Icon';
 const label=(m:string)=>MODE_LABEL[m as Mode]||m;
 const switching:Record<string,string>={free:'Свободное переключение',teacher:'Переход с разрешения',locked:'Закреплённый режим'};
 const HELP_CHOICES=['Не понимаю задание','Не получается собрать блоки','Проверка не проходит'];
@@ -24,7 +25,7 @@ export function HelpButton({assignmentId,lessonRunId,stepId}:{assignmentId?:stri
   async function send(text:string){setBusy(true);setError('');try{const r=await api('/help',{assignment_id:assignmentId,lesson_run_id:lessonRunId,step_id:stepId,message:text});setNote(waiting?(r.appended?'Вопрос дополнен — учитель увидит новые слова.':'Учитель уже видит твой запрос.'):'Учитель увидит твой запрос. Продолжай, если можешь.');setMessage('');await load().catch(()=>{});setOpen(false);trigger.current?.focus()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
   const seen=()=>{setDismissed(answerKey);try{localStorage.setItem('kodik:help-seen:'+scope,answerKey)}catch{/* only hides the card in this browser */}};
   return <div className="help-area">
-    <button ref={trigger} type="button" className={`help-trigger${waiting?' waiting':''}`} aria-expanded={open} aria-haspopup="dialog" onClick={()=>setOpen(v=>!v)}>{waiting?'✋ Ждём учителя':'✋ Нужна помощь'}{showAnswer&&<span className="help-dot" aria-label="Есть ответ учителя"/>}</button>
+    <button ref={trigger} type="button" className={`help-trigger${waiting?' waiting':''}`} aria-expanded={open} aria-haspopup="dialog" onClick={()=>setOpen(v=>!v)}><Icon name={waiting?'clock':'hand'} size="sm" />{waiting?'Ждём учителя':'Нужна помощь'}{showAnswer&&<span className="help-dot" aria-label="Есть ответ учителя"/>}</button>
     {note&&!open&&<span className="help-note" role="status">{note}</span>}
     {open&&<div ref={panel} className="help-popover" role="dialog" aria-label="Позвать учителя">
       <h3>{waiting?'Дополнить вопрос':'Что не получается?'}</h3>
@@ -139,7 +140,7 @@ export function ModeManagement({state}:{state:State}){
       {open===s.id&&<tr className="learner-more"><td colSpan={6}>
         <details open><summary>Личные разрешения</summary><PolicyForm key={JSON.stringify(s.modes)} policy={s.modes} supported={data.supported} submit={p=>act(`/assignments/${id}/students/${s.id}/mode`,{override:{allowed:p.allowed,start:p.start,switching:p.switching},reason:p.reason},'PUT',`Личные разрешения ученика ${s.name} сохранены.`)}/></details>
         <div className="actions"><button onClick={async()=>{try{setProof({...await api(`/students/${s.id}/evidence`),name:s.name})}catch(e){setError((e as Error).message)}}}>Какие решения учтены</button><button onClick={async()=>{try{setWhy({...await api(`/assignments/${id}/students/${s.id}/recommendation-check`),name:s.name})}catch(e){setError((e as Error).message)}}}>Почему есть или нет предложения</button></div>
-        {why&&why.name===s.name&&<section className="recommendation-check" aria-label={`Проверка оснований: ${s.name}`}><h3>{why.ok?`Есть основание предложить «${label(why.target)}»`:'Предложения сейчас нет'}</h3><ul>{why.checks.map((c:Row)=><li key={c.rule} className={c.ok?'ok':'bad'}>{c.ok?'✓':'✗'} {c.detail}</li>)}</ul><small>Правило {why.rule_version}: свежесть {why.rules.freshDays} дней, нужно {why.rules.minFamilies} разных задания, серия из {why.rules.recentFailures} неудач делает предложение несвоевременным.</small></section>}
+        {why&&why.name===s.name&&<section className="recommendation-check" aria-label={`Проверка оснований: ${s.name}`}><h3>{why.ok?`Есть основание предложить «${label(why.target)}»`:'Предложения сейчас нет'}</h3><ul>{why.checks.map((c:Row)=><li key={c.rule} className={c.ok?'ok':'bad'}><Icon name={c.ok?'check':'x'} size="sm" /> {c.detail}</li>)}</ul><small>Правило {why.rule_version}: свежесть {why.rules.freshDays} дней, нужно {why.rules.minFamilies} разных задания, серия из {why.rules.recentFailures} неудач делает предложение несвоевременным.</small></section>}
         {proof&&proof.name===s.name&&<section><p>{proof.labels.join(' · ')||'Успешных решений пока нет'}</p>{proof.items.map((p:Row)=><p key={p.attempt_id}>{p.title} · {label(p.mode)} · {new Date(p.created_at).toLocaleString('ru')}{p.eligible===false&&<><br/><small className="muted">Проверка пройдена, но не учитывается: {p.reason}</small></>}</p>)}<p className="muted">{proof.limitations}</p></section>}
       </td></tr>}</Fragment>)}
     </tbody></table></div>
