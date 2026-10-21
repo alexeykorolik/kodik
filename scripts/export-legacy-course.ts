@@ -95,7 +95,8 @@ const total = data.chapters.reduce((n, c) => n + c.tasks.length, 0);
 if (total !== lessons.length) throw new Error(`exported ${total} of ${lessons.length} lessons`);
 const json = JSON.stringify(data, null, 1) + "\n";
 if (process.argv.includes("--check")) {
-  if (readFileSync(target, "utf8") !== json) throw new Error("server/b2b/legacy-course.json is out of date: run npx tsx scripts/export-legacy-course.ts");
+  // Line endings follow the checkout (Git may convert them on Windows); the content must match.
+  if (readFileSync(target, "utf8").replace(/\r\n/g, "\n") !== json) throw new Error("server/b2b/legacy-course.json is out of date: run npx tsx scripts/export-legacy-course.ts");
   console.log(`✓ legacy course data is current: ${data.chapters.length} chapters, ${total} tasks`);
 } else {
   writeFileSync(target, json);
