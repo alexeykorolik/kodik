@@ -23,6 +23,7 @@ import {friendlyPassword} from './passwords';
 import {PythonHelp} from './PythonHelp';
 import { Glyph, Icon } from "./Icon";
 import { Boot } from "../Boot";
+import { Practice, isPracticeMode } from "./Practice";
 
 export { Glyph, Icon } from "./Icon";
 /** Russian plural: plural(5, ["модуль", "модуля", "модулей"]) → "5 модулей". */
@@ -1060,6 +1061,8 @@ export default function B2BApp() {
     ) : (
       <Empty title="Курс не найден" text="Вернитесь к списку курсов." />
     );
+  } else if (page === "practice") {
+    content = <Practice user={s.user.id} mode={isPracticeMode(id) ? id : undefined} go={go} ask={confirm.ask} />;
   } else if (page === "courses") {
     const starterInstalled = s.courses.some((c) => c.import_status && c.import_template !== "libraries/v1" && !c.import_template?.startsWith("legacy/"));
     const librariesInstalled = s.courses.some((c) => c.import_template === "libraries/v1");
@@ -1622,6 +1625,7 @@ export default function B2BApp() {
     ? [
         ["overview", "grid", "Обзор"],
         ["courses", "book", "Мои курсы"],
+        ["practice", "terminal", "Практика"],
         ["results", "chart", "Мой прогресс"],
         ["python-help", "code", "Справка Python"],
       ]
@@ -1638,9 +1642,9 @@ export default function B2BApp() {
         ["modes", "switch", "Способы решения"],
         ...(s.user.role==='admin'?[["school","school","Управление школой","ШКОЛА"] as [string,string,string,string]]:[]),
       ];
-  const focusPage = (student && ["assignment", "lesson-run"].includes(page)) || page === "preview",
+  const focusPage = (student && ["assignment", "lesson-run"].includes(page)) || page === "preview" || (page === "practice" && isPracticeMode(id)),
     collapsed = focusPage ? !focusExpanded : compactSidebar;
-  const pageTitle = nav.find((n) => n[0] === page)?.[2] || ({ builder: "Конструктор задания", group: "Учебная группа", program: "Программа", "lesson-run": "Занятие", assignment: "Задание", preview: "Предпросмотр", "python-help": "Справка по Python", "lesson-editor": "Сценарий урока" } as Record<string, string>)[page] || "Kodik";
+  const pageTitle = nav.find((n) => n[0] === page)?.[2] || ({ builder: "Конструктор задания", group: "Учебная группа", program: "Программа", "lesson-run": "Занятие", assignment: "Задание", preview: "Предпросмотр", "python-help": "Справка по Python", practice: "Практика", "lesson-editor": "Сценарий урока" } as Record<string, string>)[page] || "Kodik";
   return (
     <div className={`b2b-shell ${collapsed ? "sidebar-collapsed" : ""}${focusPage ? " focus-page" : ""}${drawer ? " drawer-open" : ""}`}>
       {drawer && <button className="drawer-backdrop" aria-label="Закрыть меню" onClick={() => setDrawer(false)} />}
@@ -1770,7 +1774,7 @@ export default function B2BApp() {
         <main
           id="main"
           tabIndex={-1}
-          className={`main-content ${["task","assignment","lesson-run","preview"].includes(page) ? "workspace-page" : ""}`}
+          className={`main-content${["task","assignment","lesson-run","preview"].includes(page) ? " workspace-page" : ""}${page === "practice" && isPracticeMode(id) ? " workspace-page practice-page" : ""}`}
         >
           {notice && (
             <div className="notice" role="alert">

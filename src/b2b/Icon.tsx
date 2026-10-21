@@ -35,6 +35,9 @@ const PATHS: Record<string, string> = {
   menu: "M4 7h16 M4 12h16 M4 17h16",
   list: "M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01",
   logout: "M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3 M14 16l4-4-4-4 M18 12H8",
+  puzzle: "M9 4h3a2 2 0 1 1 4 0h3v5a2 2 0 1 1 0 4v6h-6a2 2 0 1 0-4 0H4v-6a2 2 0 1 0 0-4V4z",
+  layers: "m12 3 9 5-9 5-9-5z M3 13l9 5 9-5",
+  terminal: "M3 5h18v14H3z m4 5 3 2-3 2 M13 15h4",
   sparkle: "M12 3c.7 4.6 2.4 6.3 7 7-4.6.7-6.3 2.4-7 7-.7-4.6-2.4-6.3-7-7 4.6-.7 6.3-2.4 7-7z M19 3v3 M17.5 4.5h3",
 };
 export type IconName = keyof typeof PATHS;

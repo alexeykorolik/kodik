@@ -1351,6 +1351,11 @@ export function createApp({
         ".png": "image/png",
         ".ico": "image/x-icon",
         ".woff2": "font/woff2",
+        ".ttf": "font/ttf",
+        ".mjs": "text/javascript",
+        ".wasm": "application/wasm",
+        ".zip": "application/zip",
+        ".json": "application/json",
       };
       res.setHeader(
         "Content-Type",
@@ -1358,9 +1363,20 @@ export function createApp({
       );
       res.setHeader(
         "Cache-Control",
-        extname(file) === ".html" ? "no-cache" : "public, max-age=3600",
+        // Pyodide files sit under a versioned path (/pyodide/<version>/): they never change in place.
+        extname(file) === ".html" ? "no-cache" : file.includes(`${sep}pyodide${sep}`) ? "public, max-age=31536000, immutable" : "public, max-age=3600",
       );
-      res.end(req.method === "HEAD" ? undefined : await readFile(file));
+      // Pyodide ships precompressed copies next to each file; send one the browser accepts.
+      let body = file;
+      if (file.includes(`${sep}pyodide${sep}`)) {
+        res.setHeader("Vary", "Accept-Encoding");
+        const accepts = String(req.headers["accept-encoding"] || "");
+        for (const [encoding, suffix] of [["br", ".br"], ["gzip", ".gz"]]) {
+          if (!accepts.split(",").some((part) => part.trim().split(";")[0] === encoding)) continue;
+          try { if ((await stat(file + suffix)).isFile()) { body = file + suffix; res.setHeader("Content-Encoding", encoding); break; } } catch { /* no compressed copy */ }
+        }
+      }
+      res.end(req.method === "HEAD" ? undefined : await readFile(body));
     } catch {
       res.writeHead(503);
       res.end("Сначала выполните npm run build.");

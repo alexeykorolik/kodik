@@ -46,6 +46,11 @@ export function BlockEditor({ value, palette, onChange, onSelect, readOnly = fal
   const [blocks, setBlocks] = useState<Blockly.BlockSvg[]>([]), [variable, setVariable] = useState('');
   const emitted = useRef('');
   const [rename, setRename] = useState('');
+  // A large palette (free practice, rich tasks) is split by category, so a child sees a few blocks at a time.
+  const available = BLOCKS.filter((b) => palette.includes(b.type)), categories = [...new Set(available.map((b) => b.category))];
+  const grouped = available.length > 8 && categories.length > 1, [category, setCategory] = useState(categories[0]);
+  const shown = grouped ? available.filter((b) => b.category === (categories.includes(category) ? category : categories[0])) : available;
+  const colour = (cat: string) => 'cat-' + BLOCKS.findIndex((x) => x.category === cat);
   const sync = () => { const w = ws.current; if (!w) return; const state = Blockly.serialization.workspaces.save(w); emitted.current = JSON.stringify(state); setBlocks(w.getAllBlocks(true)); setSelected(id => id && w.getBlockById(id) ? id : null); change.current(state); };
 
   useEffect(() => {
@@ -173,7 +178,7 @@ export function BlockEditor({ value, palette, onChange, onSelect, readOnly = fal
 
   return (
     <div className="block-editor">
-      {!readOnly&&<div className="block-toolbar"><div className="block-palette" role="group" aria-label="Палитра блоков">{BLOCKS.filter(b=>palette.includes(b.type)).map(b=><button key={b.type} type="button" className={`palette-block cat-${BLOCKS.findIndex(x=>x.category===b.category)}`} onClick={()=>add(b.type)} title={`Добавить блок «${b.label}»`} aria-label={`Добавить блок «${b.label}»`}><Icon name="plus" size="sm" />{b.label}</button>)}</div></div>}
+      {!readOnly&&<div className={`block-toolbar${grouped ? " grouped" : ""}`}>{grouped && <div className="palette-categories" role="tablist" aria-label="Группы блоков">{categories.map((c) => <button key={c} type="button" role="tab" aria-selected={c === (categories.includes(category) ? category : categories[0])} className={colour(c)} onClick={() => setCategory(c)}>{c}</button>)}</div>}<div className="block-palette" role="group" aria-label="Палитра блоков">{shown.map(b=><button key={b.type} type="button" className={`palette-block cat-${BLOCKS.findIndex(x=>x.category===b.category)}`} onClick={()=>add(b.type)} title={`Добавить блок «${b.label}»`} aria-label={`Добавить блок «${b.label}»`}><Icon name="plus" size="sm" />{b.label}</button>)}</div></div>}
       <div className="blockly-wrap">
         <div className="blockly-host" ref={host} role="application" aria-label={label} />
         {!readOnly&&<div className="block-tools"><button type="button" className="tool" aria-label="Отменить действие" title="Отменить" onClick={() => ws.current?.undo(false)}><Icon name="undo" /></button><button type="button" className="tool" aria-label="Вернуть действие" title="Вернуть" onClick={() => ws.current?.undo(true)}><Icon name="redo" /></button><button type="button" className="tool wide" onClick={() => { const w = ws.current; if (w) fit(w); }}><Icon name="focus" /><span>Показать мою программу</span></button></div>}
