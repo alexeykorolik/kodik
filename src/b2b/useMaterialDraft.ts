@@ -9,6 +9,25 @@ type Backup = {
   content: Row;
   changedAt: string;
 };
+// The builder and the preview of one material are separate editors in the same tab, and the preview
+// can open from a school snapshot that a slow refresh has not yet brought up to the builder's save.
+// Revisions this tab wrote itself are remembered so its editors continue from each other's saves;
+// a revision written by anyone else breaks the chain and the server still reports the conflict.
+const ownSaves = new Map<string, { next: Map<number, number>; latest: Row }>();
+// One queue for every material editor in the tab, so an editor saving on close and the one that
+// replaced it never send the same base revision at once.
+let saves: Promise<unknown> = Promise.resolve();
+const follow = (chain: string, revision: number) => {
+  const next = ownSaves.get(chain)?.next;
+  while (next?.has(revision)) revision = next.get(revision)!;
+  return revision;
+};
+const remember = (chain: string, base: number, content: Row) => {
+  const entry = ownSaves.get(chain) || { next: new Map(), latest: content };
+  if (base) entry.next.set(base, content.revision);
+  entry.latest = content;
+  ownSaves.set(chain, entry);
+};
 export function useMaterialDraft(
   initial: Row,
   owner: { id: string; org_id: string },
@@ -24,21 +43,29 @@ export function useMaterialDraft(
       return null;
     }
   };
+  const chainOf = (id: string) => `${namespace}:${owner.org_id}:${owner.id}:${id}`;
   const [backup] = useState(read);
-  const [task, setTask] = useState<Row>(() => backup?.content || initial);
+  // Without a local copy, start from this tab's own later save if the snapshot has not caught up.
+  const [mine] = useState(() => {
+    const latest = initial.id && ownSaves.get(chainOf(initial.id))?.latest;
+    return !backup && latest && latest.revision > (initial.revision ?? 0) &&
+      follow(chainOf(initial.id), initial.revision ?? 0) === latest.revision
+      ? { ...initial, ...latest }
+      : null;
+  });
+  const [task, setTask] = useState<Row>(() => backup?.content || mine || initial);
   const [status, setStatus] = useState<SaveState>(backup ? "local" : "saved");
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState<Row | null>(null);
   const state = useRef({
     id: backup?.id || initial.id || "",
     clientKey: backup?.clientKey || crypto.randomUUID(),
-    revision: backup?.baseRevision ?? initial.revision ?? 0,
+    revision: backup?.baseRevision ?? mine?.revision ?? initial.revision ?? 0,
     content: task,
     dirty: Boolean(backup),
     generation: 0,
     blocked: false,
   });
-  const queue = useRef<Promise<unknown>>(Promise.resolve());
   const mounted = useRef(true);
   const cache = () => {
     const s = state.current;
@@ -74,11 +101,12 @@ export function useMaterialDraft(
     setStatus(s.blocked ? "conflict" : "local");
   };
   const persist = (): Promise<Row> => {
-    const operation = queue.current
+    const operation = saves
       .catch(() => {})
       .then(async () => {
         const s = state.current;
         if (s.blocked) throw new Error("Сначала разрешите конфликт версий.");
+        if (s.id) s.revision = follow(chainOf(s.id), s.revision);
         if (!s.dirty && s.id) return { id: s.id, revision: s.revision };
         const content = { ...s.content },
           generation = s.generation;
@@ -88,6 +116,7 @@ export function useMaterialDraft(
         }
         cache();
         try {
+          let base = s.id ? s.revision : 0;
           let result = await api(
             s.id ? `/${resource}/${s.id}` : `/${resource}`,
             { ...content, revision: s.revision, client_key: s.clientKey },
@@ -95,7 +124,7 @@ export function useMaterialDraft(
           );
           if (result.replayed) {
             s.id = result.id;
-            s.revision = result.revision;
+            s.revision = base = result.revision;
             cache();
             result = await api(
               `/${resource}/${s.id}`,
@@ -105,6 +134,7 @@ export function useMaterialDraft(
           }
           s.id = result.id;
           s.revision = result.revision;
+          remember(chainOf(s.id), base, { ...content, id: s.id, revision: s.revision });
           if (routeId === "new" && location.hash.startsWith("#builder/new"))
             history.replaceState(null, "", `#builder/${s.id}`);
           // A response lost after a create may return an already-created revision. The
@@ -143,7 +173,7 @@ export function useMaterialDraft(
           throw e;
         }
       });
-    queue.current = operation;
+    saves = operation;
     return operation;
   };
   useEffect(() => {
