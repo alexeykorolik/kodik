@@ -22,6 +22,7 @@ import {createPilot} from './pilot.mjs';
 import {createLearningEvidence} from './learning-evidence.mjs';
 import {createStarterCourse} from './starter-course.mjs';
 import {createLibraryCourse} from './library-course.mjs';
+import {createLegacyCourse} from './legacy-course.mjs';
 import learningRules from '../../src/b2b/learningRules.json' with {type:'json'};
 
 const scrypt = promisify(scryptCallback);
@@ -499,6 +500,7 @@ export function createApp({
     if(!['GET','HEAD'].includes(method)&&!path.endsWith('/draft'))pilot.checkLicense(user);
     if(path==='/api/starter-course/install'&&method==='POST')return await createStarterCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user);
     if(path==='/api/library-course/install'&&method==='POST')return await createLibraryCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user);
+    if(path==='/api/legacy-course/install'&&method==='POST')return await createLegacyCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user,b);
     const pilotResult=await pilot.handle(path,method,b,user,req,res);
     if(pilotResult!==undefined)return pilotResult;
     const learningResult=await learningEvidence.handle(path,method,b,user,req);

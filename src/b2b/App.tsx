@@ -776,7 +776,7 @@ export default function B2BApp() {
             <article className="course-card" key={c.id}>
               <div className={`course-art art-${i % 3}`}>
                 <Glyph name="code" />
-                <span>{/блок/i.test(c.title) ? "БЛОКИ → PYTHON" : "PYTHON"}</span>
+                <span>{tasks.some((t) => { const cfg = typeof t.learning_config === "string" ? JSON.parse(t.learning_config || "{}") : t.learning_config; return cfg?.modes?.length > 0; }) || /блок/i.test(c.title) ? "БЛОКИ → PYTHON" : "PYTHON"}</span>
                 <strong>{["{ }", "</>", "( )"][i % 3]}</strong>
               </div>
               <div className="course-card-body">
@@ -1061,8 +1061,33 @@ export default function B2BApp() {
       <Empty title="Курс не найден" text="Вернитесь к списку курсов." />
     );
   } else if (page === "courses") {
-    const starterInstalled = s.courses.some((c) => c.import_status && c.import_template !== "libraries/v1");
+    const starterInstalled = s.courses.some((c) => c.import_status && c.import_template !== "libraries/v1" && !c.import_template?.startsWith("legacy/"));
     const librariesInstalled = s.courses.some((c) => c.import_template === "libraries/v1");
+    const legacyInstalled = s.courses.filter((c) => c.import_template?.startsWith("legacy/v1/") && c.import_status === "ready").length >= 12;
+    // 12 courses (one per chapter of the first version, 100 tasks) pass the quality gate one by one; the server limits checks per minute, so a
+    // busy answer means "wait a little": everything already checked stays, the next call continues.
+    const installLegacy = () => void act(async () => {
+      setToast({ text: "Готовим 12 курсов первой версии Kodik — 100 заданий. Каждое задание проходит проверку, это займёт пару минут.", sticky: true });
+      for (let attempt = 0; attempt < 80; attempt++) {
+        let step: Row;
+        try { step = await api("/legacy-course/install", {}); }
+        catch (e) {
+          if (!/Слишком много запросов|уже готовится/.test((e as Error).message)) throw e;
+          setToast({ text: "Проверили много заданий подряд — продолжим через 20 секунд. Готовые курсы сохранены.", sticky: true });
+          await new Promise((done) => setTimeout(done, 20000));
+          continue;
+        }
+        if (step.ready) {
+          await refresh();
+          setToast({ text: "12 курсов первой версии Kodik готовы: 100 проверенных заданий. Выдайте нужный курс группе.", action: { label: "К группам", path: "groups" } });
+          go("courses");
+          return;
+        }
+        setToast({ text: `Готовим курсы первой версии Kodik: готово ${step.done} из ${step.total}.`, sticky: true });
+        await refresh();
+      }
+      throw new Error("Курсы не успели подготовиться. Нажмите кнопку ещё раз — готовые курсы сохранены.");
+    });
     const installLibraries = () => void act(async () => {
       setToast({ text: "Готовим пять уроков с черепахой, Роботом и графиками и проверяем образцы. Это может занять около минуты.", sticky: true });
       const course = await mutate("/library-course/install", {});
@@ -1081,14 +1106,18 @@ export default function B2BApp() {
           title={student ? "Мои курсы" : "Курсы"}
           text={student ? "Здесь всё, что выдал учитель." : "Готовые и свои программы. Выдают их группе на странице группы."}
         >
-          {!student && !starterInstalled && s.courses.length > 0 && (
-            <button className="primary" onClick={installStarter}>Добавить стартовый курс · 6 уроков</button>
-          )}
-          {!student && !librariesInstalled && s.courses.length > 0 && (
-            <button onClick={installLibraries}>Добавить курс «Python с библиотеками» · 5 уроков</button>
+          {!student && s.courses.length > 0 && (!starterInstalled || !librariesInstalled || !legacyInstalled) && (
+            <details className="more-menu ready-courses">
+              <summary>Готовые курсы</summary>
+              <div className="more-menu-items">
+                {!starterInstalled && <button onClick={installStarter}><span><b>Первые шаги: от блоков к Python</b><small>6 уроков · блоки и Python</small></span></button>}
+                {!librariesInstalled && <button onClick={installLibraries}><span><b>Python с библиотеками</b><small>5 уроков · черепаха, Робот, графики</small></span></button>}
+                {!legacyInstalled && <button onClick={installLegacy}><span><b>Курсы первой версии Kodik</b><small>12 курсов, 100 заданий · от первых блоков до черепашки</small></span></button>}
+              </div>
+            </details>
           )}
           {!student && (
-            <button className={starterInstalled ? "primary" : ""} onClick={createCourse}>
+            <button className="primary" onClick={createCourse}>
               <Glyph name="plus" />
               Создать курс
             </button>
@@ -1108,6 +1137,7 @@ export default function B2BApp() {
             <div className="actions">
               <button className="primary" onClick={installStarter}>Добавить стартовый курс · 6 уроков</button>
               <button onClick={installLibraries}>Курс «Python с библиотеками» · 5 уроков</button>
+              <button onClick={installLegacy}>Курсы первой версии Kodik · 12 курсов</button>
               <button className="link" onClick={createCourse}>или создать свой курс</button>
             </div>
           </section>
@@ -1182,9 +1212,9 @@ export default function B2BApp() {
         <div className="actions filters">
           <label>Поиск<input type="search" defaultValue={params.get("q") || ""} placeholder="Имя, логин или группа" onChange={(e) => setParam("q", e.target.value)} /></label>
           <label>Роль<select value={role} onChange={(e) => setParam("role", e.target.value)}><option value="">Все</option><option value="student">Ученики</option><option value="teacher">Преподаватели</option><option value="admin">Администраторы</option></select></label>
-          <span className="muted">{plural(shownUsers.length, ["участник", "участника", "участников"])}</span>
         </div>
         <section className="panel">
+          <div className="panel-heading"><h2 role="status">{search || role ? "Найдено: " : "Всего: "}{plural(shownUsers.length, ["участник", "участника", "участников"])}</h2></div>
           <div className="table-scroll">
           <table>
             <thead>

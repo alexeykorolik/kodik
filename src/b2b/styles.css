@@ -2930,18 +2930,20 @@ td .link, td .text-button { font-size: 14px; text-align: left; white-space: norm
 @keyframes kd-pulse { 0% { box-shadow: 0 0 0 0 #b5452c80; } 70% { box-shadow: 0 0 0 7px #b5452c00; } 100% { box-shadow: 0 0 0 0 #b5452c00; } }
 @keyframes kd-shine { from { background-position: 0% 50%; } to { background-position: 200% 50%; } }
 
-/* Pages arrive with a short staggered rise; the learner workspace only fades (Blockly measures itself). */
-.main-content:not(.workspace-page) > * { animation: kd-rise .42s var(--ease-out) both; }
+/* Pages arrive with a short staggered rise; the learner workspace only fades (Blockly measures itself).
+   Fill mode is backwards, not both: a finished animation must not keep its own stacking layer, or
+   a menu in the page heading would open under the next block. */
+.main-content:not(.workspace-page) > * { animation: kd-rise .42s var(--ease-out) backwards; }
 .main-content:not(.workspace-page) > :nth-child(2) { animation-delay: .04s; }
 .main-content:not(.workspace-page) > :nth-child(3) { animation-delay: .08s; }
 .main-content:not(.workspace-page) > :nth-child(4) { animation-delay: .12s; }
 .main-content:not(.workspace-page) > :nth-child(n+5) { animation-delay: .16s; }
-.workspace-page { animation: kd-fade .3s ease-out both; }
-.overlay { animation: kd-fade .18s ease-out both; }
-.dialog, .help-popover, .more-menu-items { animation: kd-pop .26s var(--ease-out) both; }
-.toast { animation: kd-rise .3s var(--ease-out) both; }
-.result-box { animation: kd-rise .28s var(--ease-out) both; }
-.result-box.passed { animation: kd-pop .4s var(--ease-out) both; }
+.workspace-page { animation: kd-fade .3s ease-out backwards; }
+.overlay { animation: kd-fade .18s ease-out backwards; }
+.dialog, .help-popover, .more-menu-items { animation: kd-pop .26s var(--ease-out) backwards; }
+.toast { animation: kd-rise .3s var(--ease-out) backwards; }
+.result-box { animation: kd-rise .28s var(--ease-out) backwards; }
+.result-box.passed { animation: kd-pop .4s var(--ease-out) backwards; }
 
 /* Buttons: one transition set, a press, a lifted primary with a soft glow. */
 button, .button-link, .palette-chip { transition: background-color .15s, border-color .15s, color .15s, box-shadow .2s, transform .12s var(--ease-out), filter .15s; }
@@ -3038,7 +3040,7 @@ button.primary:active:not(:disabled) { transform: translateY(1px) scale(.985); b
 .block-notice:empty { min-height: 0; padding: 0; }
 .mode-bar { gap: 8px 14px; }
 .mode-bar > small { flex: 1 1 220px; }
-.mode-offer { animation: kd-rise .3s var(--ease-out) both; padding: 6px 6px 6px 12px; }
+.mode-offer { animation: kd-rise .3s var(--ease-out) backwards; padding: 6px 6px 6px 12px; }
 .mode-switch button { transition: background-color .2s, color .2s, box-shadow .2s; }
 /* Blocks + Python: the Python mirror is a narrow column (or a short strip below), the field keeps the rest. */
 .workspace-page .block-area.mixed { grid-template-columns: minmax(0, 1fr) minmax(220px, 34%); }
@@ -3276,7 +3278,7 @@ button.primary:active:not(:disabled) { box-shadow: 0 1px 2px #17352e1f; }
 .case-result .icon.bad { color: var(--danger); }
 .case-result > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
 /* Success: a green check that pops once instead of a party emoji. */
-.celebrate { display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 8px; border-radius: 50%; background: var(--success); color: #fff; vertical-align: middle; animation: kd-pop .45s var(--ease-out) both .1s; }
+.celebrate { display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 8px; border-radius: 50%; background: var(--success); color: #fff; vertical-align: middle; animation: kd-pop .45s var(--ease-out) backwards .1s; }
 .celebrate .icon { width: 18px; height: 18px; stroke-width: 2.2; }
 .finish-mark { display: inline-grid; place-items: center; }
 .progress-mark .icon, .setup-checklist .check .icon { width: 14px; height: 14px; stroke-width: 2.2; }
@@ -3347,7 +3349,7 @@ button.primary:active:not(:disabled) { box-shadow: 0 1px 2px #17352e1f; }
 .workspace-page .block-keyboard > summary { padding: 6px 12px; font-size: 13px; min-height: 32px; display: flex; align-items: center; gap: 6px; }
 .workspace-page .block-keyboard[open] { max-height: min(60%, 320px); overflow: auto; padding: 0 10px 10px; }
 .workspace-page .block-keyboard[open] > summary { position: sticky; top: 0; z-index: 1; padding: 8px 2px; background: inherit; }
-.workspace-page .block-notice:not(:empty) { position: absolute; left: 10px; bottom: 58px; z-index: 5; max-width: calc(100% - 110px); padding: 6px 10px; border-radius: 8px; background: #17352ee6; color: #fff; font-size: 13px; animation: kd-rise .2s var(--ease-out) both; }
+.workspace-page .block-notice:not(:empty) { position: absolute; left: 10px; bottom: 58px; z-index: 5; max-width: calc(100% - 110px); padding: 6px 10px; border-radius: 8px; background: #17352ee6; color: #fff; font-size: 13px; animation: kd-rise .2s var(--ease-out) backwards; }
 
 /* Actions: run, check, then "next" at the end of the row — one primary button at a time. */
 .workspace-page .editor-bottom .actions .next-button { order: 2; }
@@ -3383,3 +3385,40 @@ button.primary:active:not(:disabled) { box-shadow: 0 1px 2px #17352e1f; }
 .workspace-page .material-panel, .workspace-page .coding-panel { min-width: 0; }
 .workspace-page .tabs { overflow-x: auto; scrollbar-width: none; }
 @media (max-width: 720px) { .workspace-page .tabs { padding: 0 8px; gap: 0; } .workspace-page .tabs button { padding: 0 8px; } }
+/* Ready courses: one menu next to "Create course" instead of a row of install buttons. */
+.ready-courses .more-menu-items { min-width: 300px; }
+.ready-courses .more-menu-items button { padding: 10px 12px; text-align: left; white-space: normal; }
+.ready-courses .more-menu-items button > span { display: grid; gap: 2px; }
+.ready-courses .more-menu-items small { color: var(--text-2); font-weight: 500; }
+/* A status badge placed directly in a panel shares the panel's inset. */
+.panel > .badge { margin: 0 24px 12px; }
+
+/* ==== Select: our own look on the native control ====
+   appearance: base-select keeps the real <select> (keyboard, screen readers, forms, autofill) and
+   lets the field, the chevron and the option list follow the design. Older browsers keep the
+   system list. */
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 9px 12px 9px 14px; border: 1px solid var(--line-strong, #cfd8cb); border-radius: 10px; background: var(--surface, #fff); color: var(--ink); font-weight: 600; cursor: pointer; transition: border-color .15s, box-shadow .15s, background-color .15s; }
+  select:hover { border-color: #9fb79f; }
+  select:open { border-color: var(--green); box-shadow: 0 0 0 3px #36765a26; }
+  select::picker-icon { content: ""; width: 16px; height: 16px; flex-shrink: 0; background: var(--text-2); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / 16px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / 16px no-repeat; transition: rotate .2s var(--ease-out); }
+  select:open::picker-icon { rotate: 180deg; }
+  ::picker(select) { margin-top: 6px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface, #fff); color: var(--ink); box-shadow: var(--shadow-2); max-height: min(360px, 60vh); opacity: 0; translate: 0 -4px; transition: opacity .15s, translate .15s var(--ease-out), overlay .15s allow-discrete, display .15s allow-discrete; }
+  ::picker(select):popover-open { opacity: 1; translate: 0 0; }
+  @starting-style { ::picker(select):popover-open { opacity: 0; translate: 0 -4px; } }
+  select option { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 8px 10px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+  select option:hover, select option:focus-visible { background: var(--green-light); outline: none; }
+  select option:checked { font-weight: 700; color: var(--green); }
+  select option::checkmark { content: ""; order: 1; margin-left: auto; width: 16px; height: 16px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7'/%3E%3C/svg%3E") center / 16px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7'/%3E%3C/svg%3E") center / 16px no-repeat; }
+  select:disabled { cursor: not-allowed; opacity: .6; }
+  @media (prefers-color-scheme: dark) {
+    :where(:root:not([data-theme="light"])) select { background: var(--raised); }
+    :where(:root:not([data-theme="light"])) select:hover { border-color: #56685d; }
+    :where(:root:not([data-theme="light"])) ::picker(select) { background: var(--surface); border-color: var(--line-strong); }
+    :where(:root:not([data-theme="light"])) select option:checked { color: var(--accent); }
+  }
+}
+/* Filter rows: labels on one line, fields of one height. */
+.actions.filters { align-items: flex-end; }
+.actions.filters :is(input, select) { min-height: 44px; height: 44px; box-sizing: border-box; }

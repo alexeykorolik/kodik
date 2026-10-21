@@ -7,6 +7,70 @@ type Section = { id: string; title: string; intro: string; items: [string, strin
 
 export const helpSections: Section[] = [
   {
+    id: 'output', title: 'Вывод, переменные и вычисления', intro: 'print показывает значения на экране. Переменная — имя для значения: число, текст или список. Текст записывается в кавычках.',
+    items: [
+      ['print("Привет")', 'напечатать текст; каждый print — новая строка'],
+      ['print("Итого:", 5)', 'несколько значений через запятую печатаются через пробел'],
+      ['имя = "Мира"', 'сохранить значение в переменной; имя можно писать и по-русски'],
+      ['a + b, a - b, a * b, a / b', 'арифметика; деление / всегда даёт дробное число: 7 / 2 == 3.5'],
+      ['a // b, a % b, a ** b', 'целое деление, остаток от деления и степень: 7 // 2 == 3, 7 % 2 == 1, 2 ** 3 == 8'],
+      ['"Клуб " + "Кодик",  "ха" * 3', 'строки соединяются плюсом и повторяются умножением'],
+      ['str(5), int("12"), float("2.5")', 'превратить число в текст и текст в число'],
+    ],
+    examples: [{ title: 'Покупка', code: 'price = 7\ncount = 3\ntotal = price * count\nprint("Цена:", price)\nprint("Итого: " + str(total))\nprint(total // 2, total % 2)' }],
+  },
+  {
+    id: 'input', title: 'Ввод данных', intro: 'input() получает одну строку от пользователя — всегда текст. При запуске строки берутся из поля «Ввод для пробного запуска», при проверке — из тестов задания.',
+    items: [
+      ['name = input()', 'получить строку'],
+      ['n = int(input())', 'получить целое число: строку сразу превращают в число'],
+      ['a = int(input())\nb = int(input())', 'каждый новый input() читает следующую строку ввода'],
+    ],
+    examples: [{ title: 'Удвой число', code: 'n = int(input())\nprint("Ты ввёл", n)\nprint("Удвоенное:", n * 2)' }],
+  },
+  {
+    id: 'conditions', title: 'Условия: if, elif, else', intro: 'if выполняет команды, только когда условие истинно. Команды внутри условия пишутся с отступом в четыре пробела.',
+    items: [
+      ['a == b, a != b', 'равно и не равно (один знак = — это присваивание)'],
+      ['a < b, a > b, a <= b, a >= b', 'меньше, больше, не больше, не меньше'],
+      ['and, or, not', 'и, или, не: if age >= 7 and age <= 12:'],
+      ['if условие:\n    ...\nelif другое:\n    ...\nelse:\n    ...', 'проверяются по порядку, выполняется первая подходящая ветка; else — если ни одна не подошла'],
+    ],
+    examples: [{ title: 'Какая погода', code: 't = int(input())\nif t < 0:\n    print("Мороз")\nelif t < 15:\n    print("Прохладно")\nelse:\n    print("Тепло")\nprint("Чётная температура:", t % 2 == 0)' }],
+  },
+  {
+    id: 'loops', title: 'Циклы: for и while', intro: 'Цикл повторяет команды с отступом. for перебирает числа range или элементы списка, while повторяет, пока условие истинно.',
+    items: [
+      ['for i in range(3):', 'три повторения: i = 0, 1, 2'],
+      ['range(1, 6), range(10, 0, -2)', 'от 1 до 5; от 10 вниз с шагом 2 (конец не включается)'],
+      ['for name in names:', 'перебрать элементы списка'],
+      ['while n > 0:\n    n -= 1', 'повторять, пока условие истинно; не забудь менять переменную, иначе цикл не закончится'],
+      ['s += i', 'накопление: прибавить к переменной (так же -=, *=)'],
+    ],
+    examples: [{ title: 'Сумма и обратный отсчёт', code: 's = 0\nfor i in range(1, 5):\n    s += i\nprint("Сумма 1..4:", s)\n\nn = 3\nwhile n > 0:\n    print(n)\n    n -= 1\nprint("Старт!")' }],
+  },
+  {
+    id: 'lists', title: 'Списки', intro: 'Список хранит несколько значений по порядку. Элементы нумеруются с нуля.',
+    items: [
+      ['marks = [5, 4, 3]', 'создать список'],
+      ['marks[0], marks[-1]', 'первый и последний элемент'],
+      ['marks[1] = 5', 'заменить элемент'],
+      ['marks.append(4), len(marks)', 'добавить в конец; узнать длину'],
+      ['sum(marks), max(marks), min(marks)', 'сумма, наибольший и наименьший'],
+    ],
+    examples: [{ title: 'Оценки', code: 'marks = [5, 4, 3]\nmarks.append(5)\nmarks[2] = 4\nprint(marks, len(marks))\nprint("Лучшая:", max(marks))\nfor m in marks:\n    if m == 5:\n        print("Пятёрка!")' }],
+  },
+  {
+    id: 'functions', title: 'Свои функции', intro: 'def даёт имя набору команд. Функция выполняется, когда её вызывают. return возвращает результат в место вызова.',
+    items: [
+      ['def hello():\n    print("Привет")', 'описать функцию без параметров'],
+      ['hello()', 'вызвать функцию'],
+      ['def square(x):\n    return x * x', 'параметр получает значение при вызове; return отдаёт результат'],
+      ['print(square(4))', 'результат функции можно напечатать или сохранить в переменную'],
+    ],
+    examples: [{ title: 'Функция с результатом', code: 'def square(x):\n    return x * x\n\ndef greet(name):\n    print("Привет, " + name)\n\ngreet("Мира")\nprint(square(4) + square(3))' }],
+  },
+  {
     id: 'imports', title: 'Как подключать библиотеки', intro: 'Библиотеки подключаются обычным импортом Python в начале программы. Каждый запуск начинается заново: черепаха, поле Робота, графики и случайные числа не переходят из прошлого запуска.',
     items: [
       ['import math', 'весь модуль; функции вызываются через точку: math.sqrt(2)'],
@@ -147,7 +211,7 @@ const general = [
 
 export function PythonHelp() {
   return <article className="python-help">
-    <header className="page-heading"><div><div className="eyebrow">СПРАВКА</div><h1>Python в Kodik: библиотеки и примеры</h1><p>Примеры запускаются прямо здесь тем же интерпретатором, который проверяет задания.</p></div></header>
+    <header className="page-heading"><div><div className="eyebrow">СПРАВКА</div><h1>Python в Kodik: основы и библиотеки</h1><p>От print и переменных до черепахи и графиков. Примеры запускаются прямо здесь тем же интерпретатором, который проверяет задания.</p></div></header>
     <nav className="panel help-contents" aria-label="Разделы справки"><ol>{helpSections.map(s => <li key={s.id}><a href={`#python-help/${s.id}`} onClick={e => { e.preventDefault(); document.getElementById(`help-${s.id}`)?.scrollIntoView({ block: 'start' }) }}>{s.title}</a></li>)}<li><a href="#python-help/limits" onClick={e => { e.preventDefault(); document.getElementById('help-limits')?.scrollIntoView({ block: 'start' }) }}>Общие ограничения</a></li><li><a href="#python-help/checks" onClick={e => { e.preventDefault(); document.getElementById('help-checks')?.scrollIntoView({ block: 'start' }) }}>Как проверяются задания</a></li></ol></nav>
     {helpSections.map(s => <section className="panel help-section" id={`help-${s.id}`} key={s.id} aria-labelledby={`help-${s.id}-title`}>
       <h2 id={`help-${s.id}-title`}>{s.title}</h2>

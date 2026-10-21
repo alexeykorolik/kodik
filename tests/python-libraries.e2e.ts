@@ -92,7 +92,7 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
   // ---- help: every example runs in the page ----
   await page.getByRole("link", { name: "Справка Python" }).click();
-  await expect(page.getByRole("heading", { name: "Python в Kodik: библиотеки и примеры" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Python в Kodik: основы и библиотеки" })).toBeVisible();
   const buttons = page.getByRole("button", { name: "Запустить пример" });
   const count = await buttons.count();
   expect(count).toBeGreaterThanOrEqual(14);
