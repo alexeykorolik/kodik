@@ -250,7 +250,7 @@ button.dark {
   letter-spacing: 0.1px;
   border-radius: 6px;
   background: #f0f2ed;
-  color: #6a776e;
+  color: #56645b;
   padding: 5px 9px;
   white-space: nowrap;
 }
@@ -261,7 +261,7 @@ button.dark {
 .badge.failed,
 .badge.runtime_error {
   background: #fbede4;
-  color: #9a6a43;
+  color: #8a5530;
 }
 .badge.pending_review {
   background: #f7f1db;
@@ -590,7 +590,7 @@ button.dark {
 }
 .welcome-banner .badge {
   background: #dce8cc;
-  color: #627a55;
+  color: #4f6843;
   font-size: 12px;
   letter-spacing: 1px;
 }
@@ -707,7 +707,7 @@ button.dark {
   padding: 18px 21px;
   display: flex;
   align-items: flex-start;
-  color: #7e9572;
+  color: #5f7a52;
   overflow: hidden;
 }
 .course-art > svg {
@@ -792,7 +792,7 @@ button.dark {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #6a7969;
+  color: #56655a;
   margin: 16px 0 7px;
 }
 progress {
@@ -2790,26 +2790,7 @@ tr.inactive td { color: #5f6862; }
   .member { flex-wrap: wrap; }
   .notice { flex-wrap: wrap; }
 }
-/* ---- Dark theme: the main surfaces and text follow the system setting ---- */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --ink: #e6ece7; --muted: #a9b6ad; --text-2: #b4c0b8; --line: #34413a; --paper: #1d2521; --surface: #1d2521; --surface-2: #151b18;
-    color: var(--ink); background: #151b18;
-  }
-  :root:not([data-theme="light"]) body { background: #151b18; color: var(--ink); }
-  :root:not([data-theme="light"]) :is(.sidebar, .topbar, .panel, .module, .course-card, .stats > div, .dialog, .material-panel, .coding-panel, .group-card, .page-tabs, .empty, .lesson-section, .help-popover, .question-choice, .attempt-card, .auth, .auth-form, .program-lesson, .more-menu-items, .skip-link) { background: #1d2521; color: var(--ink); border-color: #34413a; }
-  :root:not([data-theme="light"]) :is(.welcome-banner, .auth-story, .lesson-title, .editor-toolbar, .editor-bottom, .console, .material-footer, .school-switch, th, .learner-more td, .step-matrix th:first-child, .step-matrix td:first-child) { background: #232d28; color: var(--ink); border-color: #34413a; }
-  :root:not([data-theme="light"]) :is(input, textarea, select, button:not(.primary):not(.danger):not(.dark)) { background: #232d28; color: var(--ink); border-color: #46554c; }
-  :root:not([data-theme="light"]) :is(h1, h2, h3, b, strong, td, label, .text-button, .welcome-banner p, .lesson-prose, .task-material p) { color: var(--ink); }
-  :root:not([data-theme="light"]) :is(small, .muted, .eyebrow, .overline, th, .topbar, .topbar-meta, .page-heading p, .stats span, .stats small, .sidebar nav a, .nav-caption, .field-hint, .course-card p, .group-facts dt) { color: var(--text-2); }
-  :root:not([data-theme="light"]) .sidebar nav a.active { background: #2b3a31; color: #d5ecd0; }
-  :root:not([data-theme="light"]) :is(a, .link) { color: #9ed3a6; }
-  :root:not([data-theme="light"]) td { border-color: #2c3731; }
-  :root:not([data-theme="light"]) :is(.minimal-code-editor, .editor-line-numbers) { background: #1a211d; }
-  :root:not([data-theme="light"]) .editor-highlight > pre { color: #dfe8dc; }
-  :root:not([data-theme="light"]) .minimal-code-editor textarea { caret-color: #9ed3a6; }
-}
+/* ---- Dark theme: see "Design pass 21.10" at the end of this file ---- */
 /* Panels that already have their own padding keep it (no double indent). */
 .panel:is(.lesson-material, .lesson-outline, .lesson-basics, .lesson-step-editor, .lesson-journal, .teacher-notes, .program-lesson, .group-card, .help-waiting, .help-history, .task-template-picker, .conflict-panel, .builder-panel, .starter-offer) > * { margin-left: 0; margin-right: 0; }
 .panel.lesson-journal > :last-child, .panel.group-card > :last-child { margin-bottom: 0; }
@@ -2841,10 +2822,10 @@ tr.inactive td { color: #5f6862; }
 .palette-block:hover { filter: brightness(1.08); background: #2f7d6d; }
 .palette-block.cat-1 { background: #a55b80; } .palette-block.cat-1:hover { background: #a55b80; }
 .palette-block.cat-2 { background: #5b67a5; } .palette-block.cat-2:hover { background: #5b67a5; }
-.palette-block.cat-3 { background: #a5745b; } .palette-block.cat-3:hover { background: #a5745b; }
+.palette-block.cat-3 { background: #96654c; } .palette-block.cat-3:hover { background: #96654c; }
 .palette-block.cat-4 { background: #5b80a5; } .palette-block.cat-4:hover { background: #5b80a5; }
 .palette-block.cat-5 { background: #7a5ba5; } .palette-block.cat-5:hover { background: #7a5ba5; }
-.palette-block.cat-6 { background: #8a7a1f; } .palette-block.cat-6:hover { background: #8a7a1f; }
+.palette-block.cat-6 { background: #7a6b14; } .palette-block.cat-6:hover { background: #7a6b14; }
 .block-tools { display: flex; gap: 4px; }
 .block-tools .tool { min-width: 40px; min-height: 38px; padding: 6px 10px; font-size: 18px; }
 .block-tools .tool.wide { font-size: 14px; }
@@ -2922,11 +2903,342 @@ td .link, td .text-button { font-size: 14px; text-align: left; white-space: norm
 }
 @media (prefers-color-scheme: dark) {
   /* Test cards of the task builder follow the dark theme like the panels around them. */
-  :root:not([data-theme="light"]) .test-card { background: #232d28; border-color: #34413a; }
+  :where(:root:not([data-theme="light"])) .test-card { background: var(--raised); border-color: var(--line); }
 }
 .robot-body .robot-eye { fill: #fff; stroke: none; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) :is(.public-examples > div, .practice-tip) { background: #232d28; border-color: #34413a; }
-  :root:not([data-theme="light"]) .public-examples :is(pre, .screen) { background: #151b18; color: var(--ink); }
+  :where(:root:not([data-theme="light"])) .public-examples > div, :where(:root:not([data-theme="light"])) .practice-tip { background: var(--raised); border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .public-examples .screen { background: var(--sunken); color: var(--ink); }
   :root:not([data-theme="light"]) .public-examples .scene-checks-note { color: var(--ink); }
+}
+
+/* ==== Design pass 21.10: motion, alignment, a token-based dark theme, room for Blockly ====
+   Motion is short (≤ .45s), only on mount/hover/press, and switched off by prefers-reduced-motion
+   (rule above). Dark rules use :where(...) so each one has the specificity of the light rule it
+   recolours: component rules (tabs, links, Blockly palette) keep their own look. */
+:root {
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --shadow-1: 0 1px 2px #17352e0d, 0 4px 14px #17352e0f;
+  --shadow-2: 0 2px 6px #17352e0f, 0 14px 32px #17352e1f;
+  --primary-glow: #36765a73;
+}
+@keyframes kd-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes kd-pop { 0% { opacity: 0; transform: scale(.96); } 60% { opacity: 1; transform: scale(1.012); } 100% { transform: none; } }
+@keyframes kd-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kd-float { 0%, 100% { transform: rotate(-7deg) translateY(0); } 50% { transform: rotate(-5deg) translateY(-7px); } }
+@keyframes kd-drift { 0%, 100% { transform: rotate(-2deg) translateY(0); } 50% { transform: rotate(-1deg) translateY(-6px); } }
+@keyframes kd-pulse { 0% { box-shadow: 0 0 0 0 #b5452c80; } 70% { box-shadow: 0 0 0 7px #b5452c00; } 100% { box-shadow: 0 0 0 0 #b5452c00; } }
+@keyframes kd-shine { from { background-position: 0% 50%; } to { background-position: 200% 50%; } }
+
+/* Pages arrive with a short staggered rise; the learner workspace only fades (Blockly measures itself). */
+.main-content:not(.workspace-page) > * { animation: kd-rise .42s var(--ease-out) both; }
+.main-content:not(.workspace-page) > :nth-child(2) { animation-delay: .04s; }
+.main-content:not(.workspace-page) > :nth-child(3) { animation-delay: .08s; }
+.main-content:not(.workspace-page) > :nth-child(4) { animation-delay: .12s; }
+.main-content:not(.workspace-page) > :nth-child(n+5) { animation-delay: .16s; }
+.workspace-page { animation: kd-fade .3s ease-out both; }
+.overlay { animation: kd-fade .18s ease-out both; }
+.dialog, .help-popover, .more-menu-items { animation: kd-pop .26s var(--ease-out) both; }
+.toast { animation: kd-rise .3s var(--ease-out) both; }
+.result-box { animation: kd-rise .28s var(--ease-out) both; }
+.result-box.passed { animation: kd-pop .4s var(--ease-out) both; }
+
+/* Buttons: one transition set, a press, a lifted primary with a soft glow. */
+button, .button-link, .palette-chip { transition: background-color .15s, border-color .15s, color .15s, box-shadow .2s, transform .12s var(--ease-out), filter .15s; }
+button:active:not(:disabled), .button-link:active { transform: translateY(1px) scale(.985); }
+button.primary, .button-link.primary {
+  background-image: linear-gradient(180deg, #ffffff1f, #ffffff00 60%);
+  box-shadow: inset 0 1px 0 #ffffff26, 0 6px 16px -8px var(--primary-glow);
+}
+button.primary:hover:not(:disabled), .button-link.primary:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 #ffffff26, 0 10px 22px -8px var(--primary-glow); }
+button.primary:active:not(:disabled) { transform: translateY(1px) scale(.985); box-shadow: inset 0 1px 0 #ffffff1a, 0 3px 8px -6px var(--primary-glow); }
+
+/* Cards and panels: hover lifts what is clickable, stays calm for plain panels. */
+.course-card, .group-card, .stats > div, .program-lesson, .help-card, .rec-card, .attempt-card { transition: transform .2s var(--ease-out), box-shadow .2s, border-color .2s; }
+.course-card:hover, .group-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); }
+.stats > div:hover, .program-lesson:hover, .help-card:hover, .rec-card:hover { box-shadow: var(--shadow-1); }
+.panel { box-shadow: 0 1px 2px #17352e08; }
+.activity, .attention-row { transition: background-color .15s, padding-left .2s var(--ease-out); }
+.activity:hover, .attention-row:hover { padding-left: 28px; }
+.activity:hover { background: #f5f8f2; }
+.avatar { background: linear-gradient(135deg, #e3ecd6, #d3e2c9); color: #3f5a37; }
+
+/* Navigation: an accent bar slides in on the active item, icons nudge on hover, a live help count pulses. */
+.sidebar nav a { transition: background-color .15s, color .15s; white-space: nowrap; gap: 10px; padding-left: 10px; padding-right: 10px; }
+.sidebar nav a .nav-label { overflow: hidden; text-overflow: ellipsis; }
+.sidebar nav a::before { content: ""; position: absolute; left: -8px; top: 22%; bottom: 22%; width: 4px; border-radius: 4px; background: var(--green); transform: scaleY(0); transition: transform .25s var(--ease-out); }
+.sidebar nav a.active::before { transform: scaleY(1); }
+.sidebar nav a svg { flex-shrink: 0; transition: transform .2s var(--ease-out); }
+/* The 78px rail (1024–1150px, or collapsed by the learner) shows icons only; labels stay as tooltips. */
+@media (min-width: 1024px) and (max-width: 1150px) {
+  .sidebar nav .nav-label, .sidebar .nav-caption { display: none; }
+  .sidebar nav a { justify-content: center; padding: 12px; }
+}
+@media (min-width: 1024px) { .sidebar-collapsed .sidebar nav a { justify-content: center; padding: 12px; } .sidebar-collapsed .sidebar .nav-caption { display: none; } }
+.sidebar nav a:hover svg { transform: translateX(2px); }
+.nav-count.hot { animation: kd-pulse 2.2s ease-out infinite; }
+.brand-mark { transition: transform .3s var(--ease-out); }
+.brand:hover .brand-mark { transform: rotate(-8deg) scale(1.06); }
+@media (max-height: 820px) {
+  .sidebar nav a { padding-top: 8px; padding-bottom: 8px; }
+  .nav-caption { margin: 10px 0 4px; }
+  .sidebar > .brand { margin-bottom: 14px; }
+  .school-switch { margin-bottom: 12px; padding: 9px 10px; }
+  .profile { padding: 12px 0; }
+}
+
+/* Welcome banner and login: a soft glow and slowly floating art. */
+.welcome-banner { position: relative; background: radial-gradient(90% 140% at 100% 0%, #d9e7c9 0%, #d9e7c900 60%), #eaf0df; }
+.banner-art { animation: kd-float 7s ease-in-out infinite; }
+.code-art { animation: kd-drift 8s ease-in-out infinite; }
+.auth-copy h1 em { background: linear-gradient(90deg, #3f6f3c, #36765a, #6b8a2e, #3f6f3c); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: kd-shine 9s linear infinite; }
+.auth-links > button, .auth-links > .link { width: 100%; }
+
+/* Alignment: one inset per panel, matching overview columns, headings that leave room for text. */
+.panel > .inset { margin-left: 0; margin-right: 0; }
+.overview-bottom { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+@media (max-width: 1150px) { .overview-bottom { grid-template-columns: minmax(0, 1fr); } }
+.stats { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.stats.two { max-width: none; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.page-heading { flex-wrap: wrap; }
+.page-heading > :first-child { flex: 1 1 340px; min-width: 0; }
+.page-heading > .actions { flex-wrap: wrap; justify-content: flex-end; }
+.panel-heading { border-bottom-color: var(--line); }
+.help-contents { padding: 18px 24px; }
+.help-contents ol { padding-left: 20px; }
+.help-contents li { padding: 2px 0; }
+.help-table th:first-child, .help-table td:first-child { padding-left: 24px; }
+.help-table th:last-child, .help-table td:last-child { padding-right: 24px; }
+.help-table th, .help-table td { padding-top: 8px; padding-bottom: 8px; }
+.help-example { padding: 12px 24px 0; }
+
+/* Learner workspace: back link, title, help and status in one row. */
+.workspace-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; flex-shrink: 0; margin: 0 0 12px; min-height: 44px; }
+.workspace-head > .workspace-heading { display: contents; }
+.workspace-head > .workspace-heading > .link:first-child { order: -2; margin: 0; padding: 6px 0; }
+.workspace-head > .workspace-title { order: -1; flex: 1 1 320px; min-width: 0; margin: 0; padding-left: 14px; border-left: 1px solid var(--line); }
+.workspace-head > .workspace-title > * { flex-shrink: 0; }
+.workspace-head > .workspace-title > h1 { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Blockly gets the space: the field fills whatever the panel leaves, the palette packs into fewer rows. */
+.workspace-page .block-area { grid-template-rows: minmax(0, 1fr); isolation: isolate; }
+.workspace-page .block-editor { min-height: 0; height: 100%; }
+.workspace-page .block-editor .blockly-wrap { flex: 1 1 0; min-height: 280px; }
+.workspace-page .block-editor .blockly-wrap .blockly-host { position: absolute; inset: 0; height: auto; min-height: 0; }
+.block-toolbar { padding: 8px 10px; }
+.block-palette { flex: 1 1 auto; gap: 6px; }
+/* Undo, redo and "show my program" float over the top right corner of the field, clear of the scrollbar. */
+.blockly-wrap > .block-tools { position: absolute; top: 10px; right: 22px; z-index: 4; gap: 4px; padding: 4px; border-radius: 12px; background: #ffffffd9; border: 1px solid var(--line); box-shadow: var(--shadow-1); backdrop-filter: blur(6px); }
+.blockly-wrap > .block-tools .tool { border-color: transparent; background: transparent; }
+.blockly-wrap > .block-tools .tool:hover { background: #eef4ef; }
+.palette-block { min-height: 36px; padding: 6px 12px; font-size: 13px; border-radius: 10px; box-shadow: inset 0 -3px 0 #00000026; transition: transform .12s var(--ease-out), filter .15s, box-shadow .15s; }
+.palette-block:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.palette-block:active { transform: translateY(1px); box-shadow: inset 0 -1px 0 #00000026; }
+.block-tools .tool { min-height: 36px; padding: 4px 10px; }
+.block-notice:empty { min-height: 0; padding: 0; }
+.mode-bar { gap: 8px 14px; }
+.mode-bar > small { flex: 1 1 220px; }
+.mode-offer { animation: kd-rise .3s var(--ease-out) both; padding: 6px 6px 6px 12px; }
+.mode-switch button { transition: background-color .2s, color .2s, box-shadow .2s; }
+/* Blocks + Python: the Python mirror is a narrow column (or a short strip below), the field keeps the rest. */
+.workspace-page .block-area.mixed { grid-template-columns: minmax(0, 1fr) minmax(220px, 34%); }
+@media (max-width: 1279px) {
+  .workspace-page .block-area.mixed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(130px, 28%); }
+}
+/* In a narrow field the floating tools shrink to icons; the button text stays its accessible name. */
+.blockly-wrap { container-type: inline-size; }
+@container (max-width: 560px) {
+  .blockly-wrap > .block-tools { top: 8px; right: 18px; }
+  .blockly-wrap > .block-tools .tool.wide { font-size: 0; gap: 0; min-width: 40px; }
+  .blockly-wrap > .block-tools .tool.wide::before { content: "⤢"; font-size: 18px; }
+}
+@media (max-height: 860px) {
+  /* Short laptop screens scroll the page; the block field then takes most of the screen height. */
+  /* overflow: clip keeps the rounded corners without making the panel a scroll box, so the run/check bar stays stuck to the screen bottom. */
+  .workspace-page .coding-panel { overflow: clip; }
+  .workspace-page .coding-panel > .block-area { height: max(460px, calc(100dvh - 190px)); }
+  .workspace-page .coding-panel > fieldset { height: max(340px, calc(100dvh - 330px)); }
+}
+@media (max-width: 720px) {
+  .workspace-head > .workspace-title { flex-basis: 100%; padding-left: 0; border-left: 0; }
+  .workspace-head > .workspace-title > h1 { white-space: normal; }
+  .workspace-page .block-editor .blockly-wrap { flex: none; height: 60vh; min-height: 340px; }
+  .workspace-page .coding-panel > .block-area { height: auto; }
+}
+
+/* Light hairlines of the light theme become the dark line colour (generated list, one rule per light rule). */
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) button { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) input { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) textarea { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) select { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .brand-suffix { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .welcome-banner { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .banner-art code { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .course-art > span { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .art-1 > span { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .card-bottom { border-top-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .panel-heading { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .activity { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .empty { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .task-row { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .member { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) td { border-top-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .notice { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .recovery-notice { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .auth-story:after { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .code-art { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .art-tag { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .learning-goal { border-left-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .result-box { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .result-box.failed { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .result-box.runtime_error { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .result-box.checker_error { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .case-result { border-top-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .code-accessory { border-top-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .code-accessory button { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .sidebar-toggle { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .block-area { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .block-keyboard { border-top-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .python-mirror { border-left-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .mirror-code { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .author-blocks { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .compact-palette { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .help-card { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .rec-card { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .result-box.passed { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .workspace-page .result-box.failed { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .workspace-page .result-box.runtime_error { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .workspace-page .result-box.checker_error { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .steps-link { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .from-blocks { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .attempt-card.passed { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .help-trigger { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .help-dot { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .help-popover { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .question-choice { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .answer-feedback.right { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .answer-feedback.wrong { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .lesson-finished { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .step-matrix .cell.ok { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .step-matrix .cell.bad { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .more-menu > summary { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .more-menu-items { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .current-card { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .button-link { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .toast { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .attention-row { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .progress-list li { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .starter-offer { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .credentials { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .bulk-bar { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .palette-chip { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .block-toolbar { border-bottom-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .blockly-empty { border-color: var(--line); }
+}
+@media (prefers-color-scheme: dark) { @media (max-width: 1279px) {
+  :where(:root:not([data-theme="light"])) .python-mirror { border-top-color: var(--line); }
+} }
+/* ---- Dark theme ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121816; --sunken: #0e1311; --surface: #19211d; --raised: #202a25; --hover: #27322c;
+    --ink: #e7eee9; --muted: #a3b1a8; --text-2: #b0bdb5; --line: #2d3832; --line-strong: #3d4b43;
+    --paper: var(--surface); --surface-2: var(--bg); --green: #3f8a66; --green-light: #1f3229; --accent: #8fd4a5;
+    --success: #9fdcb2; --success-soft: #6fcf971f; --warning: #f2cd7e; --warning-soft: #f0ba541f;
+    --danger: #f3a896; --danger-soft: #f080681f; --info: #b2c8f5; --info-soft: #78a0f024;
+    --mode-blocks: #7fd6cb; --mode-blocks-soft: #2fb3a224; --attention: #f2cd7e; --attention-soft: #f0ba541f;
+    --focus: #7fb2ec; --primary-glow: #000000a6;
+    --shadow-1: 0 1px 2px #00000040, 0 4px 14px #0000004d; --shadow-2: 0 2px 6px #00000052, 0 16px 34px #00000073;
+    color: var(--ink); background: var(--bg);
+  }
+  :where(:root:not([data-theme="light"])) body { background: var(--bg); color: var(--ink); }
+  :where(:root:not([data-theme="light"])) h1, :where(:root:not([data-theme="light"])) h2, :where(:root:not([data-theme="light"])) h3, :where(:root:not([data-theme="light"])) h4, :where(:root:not([data-theme="light"])) b, :where(:root:not([data-theme="light"])) strong, :where(:root:not([data-theme="light"])) td, :where(:root:not([data-theme="light"])) label, :where(:root:not([data-theme="light"])) legend, :where(:root:not([data-theme="light"])) summary, :where(:root:not([data-theme="light"])) dd, :where(:root:not([data-theme="light"])) .lesson-prose, :where(:root:not([data-theme="light"])) .task-material p, :where(:root:not([data-theme="light"])) .task-copy { color: var(--ink); }
+  :where(:root:not([data-theme="light"])) small, :where(:root:not([data-theme="light"])) .muted, :where(:root:not([data-theme="light"])) .eyebrow, :where(:root:not([data-theme="light"])) .overline, :where(:root:not([data-theme="light"])) th, :where(:root:not([data-theme="light"])) .topbar, :where(:root:not([data-theme="light"])) .topbar-meta, :where(:root:not([data-theme="light"])) .page-heading p, :where(:root:not([data-theme="light"])) .stats span, :where(:root:not([data-theme="light"])) .stats small, :where(:root:not([data-theme="light"])) .nav-caption, :where(:root:not([data-theme="light"])) .field-hint, :where(:root:not([data-theme="light"])) .course-card p, :where(:root:not([data-theme="light"])) .group-facts dt, :where(:root:not([data-theme="light"])) .group-next, :where(:root:not([data-theme="light"])) .help-meta, :where(:root:not([data-theme="light"])) dt, :where(:root:not([data-theme="light"])) .activity small, :where(:root:not([data-theme="light"])) .empty p, :where(:root:not([data-theme="light"])) .welcome-banner p, :where(:root:not([data-theme="light"])) .auth-copy > p, :where(:root:not([data-theme="light"])) .auth-story > small, :where(:root:not([data-theme="light"])) .console-title, :where(:root:not([data-theme="light"])) .console-title > span, :where(:root:not([data-theme="light"])) .console-empty, :where(:root:not([data-theme="light"])) .editor-bottom small, :where(:root:not([data-theme="light"])) .block-notice, :where(:root:not([data-theme="light"])) .playback-state, :where(:root:not([data-theme="light"])) .help-message, :where(:root:not([data-theme="light"])) .rec-basis, :where(:root:not([data-theme="light"])) .rec-reason, :where(:root:not([data-theme="light"])) .rec-transition { color: var(--text-2); }
+  :where(:root:not([data-theme="light"])) a, :where(:root:not([data-theme="light"])) .link, :where(:root:not([data-theme="light"])) .text-button { color: var(--accent); }
+  :where(:root:not([data-theme="light"])) .brand, :where(:root:not([data-theme="light"])) .brand-suffix { color: var(--ink); border-color: var(--line-strong); }
+
+  /* Surfaces: page < panels < raised strips; inputs and plain buttons sit on raised. */
+  :where(:root:not([data-theme="light"])) .sidebar, :where(:root:not([data-theme="light"])) .topbar { background: #151c19; border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .panel, :where(:root:not([data-theme="light"])) .module, :where(:root:not([data-theme="light"])) .course-card, :where(:root:not([data-theme="light"])) .stats > div, :where(:root:not([data-theme="light"])) .dialog, :where(:root:not([data-theme="light"])) .material-panel, :where(:root:not([data-theme="light"])) .coding-panel, :where(:root:not([data-theme="light"])) .group-card, :where(:root:not([data-theme="light"])) .page-tabs, :where(:root:not([data-theme="light"])) .lesson-section, :where(:root:not([data-theme="light"])) .help-popover, :where(:root:not([data-theme="light"])) .question-choice, :where(:root:not([data-theme="light"])) .attempt-card, :where(:root:not([data-theme="light"])) .auth, :where(:root:not([data-theme="light"])) .auth-form, :where(:root:not([data-theme="light"])) .program-lesson, :where(:root:not([data-theme="light"])) .more-menu-items, :where(:root:not([data-theme="light"])) .skip-link, :where(:root:not([data-theme="light"])) .help-card, :where(:root:not([data-theme="light"])) .rec-card, :where(:root:not([data-theme="light"])) .account-switched section, :where(:root:not([data-theme="light"])) .step-matrix th:first-child, :where(:root:not([data-theme="light"])) .step-matrix td:first-child, :where(:root:not([data-theme="light"])) .workspace-page .editor-bottom, :where(:root:not([data-theme="light"])) .minimal-code-editor, :where(:root:not([data-theme="light"])) .builder-group { background: var(--surface); color: var(--ink); border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .school-switch, :where(:root:not([data-theme="light"])) th, :where(:root:not([data-theme="light"])) .step-matrix thead th:first-child, :where(:root:not([data-theme="light"])) .editor-toolbar, :where(:root:not([data-theme="light"])) .console, :where(:root:not([data-theme="light"])) .material-footer, :where(:root:not([data-theme="light"])) .empty, :where(:root:not([data-theme="light"])) .lesson-title, :where(:root:not([data-theme="light"])) .info-box, :where(:root:not([data-theme="light"])) .test-card, :where(:root:not([data-theme="light"])) .learning-goal, :where(:root:not([data-theme="light"])) .practice-tip, :where(:root:not([data-theme="light"])) .result-box, :where(:root:not([data-theme="light"])) .editor-line-numbers, :where(:root:not([data-theme="light"])) .code-accessory, :where(:root:not([data-theme="light"])) .public-examples > div, :where(:root:not([data-theme="light"])) .python-mirror, :where(:root:not([data-theme="light"])) .block-keyboard, :where(:root:not([data-theme="light"])) .check-summary, :where(:root:not([data-theme="light"])) .state-chip, :where(:root:not([data-theme="light"])) .state-chip.closed, :where(:root:not([data-theme="light"])) .state-chip.scheduled, :where(:root:not([data-theme="light"])) .license-strip, :where(:root:not([data-theme="light"])) .lesson-callout, :where(:root:not([data-theme="light"])) .learner-more td, :where(:root:not([data-theme="light"])) .feedback-note, :where(:root:not([data-theme="light"])) .badge, :where(:root:not([data-theme="light"])) input[readonly], :where(:root:not([data-theme="light"])) .task-symbol, :where(:root:not([data-theme="light"])) .round-icon, :where(:root:not([data-theme="light"])) .empty-icon, :where(:root:not([data-theme="light"])) .solution-code, :where(:root:not([data-theme="light"])) .code-art, :where(:root:not([data-theme="light"])) .course-art, :where(:root:not([data-theme="light"])) .art-1, :where(:root:not([data-theme="light"])) .art-2, :where(:root:not([data-theme="light"])) .banner-art code, :where(:root:not([data-theme="light"])) .lesson-code, :where(:root:not([data-theme="light"])) .program-preview, :where(:root:not([data-theme="light"])) .verification-panel, :where(:root:not([data-theme="light"])) .bulk-bar, :where(:root:not([data-theme="light"])) .criteria, :where(:root:not([data-theme="light"])) .preview-key, :where(:root:not([data-theme="light"])) .setup-checklist .check, :where(:root:not([data-theme="light"])) .builder-steps button > span, :where(:root:not([data-theme="light"])) .mode-switch, :where(:root:not([data-theme="light"])) .compact-palette, :where(:root:not([data-theme="light"])) .block-toolbar, :where(:root:not([data-theme="light"])) .welcome-banner, :where(:root:not([data-theme="light"])) .auth-story, :where(:root:not([data-theme="light"])) .attempt-card.passed, :where(:root:not([data-theme="light"])) .program-lesson.passed, :where(:root:not([data-theme="light"])) .step-matrix .cell.ok, :where(:root:not([data-theme="light"])) .lesson-finished, :where(:root:not([data-theme="light"])) .question-choice.chosen, :where(:root:not([data-theme="light"])) .setup-checklist li.next { background: var(--raised); color: inherit; border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .conflict-panel pre, :where(:root:not([data-theme="light"])) .mirror-code, :where(:root:not([data-theme="light"])) .public-examples .screen, :where(:root:not([data-theme="light"])) .stdin textarea, :where(:root:not([data-theme="light"])) .minimal-code-editor .editor-line-numbers { background: var(--sunken); color: var(--ink); border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) button, :where(:root:not([data-theme="light"])) input, :where(:root:not([data-theme="light"])) textarea, :where(:root:not([data-theme="light"])) select, :where(:root:not([data-theme="light"])) .button-link, :where(:root:not([data-theme="light"])) .code-accessory button, :where(:root:not([data-theme="light"])) .sidebar-toggle, :where(:root:not([data-theme="light"])) .steps-link, :where(:root:not([data-theme="light"])) .palette-chip, :where(:root:not([data-theme="light"])) .auth-form input { background-color: var(--raised); color: var(--ink); border-color: var(--line-strong); }
+  :where(:root:not([data-theme="light"])) button:hover, :where(:root:not([data-theme="light"])) .button-link:hover, :where(:root:not([data-theme="light"])) .sidebar nav a:hover, :where(:root:not([data-theme="light"])) .activity:hover, :where(:root:not([data-theme="light"])) .attention-row:hover { background-color: var(--hover); }
+  :where(:root:not([data-theme="light"])) button.primary, :where(:root:not([data-theme="light"])) .button-link.primary { background-color: var(--green); border-color: var(--green); color: #fff; }
+  :where(:root:not([data-theme="light"])) button.primary:hover { background-color: #4a9a74; }
+  :where(:root:not([data-theme="light"])) button.dark { background-color: #2c3b33; border-color: #3d5045; color: #fff; }
+  :where(:root:not([data-theme="light"])) .mode-switch button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px #0006; }
+  :where(:root:not([data-theme="light"])) .workspace-divider { background: var(--raised); }
+  :where(:root:not([data-theme="light"])) .editor-active-line { background: #ffffff0a; }
+  :where(:root:not([data-theme="light"])) td, :where(:root:not([data-theme="light"])) .activity, :where(:root:not([data-theme="light"])) .attention-row, :where(:root:not([data-theme="light"])) .member, :where(:root:not([data-theme="light"])) .tabs, :where(:root:not([data-theme="light"])) .panel-heading, :where(:root:not([data-theme="light"])) .dialog footer, :where(:root:not([data-theme="light"])) .profile, :where(:root:not([data-theme="light"])) .help-table th, :where(:root:not([data-theme="light"])) .help-table td { border-color: var(--line); }
+  :where(:root:not([data-theme="light"])) .sidebar nav a { color: var(--text-2); }
+  :where(:root:not([data-theme="light"])) .sidebar nav a.active { background: #22332a; color: #cdebd3; }
+  :where(:root:not([data-theme="light"])) .sidebar nav a::before { background: #6fcf97; }
+  :where(:root:not([data-theme="light"])) .avatar, :where(:root:not([data-theme="light"])) .school-avatar { background: linear-gradient(135deg, #2b3f33, #22332a); color: #bfe3c8; }
+  :where(:root:not([data-theme="light"])) .nav-count { background: #2b3f33; color: #cdebd3; }
+  :where(:root:not([data-theme="light"])) .nav-count.hot { background: #c2543a; color: #fff; }
+  :where(:root:not([data-theme="light"])) .welcome-banner { background: radial-gradient(90% 140% at 100% 0%, #2c4a37 0%, #2c4a3700 60%), var(--raised); }
+  :where(:root:not([data-theme="light"])) .welcome-banner .badge, :where(:root:not([data-theme="light"])) .auth-form .badge { background: #2b3f33; color: #bfe3c8; }
+  :where(:root:not([data-theme="light"])) .banner-art { color: #8fd4a5; }
+  :where(:root:not([data-theme="light"])) .banner-art > span { color: #3c5a45; }
+  :where(:root:not([data-theme="light"])) .banner-art code { border-color: #35503f; box-shadow: 0 8px 0 #0e1311; color: #bfe3c8; }
+  :where(:root:not([data-theme="light"])) .course-art, :where(:root:not([data-theme="light"])) .art-1, :where(:root:not([data-theme="light"])) .art-2 { color: #a9c7a9; }
+  :where(:root:not([data-theme="light"])) .course-art > span { border-color: #3d5045; }
+  :where(:root:not([data-theme="light"])) .course-art > strong { color: #3a5243; }
+  :where(:root:not([data-theme="light"])) .auth-story:after { border-color: #2d3d33; }
+  :where(:root:not([data-theme="light"])) .auth-copy h1 em { background-image: linear-gradient(90deg, #8fd4a5, #b9e28a, #7fd6cb, #8fd4a5); }
+  :where(:root:not([data-theme="light"])) .code-art code { color: #bfe3c8; }
+  :where(:root:not([data-theme="light"])) .code-art code > span { color: #c9d98a; }
+  :where(:root:not([data-theme="light"])) .code-art code i { color: #e3bf86; }
+  :where(:root:not([data-theme="light"])) .code-dots { color: #4d6655; }
+  :where(:root:not([data-theme="light"])) .art-tag { background: var(--surface); border-color: var(--line-strong); color: #8fd4a5; box-shadow: 0 6px 16px #0006; }
+  :where(:root:not([data-theme="light"])) .overlay { background: #050807b3; }
+  :where(:root:not([data-theme="light"])) .secondary-action { border-color: #4f6a58; }
+  :where(:root:not([data-theme="light"])) .panel { box-shadow: none; }
+
+  /* Tinted states keep their meaning: a translucent wash of the hue and a light text of the same hue. */
+  :where(:root:not([data-theme="light"])) .badge.passed, :where(:root:not([data-theme="light"])) .state-tag.done, :where(:root:not([data-theme="light"])) .check-summary.passed, :where(:root:not([data-theme="light"])) .answer-feedback.right, :where(:root:not([data-theme="light"])) .state-chip.open, :where(:root:not([data-theme="light"])) .task-symbol.done, :where(:root:not([data-theme="light"])) .publish-icon, :where(:root:not([data-theme="light"])) .builder-steps button.complete > span, :where(:root:not([data-theme="light"])) .setup-checklist li.done .check, :where(:root:not([data-theme="light"])) .toast, :where(:root:not([data-theme="light"])) .result-box.passed { background: var(--success-soft); color: var(--success); border-color: #6fcf9740; }
+  :where(:root:not([data-theme="light"])) .badge.failed, :where(:root:not([data-theme="light"])) .badge.runtime_error, :where(:root:not([data-theme="light"])) .badge.checker_error, :where(:root:not([data-theme="light"])) .error, :where(:root:not([data-theme="light"])) .connection-error, :where(:root:not([data-theme="light"])) .state-tag.waiting, :where(:root:not([data-theme="light"])) .step-matrix .cell.bad, :where(:root:not([data-theme="light"])) .attention-row.hot, :where(:root:not([data-theme="light"])) .import-table tr.row-error td, :where(:root:not([data-theme="light"])) .result-box.failed, :where(:root:not([data-theme="light"])) .result-box.runtime_error, :where(:root:not([data-theme="light"])) .result-box.checker_error, :where(:root:not([data-theme="light"])) .workspace-page .result-box.failed, :where(:root:not([data-theme="light"])) .workspace-page .result-box.runtime_error, :where(:root:not([data-theme="light"])) .workspace-page .result-box.checker_error { background: var(--danger-soft); color: var(--danger); border-color: #f0806840; }
+  :where(:root:not([data-theme="light"])) .badge.pending_review, :where(:root:not([data-theme="light"])) .teacher-notes, :where(:root:not([data-theme="light"])) .help-button[open], :where(:root:not([data-theme="light"])) .check-summary.failed, :where(:root:not([data-theme="light"])) .check-summary.runtime_error, :where(:root:not([data-theme="light"])) .check-summary.checker_error, :where(:root:not([data-theme="light"])) .answer-feedback.wrong, :where(:root:not([data-theme="light"])) .notice, :where(:root:not([data-theme="light"])) .recovery-notice, :where(:root:not([data-theme="light"])) .publication-issues, :where(:root:not([data-theme="light"])) .credentials, :where(:root:not([data-theme="light"])) .mode-offer, :where(:root:not([data-theme="light"])) .mode-notice, :where(:root:not([data-theme="light"])) .verify-problem, :where(:root:not([data-theme="light"])) .help-trigger { background: var(--warning-soft); color: var(--warning); border-color: #f0ba5440; }
+  :where(:root:not([data-theme="light"])) .help-trigger.waiting { background: #f0ba5433; border-color: #c9952c; }
+  :where(:root:not([data-theme="light"])) .teacher-answer, :where(:root:not([data-theme="light"])) .lesson-outline .selected-step, :where(:root:not([data-theme="light"])) .submission-state { background: var(--info-soft); color: var(--info); border-color: #78a0f040; }
+  :where(:root:not([data-theme="light"])) .recovery-notice p, :where(:root:not([data-theme="light"])) .recovery-notice h3, :where(:root:not([data-theme="light"])) .help-button summary { color: var(--warning); }
+  :where(:root:not([data-theme="light"])) .attention-row.hot b { color: var(--danger); }
+  :where(:root:not([data-theme="light"])) .palette-chip.on { background: var(--mode-blocks-soft); border-color: #2fb3a266; color: var(--mode-blocks); }
+  :where(:root:not([data-theme="light"])) .mode-switch button.mode-blocks[aria-checked="true"], :where(:root:not([data-theme="light"])) .mode-switch button.mode-mixed[aria-checked="true"] { background: var(--mode-blocks-soft); color: var(--mode-blocks); }
+  :where(:root:not([data-theme="light"])) .mirror-code .highlight { background: var(--attention-soft); }
+  :where(:root:not([data-theme="light"])) .mirror-errors, :where(:root:not([data-theme="light"])) .danger-text { color: var(--danger) !important; }
+
+  /* Learner workspace text keeps its hierarchy on the dark panels. */
+  :where(:root:not([data-theme="light"])) .tabs button, :where(:root:not([data-theme="light"])) .workspace-page .tabs, :where(:root:not([data-theme="light"])) .practice-tip > span, :where(:root:not([data-theme="light"])) .workspace-page .material-footer, :where(:root:not([data-theme="light"])) .workspace-page .public-examples small, :where(:root:not([data-theme="light"])) .workspace-page .task-material .muted, :where(:root:not([data-theme="light"])) .workspace-page .console-title > span, :where(:root:not([data-theme="light"])) .workspace-page .console-empty, :where(:root:not([data-theme="light"])) .workspace-page .editor-bottom small, :where(:root:not([data-theme="light"])) .workspace-page .case-result small { color: var(--text-2); }
+  :where(:root:not([data-theme="light"])) .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  :where(:root:not([data-theme="light"])) .workspace-page .tabs button:nth-child(2).active { color: #8fb8ec; border-color: #8fb8ec; }
+  :where(:root:not([data-theme="light"])) .workspace-page .tabs button:nth-child(3).active { color: #e9c46a; border-color: #e9c46a; }
+  :where(:root:not([data-theme="light"])) .workspace-page .task-material p, :where(:root:not([data-theme="light"])) .workspace-page details summary, :where(:root:not([data-theme="light"])) .workspace-page .practice-tip p, :where(:root:not([data-theme="light"])) .practice-tip p, :where(:root:not([data-theme="light"])) .workspace-page .console-title, :where(:root:not([data-theme="light"])) .workspace-page .result-box pre, :where(:root:not([data-theme="light"])) .workspace-page .public-examples pre { color: var(--ink); }
+  :where(:root:not([data-theme="light"])) .workspace-page .learning-goal { color: #a9dcb5 !important; }
+  :where(:root:not([data-theme="light"])) .workspace-page .result-box { color: var(--ink); }
+  :where(:root:not([data-theme="light"])) .workspace-page .result-box.passed { color: var(--success); }
+  :where(:root:not([data-theme="light"])) .workspace-page .result-box.failed, :where(:root:not([data-theme="light"])) .workspace-page .result-box.runtime_error { color: var(--warning); }
+  :where(:root:not([data-theme="light"])) .eyebrow, :where(:root:not([data-theme="light"])) .auth-copy .eyebrow { color: var(--text-2); }
+  :where(:root:not([data-theme="light"])) .school-switch small, :where(:root:not([data-theme="light"])) .profile small, :where(:root:not([data-theme="light"])) .workspace-page .tabs button, :where(:root:not([data-theme="light"])) .mode-switch button, :where(:root:not([data-theme="light"])) .stdin, :where(:root:not([data-theme="light"])) .workspace-page .stdin, :where(:root:not([data-theme="light"])) .progress-label, :where(:root:not([data-theme="light"])) .code-dots { color: var(--text-2); }
+  :where(:root:not([data-theme="light"])) .task-row small, :where(:root:not([data-theme="light"])) details summary, :where(:root:not([data-theme="light"])) .rec-context dt, :where(:root:not([data-theme="light"])) .mirror-code .ln, :where(:root:not([data-theme="light"])) .step-matrix .cell:disabled, :where(:root:not([data-theme="light"])) .mode-switch button:disabled { color: var(--text-2); }
+  /* Code editor and Blockly field on the dark sunken surface; block colours stay as they are. */
+  :where(:root:not([data-theme="light"])) .minimal-code-editor, :where(:root:not([data-theme="light"])) .editor-line-numbers { background: var(--sunken); }
+  :where(:root:not([data-theme="light"])) .editor-highlight > pre { color: #dfe8dc; }
+  :where(:root:not([data-theme="light"])) .minimal-code-editor textarea { caret-color: #8fd4a5; }
+  :where(:root:not([data-theme="light"])) .workspace-page .syntax-keyword { color: #c3a6ff; }
+  :where(:root:not([data-theme="light"])) .workspace-page .syntax-string { color: #f2b48a; }
+  :where(:root:not([data-theme="light"])) .workspace-page .minimal-code-editor { color: #e6d58a; }
+  :where(:root:not([data-theme="light"])) .blockly-host .blocklyMainBackground { fill: var(--sunken) !important; stroke: none; }
+  :where(:root:not([data-theme="light"])) .blockly-host .blocklyScrollbarHandle { fill: #4b5d53; }
+  :where(:root:not([data-theme="light"])) .blockly-host .blocklyZoom > image, :where(:root:not([data-theme="light"])) .blockly-host .blocklyTrash > image { opacity: .55; filter: invert(1); }
+  :where(:root:not([data-theme="light"])) .blockly-wrap > .block-tools { background: #19211dd9; border-color: var(--line-strong); }
+  :where(:root:not([data-theme="light"])) .blockly-wrap > .block-tools .tool { background: transparent; }
+  :where(:root:not([data-theme="light"])) .blockly-wrap > .block-tools .tool:hover { background: var(--hover); }
+  :where(:root:not([data-theme="light"])) .blockly-empty { background: #19211de6; color: var(--text-2); border-color: #2f6f63; }
+  :where(:root:not([data-theme="light"])) .block-keyboard summary { color: var(--mode-blocks); }
+  :where(:root:not([data-theme="light"])) .robot-cell { fill: #1f2924; stroke: #34413a; }
+  :where(:root:not([data-theme="light"])) .robot-wall, :where(:root:not([data-theme="light"])) .robot-border { stroke: #d6e0d9; }
 }

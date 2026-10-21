@@ -112,6 +112,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
   const emptyPython=!code.trim()||code.trim()===(task.starter||'').trim();
   return (
     <>
+      <div className="workspace-head">
       <div className="workspace-heading">
         <button
           className="link"
@@ -137,6 +138,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
         {!previewMode&&<HelpButton assignmentId={task.assignment_id}/>}
         {readOnly&&viewNote&&<p className="notice view-only-note" role="status" data-testid="view-only-note">{viewNote}</p>}
         {task.due_at&&<p className="workspace-deadline">{Date.parse(task.due_at)<Date.now()?'Срок прошёл:':'Срок:'} {new Date(task.due_at).toLocaleDateString('ru')}</p>}
+      </div>
       </div>
       {studentDraft.error && (
         <p className="error" role="alert">
