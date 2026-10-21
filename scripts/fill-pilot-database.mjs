@@ -71,6 +71,10 @@ try{
   db.prepare("INSERT INTO mode_events VALUES(?,?,?,?,?,'offered','blocks','mixed',?,?,?)").run(randomUUID(),school.org_id,a1.id,kids[1].id,teacher.id,`Рекомендация ${sent}: основание`,JSON.stringify({recommendation_id:sent}),at);
   recEvent(sent,'approve',null);
   for(const [status,reason,version] of [['dismissed','Преподаватель отклонил предложение.','pilot-transition/0.1'],[withReason?'withdrawn':'expired',withReason?'Преподаватель закрепил режим ученика.':'Срок предложения истёк.','pilot-transition/0.2']]){const id=randomUUID();rec(id,kids[0].id,'mixed',version,status,reason);recEvent(id,status,reason)}
+  // Newer schemas store lifecycle fields directly; fixtures must satisfy the same
+  // invariants as real API-created recommendations, without relying on a future migration.
+  if(db.prepare('PRAGMA table_info(recommendations)').all().some(c=>c.name==='closed_at'))db.prepare("UPDATE recommendations SET closed_at=? WHERE status NOT IN ('proposed','offered') AND closed_at IS NULL").run(at);
+  if(db.prepare('PRAGMA table_info(assignment_mode_state)').all().some(c=>c.name==='offer_recommendation_id'))db.prepare('UPDATE assignment_mode_state SET offer_recommendation_id=? WHERE assignment_id=? AND user_id=?').run(sent,a1.id,kids[1].id);
   await call(teacherClient,`/assignments/${a1.id}/students/${kids[0].id}/mode`,{offer:'mixed',reason:'Решение преподавателя'},'PUT');
   // An archived group with an issued task and Аня's draft in it.
   const archived=await call(admin,'/groups',{title:'Архив 6В'});await call(admin,`/groups/${archived.id}/members`,{user_id:kids[0].id});

@@ -8,6 +8,24 @@ import {execute} from '../server/b2b/grader.mjs';
 // Full path through the real API for library tasks: template → quality check (reference passes, wrong
 // examples fail, start does not pass) → publish → assign → learner run with a scene → graded submissions.
 const template=id=>taskTemplates.find(t=>t.id===id).task;
+test('the restricted runner rejects scene-check bypasses and invalid animation values',async()=>{
+  const reset=await execute('from pyrob.api import *\nset_field_size(1, 1)',[],{world:'R . *',checks:['robot']});
+  assert.equal(!!reset.infrastructure,false);
+  assert.match(reset.error,/поле задано преподавателем/);
+  for(const [reference,code] of [
+    ['import turtle\nturtle.write("OK")','import turtle\nturtle.penup()\nturtle.goto(200, 200)\nturtle.write("OK")'],
+    ['import turtle\nturtle.shape("square")\nturtle.stamp()','import turtle\nturtle.shape("circle")\nturtle.stamp()'],
+  ]){
+    const result=await execute(code,[],{checks:['drawing'],reference});
+    assert.equal(!!result.infrastructure,false);
+    assert.equal(result.scene_check?.passed,false,'a different rendered scene must not pass');
+  }
+  const huge=await execute('import turtle\nturtle.dot(1000000000)',[],{checks:['drawing'],reference:'import turtle\nturtle.dot(10)'});
+  assert.equal(!!huge.infrastructure,false,'large geometry is refused without a runner timeout');
+  assert.match(huge.scene_check?.message,/слишком большой/);
+  const invalid=await execute('import matplotlib.pyplot as plt\nplt.pause(float("nan"))');
+  assert.match(invalid.error,/конечн/);
+});
 async function setup(h,tag){
   const {admin}=await h.school(tag),{lesson}=await h.content(admin);
   const group=await h.request('/groups',{title:'7Б'},admin),kid=await h.request('/users',{name:'Ученик',login:`${tag}-kid`,password:h.password,role:'student'},admin);
@@ -54,6 +72,12 @@ test('turtle, Robot and plot tasks are checked by their scene end to end',async(
     const walk=await s.run(robot,'from pyrob.api import *\nmove_right(2)');
     assert.deepEqual([walk.scene.robot.cols,walk.scene.robot.final.c],[6,2],'a trial run uses the field of the open test');
     assert.equal((await s.submit(robot,'from pyrob.api import *\nwhile not wall_is_on_the_right():\n    move_right()\nfill_cell()')).status,'passed');
+    const resetWorld=await s.submit(robot,'from pyrob.api import *\nset_field_size(1, 1)\nwhile not wall_is_on_the_right():\n    move_right()\nfill_cell()');
+    assert.equal(resetWorld.status,'runtime_error','replacing the assigned field cannot earn a pass');
+    assert.match(resetWorld.message,/поле задано преподавателем/);
+    const removeTarget=await s.submit(robot,'from pyrob.api import *\nset_cell_type(0, 5, CELL_EMPTY)\nwhile not wall_is_on_the_right():\n    move_right()');
+    assert.equal(removeTarget.status,'runtime_error','removing a target from the assigned field is refused');
+    assert.match(removeTarget.message,/поле задано преподавателем/);
     const fixed=await s.submit(robot,'from pyrob.api import *\nwhile not wall_is_on_the_right():\n    move_right()\nmove_left()\nmove_right()\nfill_cell()');
     assert.equal(fixed.status,'passed','another correct path passes');
     const crash=await s.submit(robot,'from pyrob.api import *\nwhile True:\n    move_right()');

@@ -4,7 +4,7 @@
 //   drawing — the final turtle picture equals the reference picture (order of drawing does not matter);
 //   robot   — the Robot solved the field: every * cell filled, nothing extra, finished on P, no crash;
 //   plot    — the shown figures have the reference's chart types, data, titles, labels, grid and legend.
-import { figuresAt, turtleAt, type FigureShot, type RobotScene, type Scene, type Series, type TurtleScene } from './scene'
+import { figuresAt, turtleAt, type FigureShot, type Pose, type RobotScene, type Scene, type Series, type TurtleItem, type TurtleScene } from './scene'
 import { cssColor } from './colors'
 
 export const SCENE_CHECKS = ['output', 'drawing', 'robot', 'plot'] as const
@@ -15,30 +15,48 @@ const ok: SceneVerdict = { passed: true, message: '' }
 // ---------- turtle picture ----------
 const GRID = 2
 const hex = (c: string) => cssColor(c) ?? c
-function raster(scene: TurtleScene | undefined): { points: Map<string, string>; texts: string[]; bg: string } {
-  const points = new Map<string, string>(), texts: string[] = []
-  if (!scene) return { points, texts, bg: '#ffffff' }
+type TextItem = Extract<TurtleItem, { kind: 'text' }>
+function raster(scene: TurtleScene | undefined) {
+  const points = new Map<string, string>(), texts: TextItem[] = [], stamps: Pose[] = []
+  let complete = true
+  if (!scene) return { points, texts, stamps, bg: '#ffffff', complete }
   const state = turtleAt(scene), put = (x: number, y: number, color: string, layer: string) => points.set(`${layer}:${Math.round(x / GRID)}:${Math.round(y / GRID)}`, color)
   let budget = 400000
+  const result = () => ({ points, texts, stamps, bg: hex(state.bg), complete })
+  const spend = () => { if (--budget < 0) { complete = false; return false } return true }
   for (const item of state.items) {
     if (item.kind === 'line') {
       const length = Math.hypot(item.x2 - item.x1, item.y2 - item.y1), steps = Math.max(1, Math.ceil(length / (GRID / 2)))
-      for (let i = 0; i <= steps && budget-- > 0; i++) put(item.x1 + (item.x2 - item.x1) * i / steps, item.y1 + (item.y2 - item.y1) * i / steps, hex(item.color), 'l')
+      for (let i = 0; i <= steps; i++) { if (!spend()) return result(); put(item.x1 + (item.x2 - item.x1) * i / steps, item.y1 + (item.y2 - item.y1) * i / steps, hex(item.color), 'l') }
     } else if (item.kind === 'dot') {
       const r = item.size / 2
-      for (let dx = -r; dx <= r; dx += GRID) for (let dy = -r; dy <= r; dy += GRID) if (dx * dx + dy * dy <= r * r && budget-- > 0) put(item.x + dx, item.y + dy, hex(item.color), 'f')
+      for (let dx = -r; dx <= r; dx += GRID) for (let dy = -r; dy <= r; dy += GRID) { if (!spend()) return result(); if (dx * dx + dy * dy <= r * r) put(item.x + dx, item.y + dy, hex(item.color), 'f') }
     } else if (item.kind === 'fill') {
       const xs = item.points.filter((_, i) => i % 2 === 0), ys = item.points.filter((_, i) => i % 2 === 1)
       const step = GRID * 2
       for (let x = Math.min(...xs); x <= Math.max(...xs); x += step) for (let y = Math.min(...ys); y <= Math.max(...ys); y += step) {
-        if (budget-- <= 0) break
+        if (!spend()) return result()
         let inside = false
-        for (let i = 0, j = xs.length - 1; i < xs.length; j = i++) if ((ys[i] > y) !== (ys[j] > y) && x < (xs[j] - xs[i]) * (y - ys[i]) / (ys[j] - ys[i]) + xs[i]) inside = !inside
+        for (let i = 0, j = xs.length - 1; i < xs.length; j = i++) { if (!spend()) return result(); if ((ys[i] > y) !== (ys[j] > y) && x < (xs[j] - xs[i]) * (y - ys[i]) / (ys[j] - ys[i]) + xs[i]) inside = !inside }
         if (inside) put(x, y, hex(item.color), 'f')
       }
-    } else if (item.kind === 'text') texts.push(item.text)
+    } else if (item.kind === 'text') texts.push(item)
+    else if (item.kind === 'stamp' && item.pose.shape !== 'blank') stamps.push(item.pose)
   }
-  return { points, texts: texts.sort(), bg: hex(state.bg) }
+  return result()
+}
+const samePosition = (a: { x: number; y: number }, e: { x: number; y: number }) => Math.abs(a.x - e.x) <= GRID && Math.abs(a.y - e.y) <= GRID
+const chosenColor = (a: string, e: string) => hex(e) === '#000000' || hex(a) === hex(e)
+function sameTexts(actual: TextItem[], expected: TextItem[]): boolean {
+  const sort = (a: TextItem, b: TextItem) => a.text.localeCompare(b.text) || a.x - b.x || a.y - b.y
+  const a = [...actual].sort(sort), e = [...expected].sort(sort)
+  return a.length === e.length && e.every((v, i) => v.text === a[i].text && samePosition(a[i], v) && a[i].align === v.align && a[i].size === v.size && a[i].weight === v.weight && chosenColor(a[i].color, v.color))
+}
+function sameStamps(actual: Pose[], expected: Pose[]): boolean {
+  const angle = (p: Pose) => { const period = p.shape === 'circle' ? 1 : p.shape === 'square' ? 90 : p.shape === 'triangle' ? 120 : 360; return p.shape === 'circle' ? 0 : ((p.heading % period) + period) % period }
+  const sort = (a: Pose, b: Pose) => a.shape.localeCompare(b.shape) || a.x - b.x || a.y - b.y || angle(a) - angle(b) || a.stretch - b.stretch
+  const a = [...actual].sort(sort), e = [...expected].sort(sort)
+  return a.length === e.length && e.every((v, i) => v.shape === a[i].shape && samePosition(a[i], v) && Math.abs(a[i].stretch - v.stretch) <= 1e-9 && Math.abs(angle(a[i]) - angle(v)) <= 1e-9 && chosenColor(a[i].pen, v.pen) && chosenColor(a[i].fill, v.fill))
 }
 function near(map: Map<string, string>, key: string, color: string | undefined): boolean {
   const [layer, x, y] = key.split(':'), cx = Number(x), cy = Number(y)
@@ -52,6 +70,8 @@ function where(keys: string[]): string {
 export function compareDrawing(actual: TurtleScene | undefined, expected: TurtleScene | undefined): SceneVerdict {
   if (!actual || !actual.items.length) return { passed: false, message: 'Черепаха ничего не нарисовала. Подключи turtle (import turtle) и опусти перо перед движением.' }
   const a = raster(actual), e = raster(expected)
+  if (!a.complete || !e.complete) return { passed: false, message: 'Рисунок слишком большой или сложный для сравнения. Уменьши размеры или число деталей.' }
+  if (!a.points.size && !a.texts.length && !a.stamps.length) return { passed: false, message: 'Черепаха ничего не нарисовала: итоговый рисунок пуст. Проверь clear(), reset() и положение пера.' }
   // Colour matters only when the reference chose colours; a task about shape accepts any pen colour.
   const colourMatters = [...e.points.values()].some(c => c !== '#000000')
   const missing = [...e.points].filter(([k, c]) => !near(a.points, k, colourMatters ? c : undefined)).map(([k]) => k)
@@ -64,7 +84,8 @@ export function compareDrawing(actual: TurtleScene | undefined, expected: Turtle
     if (missing.length > tolerance(e.points.size)) return { passed: false, message: `Рисунок отличается: не хватает части рисунка ${where(missing)}. Проверь длины, углы и число повторений.` }
     return { passed: false, message: `Рисунок отличается: есть лишние линии ${where(extra)}. Проверь длины, углы и penup/pendown.` }
   }
-  if (e.texts.join('\n') !== a.texts.join('\n')) return { passed: false, message: 'Надписи на рисунке отличаются. Проверь текст в write().' }
+  if (!sameTexts(a.texts, e.texts)) return { passed: false, message: 'Надписи на рисунке отличаются. Проверь текст, положение и оформление write().' }
+  if (!sameStamps(a.stamps, e.stamps)) return { passed: false, message: 'Штампы на рисунке отличаются. Проверь форму, положение, размер и направление stamp().' }
   if (e.bg !== a.bg) return { passed: false, message: 'Цвет фона отличается. Проверь bgcolor().' }
   return ok
 }
@@ -77,7 +98,7 @@ export function checkRobot(actual: RobotScene | undefined): SceneVerdict {
 }
 
 // ---------- plots ----------
-const close = (x: number, y: number) => x === y || Math.abs(x - y) <= 1e-9 * Math.max(1, Math.abs(x), Math.abs(y)) || Number.isNaN(x) && Number.isNaN(y)
+const close = (x: number, y: number) => Number.isFinite(x) && Number.isFinite(y) && (x === y || Math.abs(x - y) <= 1e-9 * Math.max(1, Math.abs(x), Math.abs(y)))
 const kind: Record<Series['type'], string> = { line: 'линия', scatter: 'точечная диаграмма', bar: 'столбчатая диаграмма', hist: 'гистограмма' }
 function sameSeries(a: Series, e: Series, n: number): string | undefined {
   if (a.type !== e.type) return `Набор данных ${n}: ожидается ${kind[e.type]}, а построена ${kind[a.type]}.`

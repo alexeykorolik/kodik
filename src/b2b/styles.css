@@ -2925,3 +2925,8 @@ td .link, td .text-button { font-size: 14px; text-align: left; white-space: norm
   :root:not([data-theme="light"]) .test-card { background: #232d28; border-color: #34413a; }
 }
 .robot-body .robot-eye { fill: #fff; stroke: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :is(.public-examples > div, .practice-tip) { background: #232d28; border-color: #34413a; }
+  :root:not([data-theme="light"]) .public-examples :is(pre, .screen) { background: #151b18; color: var(--ink); }
+  :root:not([data-theme="light"]) .public-examples .scene-checks-note { color: var(--ink); }
+}

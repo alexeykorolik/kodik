@@ -10,12 +10,12 @@ const B2BApp = lazy(async () => {
   return import("./b2b/App");
 });
 const Legacy = lazy(async () => {
-  await Promise.all([
-    import("./styles.css"),
-    import("./mobileLesson.css"),
-    import("./designSystem.css"),
-    import("./appPolish.css"),
-  ]);
+  // These styles deliberately override one another. Parallel imports let network/cache
+  // timing change the cascade, collapsing Blockly and moving controls after a reload.
+  await import("./styles.css");
+  await import("./mobileLesson.css");
+  await import("./designSystem.css");
+  await import("./appPolish.css");
   const { startNativeShell } = await import("./nativeShell");
   requestAnimationFrame(() => {
     void startNativeShell().catch(() => {});

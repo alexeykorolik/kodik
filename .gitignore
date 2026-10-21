@@ -25,3 +25,6 @@ data/
 work/
 playwright-report/
 desktop.ini
+
+# Separate git repository for the static teacher demo
+teacher-demo/

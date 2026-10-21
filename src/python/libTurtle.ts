@@ -3,7 +3,13 @@
 // scene timeline: each move lasts as long as at the turtle's speed, tracer(0)/update() hold frames.
 import { cssColor } from './colors'
 import type { Pose, TurtleItem, TurtleScene } from './scene'
-import { PyModule, PyNative, PyObject, PyTuple, Vec2D, arg, bind, floatArg, int, none, num, pyRound, roundHalfEven, text, type Arg, type Ctx, type Keywords } from './values'
+import { PyModule, PyNative, PyObject, PyTuple, Vec2D, arg, bind, floatArg, int, none, num as numberValue, pyRound, roundHalfEven, text, type Arg, type Ctx, type Keywords } from './values'
+
+function num(...args: Parameters<typeof numberValue>): number {
+  const value = numberValue(...args)
+  if (!Number.isFinite(value)) args[1].fail('Черепаха: используй конечные числа, без NaN и Infinity.')
+  return value
+}
 
 const LIMIT_ITEMS = 8000, LIMIT_FRAMES = 16000
 const pyMod = (x: number, y: number) => { const r = x % y; if (r === 0) return y < 0 ? -0 : 0; return (r < 0) !== (y < 0) ? r + y : r }

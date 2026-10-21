@@ -1591,6 +1591,7 @@ function randomModule() {
 }
 var SLEEP_LIMIT_MS = 6e4;
 function pause(ctx, ms, fn) {
+  if (!Number.isFinite(ms) || ms < 0) ctx.fail(`${fn}: \u0432\u0440\u0435\u043C\u044F \u043F\u0430\u0443\u0437\u044B \u0434\u043E\u043B\u0436\u043D\u043E \u0431\u044B\u0442\u044C \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u043C \u043D\u0435\u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C.`);
   const total = (ctx.state.get("paused") ?? 0) + ms;
   if (total > SLEEP_LIMIT_MS) ctx.fail(`\u041F\u0430\u0443\u0437\u044B \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B \u0434\u043B\u044F\u0442\u0441\u044F \u0431\u043E\u043B\u044C\u0448\u0435 60 \u0441\u0435\u043A\u0443\u043D\u0434. \u0423\u043C\u0435\u043D\u044C\u0448\u0438 ${fn} \u0438\u043B\u0438 \u0447\u0438\u0441\u043B\u043E \u043A\u0430\u0434\u0440\u043E\u0432.`);
   ctx.state.set("paused", total);
@@ -1778,6 +1779,11 @@ function cssColor(name) {
 }
 
 // src/python/libPlot.ts
+function num2(...args) {
+  const value = num(...args);
+  if (!Number.isFinite(value)) args[1].fail("\u0413\u0440\u0430\u0444\u0438\u043A: \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0431\u0435\u0437 NaN \u0438 Infinity.");
+  return value;
+}
 var cycle = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
 var short = { b: "#0000ff", g: "#008000", r: "#ff0000", c: "#00bfbf", m: "#bf00bf", y: "#bfbf00", k: "#000000", w: "#ffffff" };
 var markers = /* @__PURE__ */ new Set(["o", ".", ",", "v", "^", "<", ">", "s", "*", "+", "x", "D", "d", "p", "h", "H", "8", "|", "_"]);
@@ -1829,7 +1835,7 @@ function color(v, ctx, fallback) {
     if (c) return c;
     return ctx.fail(`\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u0439 \u0446\u0432\u0435\u0442 \xAB${s}\xBB. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, "red", "C1", "#ff8800" \u0438\u043B\u0438 \u0431\u0443\u043A\u0432\u0443 r, g, b, k.`);
   }
-  const parts = ctx.items(v.value, "\u0446\u0432\u0435\u0442").map((p) => num(p, ctx));
+  const parts = ctx.items(v.value, "\u0446\u0432\u0435\u0442").map((p) => num2(p, ctx));
   if (parts.length !== 3 && parts.length !== 4 || parts.some((p) => p < 0 || p > 1)) ctx.fail("\u0426\u0432\u0435\u0442 \u0438\u0437 \u0447\u0438\u0441\u0435\u043B \u2014 \u0442\u0440\u0438 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u043E\u0442 0 \u0434\u043E 1: (r, g, b).");
   return "#" + parts.slice(0, 3).map((p) => Math.round(p * 255).toString(16).padStart(2, "0")).join("");
 }
@@ -1840,7 +1846,7 @@ function numbers(v, ctx, what) {
   return a.data;
 }
 function categories(v, ctx) {
-  const items = v.value instanceof NdArray ? v.value.data : typeof v.value === "number" || typeof v.value === "string" ? [v.value] : ctx.items(v.value, "\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F").map((item) => typeof item.value === "string" ? item.value : num(item, ctx));
+  const items = v.value instanceof NdArray ? v.value.data : typeof v.value === "number" || typeof v.value === "string" ? [v.value] : ctx.items(v.value, "\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F").map((item) => typeof item.value === "string" ? item.value : num2(item, ctx));
   return items;
 }
 function parseFormat(fmt, ctx) {
@@ -1882,6 +1888,8 @@ function pyplotModule(ctx) {
     for (const f of [...open]) if (!f.empty()) shoot(f, true);
   });
   const add = (f, s) => {
+    const values = s.type === "hist" ? [...s.edges, ...s.counts] : s.type === "bar" ? [...s.x, ...s.height, s.width] : [...s.x, ...s.y, s.type === "line" ? s.linewidth : s.size];
+    if (values.some((v) => typeof v === "number" && !Number.isFinite(v))) ctx.fail("\u0413\u0440\u0430\u0444\u0438\u043A: \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0431\u0435\u0437 NaN \u0438 Infinity.");
     const count = "x" in s ? s.x.length : s.type === "hist" ? s.counts.length : 0;
     if ((points += count) > LIMIT_POINTS) ctx.fail(`\u041D\u0430 \u0433\u0440\u0430\u0444\u0438\u043A\u0430\u0445 \u0431\u043E\u043B\u044C\u0448\u0435 ${LIMIT_POINTS} \u0442\u043E\u0447\u0435\u043A.`);
     if (f.series.length >= 100) ctx.fail("\u041D\u0430 \u043E\u0434\u043D\u043E\u043C \u0433\u0440\u0430\u0444\u0438\u043A\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 100 \u043D\u0430\u0431\u043E\u0440\u043E\u0432 \u0434\u0430\u043D\u043D\u044B\u0445.");
@@ -1916,7 +1924,7 @@ function pyplotModule(ctx) {
       const colour = color(kw.get("color") ?? kw.get("c"), c, fmt.color ?? cycle[f.lines % 10]);
       f.lines++;
       const lw = kw.get("linewidth") ?? kw.get("lw");
-      add(f, { type: "line", x, y, color: colour, linestyle, linewidth: lw ? num(lw, c) : 1.5, ...marker ? { marker } : {}, ...label(kw.get("label"), c) !== void 0 ? { label: label(kw.get("label"), c) } : {} });
+      add(f, { type: "line", x, y, color: colour, linestyle, linewidth: lw ? num2(lw, c) : 1.5, ...marker ? { marker } : {}, ...label(kw.get("label"), c) !== void 0 ? { label: label(kw.get("label"), c) } : {} });
     }
     return { value: c.list(groups.map(() => ({ value: new Opaque("Line2D", "<Line2D>") }))) };
   };
@@ -1927,7 +1935,7 @@ function pyplotModule(ctx) {
     const marker = p.marker ? text2(p.marker, c, "\u043C\u0430\u0440\u043A\u0435\u0440") : "o";
     if (!markers.has(marker)) c.fail('scatter(): \u043C\u0430\u0440\u043A\u0435\u0440 \u2014 \u043E\u0434\u0438\u043D \u0438\u0437 "o", ".", "s", "^", "v", "*", "+", "x", "D".');
     if (p.c && typeof p.c.value !== "string" && !(p.c.value instanceof PyTuple)) c.fail("scatter(): \u0432 Kodik c= \u0437\u0430\u0434\u0430\u0451\u0442 \u043E\u0434\u0438\u043D \u0446\u0432\u0435\u0442 \u0434\u043B\u044F \u0432\u0441\u0435\u0445 \u0442\u043E\u0447\u0435\u043A.");
-    add(f, { type: "scatter", x, y, color: color(p.color ?? p.c, c, cycle[f.patches++ % 10]), marker, size: p.s ? num(p.s, c) : 36, ...label(p.label, c) !== void 0 ? { label: label(p.label, c) } : {} });
+    add(f, { type: "scatter", x, y, color: color(p.color ?? p.c, c, cycle[f.patches++ % 10]), marker, size: p.s ? num2(p.s, c) : 36, ...label(p.label, c) !== void 0 ? { label: label(p.label, c) } : {} });
     return { value: new Opaque("PathCollection", "<matplotlib.collections.PathCollection>") };
   };
   const bar = (f, args, kw, c, horizontal = false) => {
@@ -1936,7 +1944,7 @@ function pyplotModule(ctx) {
     const x = categories(p[names[0]], c), sizes = numbers(p[names[1]], c, "bar"), heights = sizes.length === 1 && x.length > 1 ? x.map(() => sizes[0]) : sizes;
     if (x.length !== heights.length) c.fail(`${horizontal ? "barh" : "bar"}(): \u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0439 ${x.length} \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439, \u0430 \u0443 \u0432\u044B\u0441\u043E\u0442 \u2014 ${heights.length}.`);
     if (p[names[3]] && p[names[3]].value !== null) c.fail("bar(): bottom/left (\u0441\u043E\u0441\u0442\u0430\u0432\u043D\u044B\u0435 \u0441\u0442\u043E\u043B\u0431\u0438\u043A\u0438) \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F.");
-    add(f, { type: "bar", x, height: heights, color: color(p.color, c, cycle[f.patches++ % 10]), width: p[names[2]] ? num(p[names[2]], c) : 0.8, ...horizontal ? { horizontal: true } : {}, ...label(p.label, c) !== void 0 ? { label: label(p.label, c) } : {} });
+    add(f, { type: "bar", x, height: heights, color: color(p.color, c, cycle[f.patches++ % 10]), width: p[names[2]] ? num2(p[names[2]], c) : 0.8, ...horizontal ? { horizontal: true } : {}, ...label(p.label, c) !== void 0 ? { label: label(p.label, c) } : {} });
     return { value: new Opaque("BarContainer", `<BarContainer object of ${x.length} artists>`) };
   };
   const hist = (f, args, kw, c) => {
@@ -1953,7 +1961,7 @@ function pyplotModule(ctx) {
       const count = p.bins ? int(p.bins, c, "\u0447\u0438\u0441\u043B\u043E \u0441\u0442\u043E\u043B\u0431\u0438\u043A\u043E\u0432") : 10;
       if (count < 1 || count > 500) c.fail("hist(): \u0447\u0438\u0441\u043B\u043E \u0441\u0442\u043E\u043B\u0431\u0438\u043A\u043E\u0432 \u043E\u0442 1 \u0434\u043E 500.");
       let lo, hi;
-      if (p.range && p.range.value !== null) [lo, hi] = c.items(p.range.value).map((v) => num(v, c));
+      if (p.range && p.range.value !== null) [lo, hi] = c.items(p.range.value).map((v) => num2(v, c));
       else {
         lo = data.length ? Math.min(...data) : 0;
         hi = data.length ? Math.max(...data) : 1;
@@ -1987,7 +1995,8 @@ function pyplotModule(ctx) {
       const v = f[axis] ?? [0, 1];
       return { value: c.tuple(v.map((x) => ({ value: x, float: true }))) };
     }
-    const old = f[axis] ?? [NaN, NaN], lo = p[names[0]] && p[names[0]].value !== null ? num(p[names[0]], c) : old[0], hi = p[names[1]] && p[names[1]].value !== null ? num(p[names[1]], c) : old[1];
+    const old = f[axis] ?? [NaN, NaN], lo = p[names[0]] && p[names[0]].value !== null ? num2(p[names[0]], c) : old[0], hi = p[names[1]] && p[names[1]].value !== null ? num2(p[names[1]], c) : old[1];
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) c.fail(`${axis}(): \u0443\u043A\u0430\u0436\u0438 \u043E\u0431\u0435 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043E\u0441\u0438.`);
     if (lo === hi) c.fail(`${axis}(): \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043E\u0441\u0438 \u043D\u0435 \u0434\u043E\u043B\u0436\u043D\u044B \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0442\u044C.`);
     f[axis] = [lo, hi];
   };
@@ -2026,7 +2035,10 @@ function pyplotModule(ctx) {
       const v = a[0]?.value;
       if (typeof v === "string" && ["equal", "on", "auto", "tight", "scaled"].includes(v)) return;
       if (v instanceof PyTuple || Array.isArray(v)) {
-        const [x0, x1, y0, y1] = c.items(v).map((x) => num(x, c));
+        const values = c.items(v).map((x) => num2(x, c));
+        if (values.length !== 4) c.fail("axis(): \u043D\u0443\u0436\u043D\u044B \u0447\u0435\u0442\u044B\u0440\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B [xmin, xmax, ymin, ymax].");
+        const [x0, x1, y0, y1] = values;
+        if (x0 === x1 || y0 === y1) c.fail("axis(): \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043A\u0430\u0436\u0434\u043E\u0439 \u043E\u0441\u0438 \u043D\u0435 \u0434\u043E\u043B\u0436\u043D\u044B \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0442\u044C.");
         f.xlim = [x0, x1];
         f.ylim = [y0, y1];
         return;
@@ -2098,7 +2110,7 @@ function pyplotModule(ctx) {
     }
   });
   def("pause", (a, kw, c) => {
-    const seconds = num(bind("pause", a, kw, ["interval"], 1, c).interval, c, "\u0447\u0438\u0441\u043B\u043E \u0441\u0435\u043A\u0443\u043D\u0434");
+    const seconds = num2(bind("pause", a, kw, ["interval"], 1, c).interval, c, "\u0447\u0438\u0441\u043B\u043E \u0441\u0435\u043A\u0443\u043D\u0434");
     if (seconds < 0) c.fail("pause: \u0432\u0440\u0435\u043C\u044F \u043F\u0430\u0443\u0437\u044B \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C.");
     for (const f of open) if (!f.empty()) shoot(f);
     pause(c, seconds * 1e3, "plt.pause");
@@ -2252,6 +2264,7 @@ var Robot = class {
     }
   }
   setup(fn) {
+    if (this.ctx.world !== void 0) this.ctx.fail(`${fn}: \u043F\u043E\u043B\u0435 \u0437\u0430\u0434\u0430\u043D\u043E \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0435\u043C. \u041D\u0435\u043B\u044C\u0437\u044F \u043C\u0435\u043D\u044F\u0442\u044C \u0435\u0433\u043E \u0440\u0430\u0437\u043C\u0435\u0440, \u0441\u0442\u0435\u043D\u044B, \u043A\u043B\u0435\u0442\u043A\u0438 \u0438\u043B\u0438 \u043D\u0430\u0447\u0430\u043B\u044C\u043D\u043E\u0435 \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0420\u043E\u0431\u043E\u0442\u0430.`);
     if (this.started) this.ctx.fail(`${fn}: \u043F\u043E\u043B\u0435 \u043D\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u044E\u0442 \u0434\u043E \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0448\u0430\u0433\u0430 \u0420\u043E\u0431\u043E\u0442\u0430.`);
   }
   inside(r, c, fn) {
@@ -2388,6 +2401,11 @@ function pyrobModules(ctx) {
 }
 
 // src/python/libTurtle.ts
+function num3(...args) {
+  const value = num(...args);
+  if (!Number.isFinite(value)) args[1].fail("\u0427\u0435\u0440\u0435\u043F\u0430\u0445\u0430: \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0431\u0435\u0437 NaN \u0438 Infinity.");
+  return value;
+}
 var LIMIT_ITEMS = 8e3;
 var LIMIT_FRAMES = 16e3;
 var pyMod2 = (x, y) => {
@@ -2448,7 +2466,7 @@ var Screen = class {
     }
     const parts = value instanceof PyTuple || Array.isArray(value) ? ctx.items(value) : [];
     if (parts.length !== 3) ctx.fail(`${fn}: \u0446\u0432\u0435\u0442 \u2014 \u0441\u0442\u0440\u043E\u043A\u0430 \u0438\u043B\u0438 \u0442\u0440\u0438 \u0447\u0438\u0441\u043B\u0430 (r, g, b).`);
-    let rgb = parts.map((p) => num(p, ctx));
+    let rgb = parts.map((p) => num3(p, ctx));
     if (this.colormode === 1) rgb = rgb.map((v) => roundHalfEven(255 * v));
     if (rgb.some((v) => v < 0 || v > 255 || !Number.isInteger(v))) ctx.fail(`${fn}: \u0447\u0438\u0441\u043B\u0430 \u0446\u0432\u0435\u0442\u0430 \u0434\u043E\u043B\u0436\u043D\u044B \u0431\u044B\u0442\u044C \u043E\u0442 0 \u0434\u043E ${this.colormode === 1 ? "1.0" : "255"} (\u0441\u0435\u0439\u0447\u0430\u0441 colormode ${this.colormode === 1 ? "1.0" : "255"}).`);
     return "#" + rgb.map((v) => v.toString(16).padStart(2, "0")).join("");
@@ -2549,17 +2567,17 @@ var TurtleObject = class extends PyObject {
   }
 };
 var point = (t, args, ctx, fn) => {
-  if (args.length === 2) return [num(args[0], ctx), num(args[1], ctx), !!args[0].float, !!args[1].float];
+  if (args.length === 2) return [num3(args[0], ctx), num3(args[1], ctx), !!args[0].float, !!args[1].float];
   const v = args[0]?.value;
   if (v instanceof TurtleObject) return [v.x, v.y, v.xFloat, v.yFloat];
   if (args.length === 1 && (v instanceof PyTuple || Array.isArray(v))) {
     const p = ctx.items(v);
-    if (p.length === 2) return [num(p[0], ctx), num(p[1], ctx), !!p[0].float, !!p[1].float];
+    if (p.length === 2) return [num3(p[0], ctx), num3(p[1], ctx), !!p[0].float, !!p[1].float];
   }
   return ctx.fail(`${fn}: \u0443\u043A\u0430\u0436\u0438 \u043A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442\u044B x \u0438 y.`);
 };
 var angleOf = (degreesValue) => degreesValue;
-var oneNumber = (fn, args, kw, ctx, name = "distance") => num(bind(fn, args, kw, [name], 1, ctx)[name], ctx);
+var oneNumber = (fn, args, kw, ctx, name = "distance") => num3(bind(fn, args, kw, [name], 1, ctx)[name], ctx);
 var turtleMethods = {
   forward: (t, a, kw, ctx) => {
     t.go(oneNumber("forward", a, kw, ctx));
@@ -2580,11 +2598,11 @@ var turtleMethods = {
   },
   setx: (t, a, kw, ctx) => {
     const v = bind("setx", a, kw, ["x"], 1, ctx).x;
-    t.goto(num(v, ctx), t.y, !!v.float, t.yFloat);
+    t.goto(num3(v, ctx), t.y, !!v.float, t.yFloat);
   },
   sety: (t, a, kw, ctx) => {
     const v = bind("sety", a, kw, ["y"], 1, ctx).y;
-    t.goto(t.x, num(v, ctx), t.xFloat, !!v.float);
+    t.goto(t.x, num3(v, ctx), t.xFloat, !!v.float);
   },
   setheading: (t, a, kw, ctx) => {
     t.setheading(oneNumber("setheading", a, kw, ctx, "to_angle"));
@@ -2594,8 +2612,8 @@ var turtleMethods = {
     t.setheading(0);
   },
   circle: (t, a, kw, ctx) => {
-    const p = bind("circle", a, kw, ["radius", "extent", "steps"], 1, ctx), radius = num(p.radius, ctx);
-    const extent = p.extent && p.extent.value !== null ? num(p.extent, ctx) : 360;
+    const p = bind("circle", a, kw, ["radius", "extent", "steps"], 1, ctx), radius = num3(p.radius, ctx);
+    const extent = p.extent && p.extent.value !== null ? num3(p.extent, ctx) : 360;
     let steps = p.steps && p.steps.value !== null ? int(p.steps, ctx, "\u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0448\u0430\u0433\u043E\u0432") : 1 + Math.trunc(Math.min(11 + Math.abs(radius) / 6, 59) * (Math.abs(extent) / 360));
     if (steps < 1) steps = 1;
     if (steps > 720) ctx.fail("circle: \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0448\u0430\u0433\u043E\u0432 (steps).");
@@ -2628,7 +2646,7 @@ var turtleMethods = {
       color2 = t.screen.color(a, ctx, "dot");
       size = def;
     } else {
-      size = a[0].value === null ? def : num(a[0], ctx);
+      size = a[0].value === null ? def : num3(a[0], ctx);
       color2 = a.length > 1 ? t.screen.color(a.slice(1), ctx, "dot") : t.pen;
     }
     t.screen.push({ kind: "dot", id: t.id, t0: ctx.clock.now, x: t.x, y: t.y, size, color: color2 });
@@ -2639,7 +2657,7 @@ var turtleMethods = {
     let size = 8, weight = "normal";
     if (p.font) {
       const parts = ctx.items(p.font.value, "font");
-      if (parts[1]) size = num(parts[1], ctx);
+      if (parts[1]) size = num3(parts[1], ctx);
       if (parts[2] && typeof parts[2].value === "string") weight = parts[2].value;
     }
     if (size <= 0 || size > 200) ctx.fail("write: \u0440\u0430\u0437\u043C\u0435\u0440 \u0448\u0440\u0438\u0444\u0442\u0430 \u043E\u0442 1 \u0434\u043E 200.");
@@ -2659,7 +2677,7 @@ var turtleMethods = {
   pensize: (t, a, kw, ctx) => {
     const { width } = bind("pensize", a, kw, ["width"], 0, ctx);
     if (!width) return arg(t.width);
-    const w = num(width, ctx);
+    const w = num3(width, ctx);
     if (w <= 0 || w > 500) ctx.fail("pensize: \u0442\u043E\u043B\u0449\u0438\u043D\u0430 \u043E\u0442 1 \u0434\u043E 500.");
     t.width = w;
     t.touch();
@@ -2729,7 +2747,7 @@ var turtleMethods = {
       t.speed = speeds[speed.value];
       return;
     }
-    const s = num(speed, ctx);
+    const s = num3(speed, ctx);
     t.speed = s > 0.5 && s < 10.5 ? roundHalfEven(s) : 0;
   },
   hideturtle: (t) => {
@@ -2752,7 +2770,7 @@ var turtleMethods = {
   shapesize: (t, a, kw, ctx) => {
     const p = bind("shapesize", a, kw, ["stretch_wid", "stretch_len", "outline"], 0, ctx);
     if (!p.stretch_wid) return { value: ctx.tuple([arg(t.stretch), arg(t.stretch), arg(1)]) };
-    const s = num(p.stretch_wid, ctx);
+    const s = num3(p.stretch_wid, ctx);
     if (s <= 0 || s > 50) ctx.fail("shapesize: \u0440\u0430\u0437\u043C\u0435\u0440 \u043E\u0442 0.1 \u0434\u043E 50.");
     t.stretch = s;
     t.touch();
@@ -2782,7 +2800,7 @@ var screenMethods = {
   },
   setup: (s, a, kw, ctx) => {
     const p = bind("setup", a, kw, ["width", "height", "startx", "starty"], 0, ctx);
-    const size = (v, base2, fallback) => !v || v.value === null ? fallback : v.float && num(v, ctx) <= 1 ? num(v, ctx) * base2 : num(v, ctx);
+    const size = (v, base2, fallback) => !v || v.value === null ? fallback : v.float && num3(v, ctx) <= 1 ? num3(v, ctx) * base2 : num3(v, ctx);
     const w = size(p.width, 1600, 800), h = size(p.height, 900, 600);
     if (w < 50 || h < 50 || w > 4e3 || h > 4e3) ctx.fail("setup: \u0448\u0438\u0440\u0438\u043D\u0430 \u0438 \u0432\u044B\u0441\u043E\u0442\u0430 \u043E\u043A\u043D\u0430 \u043E\u0442 50 \u0434\u043E 4000.");
     s.scene.size = [Math.round(w), Math.round(h)];
@@ -2791,12 +2809,12 @@ var screenMethods = {
   screensize: (s, a, kw, ctx) => {
     const p = bind("screensize", a, kw, ["canvwidth", "canvheight", "bg"], 0, ctx);
     if (!p.canvwidth) return { value: ctx.tuple([arg(400), arg(300)]) };
-    s.scene.size = [num(p.canvwidth, ctx), p.canvheight ? num(p.canvheight, ctx) : 300];
+    s.scene.size = [num3(p.canvwidth, ctx), p.canvheight ? num3(p.canvheight, ctx) : 300];
     if (p.bg) screenMethods.bgcolor(s, [p.bg], /* @__PURE__ */ new Map(), ctx);
   },
   setworldcoordinates: (s, a, kw, ctx) => {
     if (a.length !== 4) ctx.fail("setworldcoordinates(llx, lly, urx, ury).");
-    const [x0, y0, x1, y1] = a.map((v) => num(v, ctx));
+    const [x0, y0, x1, y1] = a.map((v) => num3(v, ctx));
     if (x1 <= x0 || y1 <= y0) ctx.fail("setworldcoordinates: \u043F\u0440\u0430\u0432\u044B\u0439 \u0432\u0435\u0440\u0445\u043D\u0438\u0439 \u0443\u0433\u043E\u043B \u0434\u043E\u043B\u0436\u0435\u043D \u0431\u044B\u0442\u044C \u043F\u0440\u0430\u0432\u0435\u0435 \u0438 \u0432\u044B\u0448\u0435 \u043B\u0435\u0432\u043E\u0433\u043E \u043D\u0438\u0436\u043D\u0435\u0433\u043E.");
     s.scene.view = [x0, y0, x1, y1];
   },
@@ -2804,7 +2822,7 @@ var screenMethods = {
     const p = bind("tracer", a, kw, ["n", "delay"], 0, ctx);
     if (!p.n || p.n.value === null) return arg(s.tracing);
     s.tracing = int(p.n, ctx) ? 1 : 0;
-    if (p.delay && p.delay.value !== null) s.delay = Math.max(0, num(p.delay, ctx));
+    if (p.delay && p.delay.value !== null) s.delay = Math.max(0, num3(p.delay, ctx));
     if (s.tracing) s.flush();
   },
   update: (s) => {
@@ -2813,12 +2831,12 @@ var screenMethods = {
   delay: (s, a, kw, ctx) => {
     const { delay } = bind("delay", a, kw, ["delay"], 0, ctx);
     if (!delay || delay.value === null) return arg(s.delay);
-    s.delay = Math.max(0, Math.min(1e3, num(delay, ctx)));
+    s.delay = Math.max(0, Math.min(1e3, num3(delay, ctx)));
   },
   colormode: (s, a, kw, ctx) => {
     const { cmode } = bind("colormode", a, kw, ["cmode"], 0, ctx);
     if (!cmode || cmode.value === null) return s.colormode === 1 ? floatArg(1) : arg(255);
-    const m = num(cmode, ctx);
+    const m = num3(cmode, ctx);
     if (m !== 1 && m !== 255) ctx.fail("colormode: 1.0 \u0438\u043B\u0438 255.");
     s.colormode = m === 255 ? 255 : 1;
   },
@@ -2916,7 +2934,7 @@ function turtleModule(ctx) {
   attrs.set("getscreen", attrs.get("Screen"));
   attrs.set("Vec2D", { value: new PyNative("Vec2D", (a, kw, c) => {
     if (a.length !== 2) c.fail("Vec2D(x, y) \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430.");
-    return { value: new Vec2D(num(a[0], c), num(a[1], c), !!a[0].float, !!a[1].float) };
+    return { value: new Vec2D(num3(a[0], c), num3(a[1], c), !!a[0].float, !!a[1].float) };
   }) });
   return new PyModule("turtle", attrs, [...attrs.keys()]);
 }

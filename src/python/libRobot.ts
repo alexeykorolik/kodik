@@ -42,7 +42,10 @@ class Robot {
       this.step('move', dir)
     }
   }
-  setup(fn: string) { if (this.started) this.ctx.fail(`${fn}: поле настраивают до первого шага Робота.`) }
+  setup(fn: string) {
+    if (this.ctx.world !== undefined) this.ctx.fail(`${fn}: поле задано преподавателем. Нельзя менять его размер, стены, клетки или начальное положение Робота.`)
+    if (this.started) this.ctx.fail(`${fn}: поле настраивают до первого шага Робота.`)
+  }
   inside(r: number, c: number, fn: string) { if (r < 0 || c < 0 || r >= this.world.rows || c >= this.world.cols) this.ctx.fail(`${fn}: клетки (${r}, ${c}) нет на поле ${this.world.rows}×${this.world.cols}. Строки и столбцы считаются с нуля.`) }
   scene(): RobotScene {
     const w = this.world, cells = (s: Set<string>) => [...s].map(cellOf)

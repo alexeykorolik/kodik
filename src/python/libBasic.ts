@@ -234,6 +234,7 @@ export function randomModule(): PyModule {
 export const SLEEP_LIMIT_MS = 60000
 /** time.sleep and plt.pause together may pause a run for at most 60 seconds. */
 export function pause(ctx: Ctx, ms: number, fn: string) {
+  if (!Number.isFinite(ms) || ms < 0) ctx.fail(`${fn}: время паузы должно быть конечным неотрицательным числом.`)
   const total = (ctx.state.get('paused') as number | undefined ?? 0) + ms
   if (total > SLEEP_LIMIT_MS) ctx.fail(`Паузы программы длятся больше 60 секунд. Уменьши ${fn} или число кадров.`)
   ctx.state.set('paused', total)

@@ -78,6 +78,12 @@ const run = (code: string, inputs: string[] = [], world?: string) => runCoursePr
   eq(sensors.output, ["True False True False", "True False"], "wall sensors see borders and inner walls");
   const own = run("from pyrob.api import *\nset_field_size(2, 3)\ngoto(1, 1)\nput_wall(right=True)\nset_cell_type(0, 0, CELL_TO_BE_FILLED)\nset_parking_cell(1, 0)\nprint(wall_is_on_the_right(), get_field_size())\nmove_up()\nmove_left()\nfill_cell()\nmove_down()");
   ok(!own.error && own.scene!.robot!.result.solved, `program-made field: ${own.error}`);
+  for (const setup of ['set_field_size(1, 1)', 'goto(0, 3)', 'put_wall(right=True)', 'set_cell_type(0, 3, CELL_EMPTY)', 'set_parking_cell(0, 0)']) {
+    const changed = run('from pyrob.api import *\n' + setup, [], world);
+    ok(/поле задано преподавателем/.test(changed.error ?? ''), `task world cannot be changed by ${setup}`);
+    ok(!changed.scene!.robot!.result.solved, `changing the task world cannot earn a pass: ${setup}`);
+    eq(changed.scene!.robot!.targets, parsed.targets.size ? [...parsed.targets].map(k => k.split(':').map(Number)) : [], `targets stay in place: ${setup}`);
+  }
   ok(/до первого шага/.test(run("from pyrob.api import *\nmove_right()\nset_field_size(3, 3)").error ?? ""), "setup after moving is refused");
   const tasks = run("from pyrob.api import *\n\n@task(delay=0.05)\ndef task_1():\n    move_right(3)\n    fill_cell()\n    move_down()\n    move_left()\n\nif __name__ == '__main__':\n    run_tasks()", [], world);
   ok(!tasks.error && tasks.scene!.robot!.result.solved && tasks.scene!.robot!.steps[0].t === 50, `@task(delay) and run_tasks: ${tasks.error}`);
@@ -134,6 +140,38 @@ const run = (code: string, inputs: string[] = [], world?: string) => runCoursePr
   ok(/цвет/.test(checkScene(["drawing"], run("import turtle\nturtle.color('blue')\nfor i in range(4):\n    turtle.forward(100)\n    turtle.left(90)").scene, redSquare).message), "a colour chosen by the reference is required and named");
   ok(/ничего не нарисовала/.test(verdict("print(1)").message), "no drawing");
   ok(/Подключи turtle/.test(compareDrawing(undefined, expected?.turtle).message), "no turtle scene");
+  const text = run('import turtle\nturtle.write("OK")').scene;
+  ok(checkScene(['drawing'], run('import turtle\nturtle.write("OK")').scene, text).passed, 'the same text at the same position passes');
+  ok(!checkScene(['drawing'], run('import turtle\nturtle.penup()\nturtle.goto(200, 200)\nturtle.write("OK")').scene, text).passed, 'text in the wrong position fails');
+  ok(!checkScene(['drawing'], run('import turtle\nturtle.write("OK", align="center")').scene, text).passed, 'text with different alignment fails');
+  const stamp = run('import turtle\nturtle.shape("square")\nturtle.stamp()').scene;
+  ok(checkScene(['drawing'], run('import turtle\nturtle.shape("square")\nturtle.right(90)\nturtle.stamp()').scene, stamp).passed, 'a rotated square stamp with the same appearance passes');
+  ok(!checkScene(['drawing'], run('import turtle\nturtle.shape("circle")\nturtle.stamp()').scene, stamp).passed, 'a different stamp shape fails');
+  ok(!checkScene(['drawing'], run('import turtle\nturtle.penup()\nturtle.goto(100, 0)\nturtle.shape("square")\nturtle.stamp()').scene, stamp).passed, 'a moved stamp fails');
+  const erased = run('import turtle\nturtle.forward(100)\nturtle.clear()').scene;
+  ok(!checkScene(['drawing'], erased, erased).passed, 'an erased final drawing cannot earn a pass');
+  const huge = run('import turtle\nturtle.dot(1000000000)').scene;
+  ok(/слишком большой/.test(checkScene(['drawing'], huge, huge).message), 'oversized shapes stop at a bounded comparison budget instead of hanging');
+  for (const value of ['float("nan")', 'float("inf")']) {
+    const paused = run('import matplotlib.pyplot as plt\nplt.plot([1, 2])\nplt.pause(' + value + ')');
+    ok(/конечн/.test(paused.error ?? ''), `non-finite plot pause is refused: ${value}`);
+    ok(Number.isFinite(paused.scene!.duration), 'invalid pauses cannot corrupt the animation timeline');
+  }
+  for (const code of [
+    'import turtle\nturtle.left(float("inf"))',
+    'import turtle\nturtle.pensize(float("nan"))',
+    'import turtle\nturtle.tracer(1, float("inf"))',
+    'import turtle\nturtle.dot(float("nan"))',
+    'import matplotlib.pyplot as plt\nplt.plot([0, 1], [0, float("nan")])',
+    'import numpy as np\nimport matplotlib.pyplot as plt\nplt.plot(np.array([0, np.inf]))',
+    'import matplotlib.pyplot as plt\nplt.xlim(0, float("inf"))',
+    'import matplotlib.pyplot as plt\nplt.xlim(left=0)',
+  ]) {
+    const r = run(code);
+    ok(/конечн/.test(r.error ?? ''), `non-finite graphics input is refused: ${code}`);
+    ok(!r.scene || Number.isFinite(r.scene.duration), 'a failed graphics call keeps a finite scene duration');
+  }
+  for (const limits of ['[0, 1]', '[0, 0, 0, 1]']) ok(!!run('import matplotlib.pyplot as plt\nplt.axis(' + limits + ')').error, 'invalid axis bounds are refused');
   const filled = run("import turtle\nturtle.fillcolor('blue')\nturtle.begin_fill()\nturtle.circle(40)\nturtle.end_fill()").scene;
   ok(!checkScene(["drawing"], run("import turtle\nturtle.circle(40)").scene, filled).passed, "missing fill fails");
   ok(/Подключи команды/.test(checkRobot(undefined).message), "robot check without pyrob");

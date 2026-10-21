@@ -5,7 +5,13 @@ import type { Figure, FigureShot, Series } from './scene'
 import { cssColor } from './colors'
 import { pause } from './libBasic'
 import { NdArray, toArray } from './libNumpy'
-import { PyModule, PyNative, PyObject, PyTuple, arg, bind, int, none, num, text, type Arg, type Ctx, type Keywords } from './values'
+import { PyModule, PyNative, PyObject, PyTuple, arg, bind, int, none, num as numberValue, text, type Arg, type Ctx, type Keywords } from './values'
+
+function num(...args: Parameters<typeof numberValue>): number {
+  const value = numberValue(...args)
+  if (!Number.isFinite(value)) args[1].fail('График: используй конечные числа, без NaN и Infinity.')
+  return value
+}
 
 const cycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 const short: Record<string, string> = { b: '#0000ff', g: '#008000', r: '#ff0000', c: '#00bfbf', m: '#bf00bf', y: '#bfbf00', k: '#000000', w: '#ffffff' }
@@ -74,6 +80,9 @@ export function pyplotModule(ctx: Ctx): { pyplot: PyModule; package: PyModule } 
   const close = (f: FigureState) => { open.splice(open.indexOf(f), 1); if (current === f) current = open.at(-1) }
   ctx.scene.onFinish(() => { for (const f of [...open]) if (!f.empty()) shoot(f, true) })
   const add = (f: FigureState, s: Series) => {
+    // JSON transport would silently turn NaN/Infinity into null and show a false zero on the chart.
+    const values = s.type === 'hist' ? [...s.edges, ...s.counts] : s.type === 'bar' ? [...s.x, ...s.height, s.width] : [...s.x, ...s.y, s.type === 'line' ? s.linewidth : s.size]
+    if (values.some(v => typeof v === 'number' && !Number.isFinite(v))) ctx.fail('График: используй конечные числа, без NaN и Infinity.')
     const count = 'x' in s ? s.x.length : s.type === 'hist' ? s.counts.length : 0
     if ((points += count) > LIMIT_POINTS) ctx.fail(`На графиках больше ${LIMIT_POINTS} точек.`)
     if (f.series.length >= 100) ctx.fail('На одном графике больше 100 наборов данных.')
@@ -162,6 +171,7 @@ export function pyplotModule(ctx: Ctx): { pyplot: PyModule; package: PyModule } 
     const p = bind(axis, args.length === 1 && (args[0].value instanceof PyTuple || Array.isArray(args[0].value)) ? c.items(args[0].value) : args, kw, names, 0, c)
     if (!p[names[0]] && !p[names[1]]) { const v = f[axis] ?? [0, 1]; return { value: c.tuple(v.map(x => ({ value: x, float: true }))) } }
     const old = f[axis] ?? [NaN, NaN], lo = p[names[0]] && p[names[0]]!.value !== null ? num(p[names[0]], c) : old[0], hi = p[names[1]] && p[names[1]]!.value !== null ? num(p[names[1]], c) : old[1]
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) c.fail(`${axis}(): укажи обе конечные границы оси.`)
     if (lo === hi) c.fail(`${axis}(): границы оси не должны совпадать.`)
     f[axis] = [lo, hi]
   }
@@ -186,7 +196,7 @@ export function pyplotModule(ctx: Ctx): { pyplot: PyModule; package: PyModule } 
     title: textSetter('title'), xlabel: textSetter('xlabel'), ylabel: textSetter('ylabel'),
     xlim: (f, a, kw, c) => limits(f, 'xlim', a, kw, c), ylim: (f, a, kw, c) => limits(f, 'ylim', a, kw, c),
     xticks: () => undefined, yticks: () => undefined, tight_layout: () => undefined,
-    axis: (f, a, kw, c) => { const v = a[0]?.value; if (typeof v === 'string' && ['equal', 'on', 'auto', 'tight', 'scaled'].includes(v)) return; if (v instanceof PyTuple || Array.isArray(v)) { const [x0, x1, y0, y1] = c.items(v).map(x => num(x, c)); f.xlim = [x0, x1]; f.ylim = [y0, y1]; return } c.fail('axis(): в Kodik — axis([xmin, xmax, ymin, ymax]) или axis("equal").') },
+    axis: (f, a, kw, c) => { const v = a[0]?.value; if (typeof v === 'string' && ['equal', 'on', 'auto', 'tight', 'scaled'].includes(v)) return; if (v instanceof PyTuple || Array.isArray(v)) { const values = c.items(v).map(x => num(x, c)); if (values.length !== 4) c.fail('axis(): нужны четыре границы [xmin, xmax, ymin, ymax].'); const [x0, x1, y0, y1] = values; if (x0 === x1 || y0 === y1) c.fail('axis(): границы каждой оси не должны совпадать.'); f.xlim = [x0, x1]; f.ylim = [y0, y1]; return } c.fail('axis(): в Kodik — axis([xmin, xmax, ymin, ymax]) или axis("equal").') },
   }
 
   class Axes extends PyObject {

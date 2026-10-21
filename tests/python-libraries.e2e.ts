@@ -40,6 +40,18 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   // ---- turtle: animation, stop, show at once, clean new run ----
   await page.goto(`/#assignment/${s.turtle.assignment.id}`);
   await expect(page.getByText("Проверяется: рисунок черепахи.")).toBeVisible();
+  await page.emulateMedia({colorScheme:'dark'});
+  for(const selector of ['.scene-checks-note','.practice-tip p']){
+    const contrast=await page.locator(selector).evaluate(element=>{
+      const rgb=(color:string)=>color.match(/[\d.]+/g)!.slice(0,3).map(Number).map(v=>{const c=v/255;return c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4});
+      const light=(color:string)=>{const [r,g,b]=rgb(color);return 0.2126*r+0.7152*g+0.0722*b};
+      const wrapper=element.closest('.practice-tip')??element.parentElement!;
+      const values=[light(getComputedStyle(element).color),light(getComputedStyle(wrapper).backgroundColor)].sort((a,b)=>b-a);
+      return (values[0]+0.05)/(values[1]+0.05);
+    });
+    expect(contrast,`${selector} stays readable in the dark theme`).toBeGreaterThanOrEqual(4.5);
+  }
+  await page.emulateMedia({colorScheme:'light'});
   await page.locator("#python-answer").fill("import turtle\nt = turtle.Turtle()\nt.speed(1)\nfor i in range(4):\n    t.forward(100)\n    t.left(90)\n");
   await expect(page.getByText("✓ Сохранено", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "▷ Запустить" }).click();
@@ -66,6 +78,7 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   await page.locator("#python-answer").fill("import turtle\nt = turtle.Turtle()\nt.speed(0)\nt.color('green')\nfor i in range(4):\n    t.forward(100)\n    t.left(90)\n");
   await page.getByRole("button", { name: "Проверить решение", exact: true }).click();
   await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
+  await page.screenshot({path:test.info().outputPath('libraries-checked.png')});
   // ---- Robot: the task field and a crash ----
   await page.goto(`/#assignment/${s.robot.assignment.id}`);
   await expect(page.getByRole("img", { name: /Поле Робота 1×6: Робот в строке 1, столбце 1; нужно закрасить клеток: 1/ })).toBeVisible();
