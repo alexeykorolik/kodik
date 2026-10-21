@@ -13,7 +13,7 @@ export const executionQueue = new ExecutionQueue();
 export function execute(code, inputs = [], options = {}) {
   return executionQueue.run(
     options.tenant || "local",
-    () => spawnRestricted(runner, { code, inputs, rules: options.rules || [] }),
+    () => spawnRestricted(runner, { code, inputs, rules: options.rules || [], ...(options.world !== undefined ? { world: options.world } : {}), ...(options.checks?.length ? { checks: options.checks } : {}), ...(options.reference !== undefined ? { reference: options.reference } : {}) }),
     options,
   );
 }
@@ -68,7 +68,8 @@ function spawnRestricted(file, payload, deadline = 2500, heapMb = 48) {
     }, deadline);
     child.stdout.on("data", (chunk) => {
       output += chunk;
-      if (output.length > 128000) {
+      // Scenes (turtle, Robot, plots) make the answer larger than text output alone.
+      if (output.length > 4000000) {
         child.kill();
         finish({ output: [], error: "Слишком много вывода." });
       }
@@ -99,6 +100,9 @@ function spawnRestricted(file, payload, deadline = 2500, heapMb = 48) {
     child.stdin.end(JSON.stringify(payload));
   });
 }
+/** Learner's own scene and the target picture travel with the result only while they stay small. */
+const SCENE_BYTES = 400000;
+const small = (scene) => scene && JSON.stringify(scene).length <= SCENE_BYTES ? scene : undefined;
 export async function grade(task, code, options = {}) {
   if (task.check_mode === "manual")
     return {
@@ -108,10 +112,16 @@ export async function grade(task, code, options = {}) {
     };
   const tests = JSON.parse(task.tests),
     cases = [];
+  let scene;
   for (const [index, test] of tests.entries()) {
-    const result = await execute(code, test.inputs, {...options,rules:JSON.parse(task.learning_rules||'[]')});
+    // Old tests carry no checks: they compare printed text exactly as before.
+    const checks = test.checks?.length ? test.checks : ["output"];
+    const result = await execute(code, test.inputs, {...options,rules:JSON.parse(task.learning_rules||'[]'),world:test.world,checks,reference:checks.some(c=>c==='drawing'||c==='plot')?task.reference_solution||'':undefined});
     if (result.infrastructure)
       return { status: "checker_error", message: result.error, cases: [] };
+    if (result.scene_check?.infrastructure)
+      return { status: "checker_error", message: result.scene_check.message, cases: [] };
+    if (scene === undefined && result.scene && !test.hidden) scene = small(result.scene);
     if (result.error)
       return {
         status: "runtime_error",
@@ -119,11 +129,14 @@ export async function grade(task, code, options = {}) {
           ? "Ошибка выполнения на скрытом тесте."
           : result.error,
         cases,
+        ...(scene ? { scene } : {}),
       };
     if(result.learning_error&&!test.hidden)
       return {status:'failed',message:result.learning_error,cases};
-    const passed = !result.learning_error &&
-      outputMatches(result.output, test.expected);
+    const textOk = !checks.includes("output") || outputMatches(result.output, test.expected);
+    const sceneOk = !result.scene_check || result.scene_check.passed;
+    const passed = !result.learning_error && textOk && sceneOk;
+    const expectedScene = !passed && !test.hidden ? small(result.expected_scene) : undefined;
     cases.push(
       test.hidden
         ? { index: index + 1, hidden: true, passed }
@@ -133,15 +146,20 @@ export async function grade(task, code, options = {}) {
             output: result.output.join("\n"),
             inputs: test.inputs,
             expected: test.expected,
+            ...(checks.includes("output") ? {} : { text_checked: false }),
+            ...(result.scene_check && !result.scene_check.passed ? { scene_message: result.scene_check.message } : {}),
+            ...(expectedScene ? { expected_scene: expectedScene } : {}),
           },
     );
   }
   const passed = cases.every((t) => t.passed);
+  const sceneProblem = cases.find((t) => !t.passed && t.scene_message)?.scene_message;
   return {
     status: passed ? "passed" : "failed",
     message: passed
       ? "Отлично! Все проверки пройдены."
-      : "Пока не совпадает с нужным результатом. Посмотри, что отличается, и попробуй ещё раз.",
+      : sceneProblem || "Пока не совпадает с нужным результатом. Посмотри, что отличается, и попробуй ещё раз.",
     cases,
+    ...(scene ? { scene } : {}),
   };
 }

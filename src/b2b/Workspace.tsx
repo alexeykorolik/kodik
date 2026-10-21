@@ -10,6 +10,7 @@ import { useSolvingModes, type SolvingModes } from "./useSolvingModes";
 import { MODE_LABEL, type Mode } from "../adaptive/modePolicy";
 import {HelpButton} from './PilotPanels';
 import { explainDifference, learnerStatus } from "./feedback";
+import { PlaybackBar, SceneView, WorldPreview, usePlayback } from "./SceneView";
 function useWorkspaceController({
   task,
   state,
@@ -93,6 +94,9 @@ export function Workspace(props:Parameters<typeof useWorkspaceController>[0]){re
 export function WorkspaceView({model}:{model:WorkspaceModel}){
   const {modes,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,viewNote,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode,checkLabel,nextLabel,referenceAction}=model;
   const [inputsExpanded,setInputsExpanded]=useState(false),[hintsShown,setHintsShown]=useState(0),consoleRef=useRef<HTMLDivElement>(null),resultRef=useRef<HTMLDivElement>(null);
+  // A run's picture replays on its own timeline; every new run starts from a clean scene.
+  const playback=usePlayback(result?.scene?.duration??0,result);
+  const shownOutput:string[]|undefined=result?.output&&result.output_times&&playback.state!=='done'?result.output.filter((_:string,i:number)=>result.output_times[i]<=playback.t):result?.output;
   // After a run or a check the result comes into view next to the buttons, without jumping the page.
   useEffect(()=>{if(result){setInputsExpanded(false);if(consoleRef.current)consoleRef.current.scrollTop=0;resultRef.current?.scrollIntoView?.({block:'nearest'})}},[result]);
   // On-screen keyboard (phones, tablets): keep the field being typed in visible above it.
@@ -209,8 +213,10 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                       <div key={i}>
                         {example.inputs.length > 0 && <><small>Если ввести</small>
                         <pre>{example.inputs.join("\n")}</pre></>}
-                        <small>Программа напечатает</small>
-                        <pre className="screen">{example.expected || "(ничего)"}</pre>
+                        {example.world && <><small>Поле Робота</small><WorldPreview text={example.world} /></>}
+                        {(!example.checks || example.checks.includes("output")) && <><small>Программа напечатает</small>
+                        <pre className="screen">{example.expected || "(ничего)"}</pre></>}
+                        {example.checks?.some((c: string) => c !== "output") && <p className="scene-checks-note">Проверяется: {example.checks.map((c: string) => ({ output: "текст вывода", drawing: "рисунок черепахи", robot: "поле Робота (закрашенные клетки и финиш)", plot: "график" } as Record<string, string>)[c]).join(", ")}.</p>}
                       </div>
                     ))}
                   </div>
@@ -449,10 +455,11 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                 className={`result-box ${resultTone}`}
               >
                 {result.status === "passed" && <span className="celebrate" aria-hidden="true">🎉</span>}<b>{result.message || result.error || "Программа выполнена"}</b>
-                {failedCase && <p className="difference">{explainDifference(failedCase.expected, failedCase.output)}</p>}
+                {failedCase && failedCase.text_checked !== false && !failedCase.scene_message && <p className="difference">{explainDifference(failedCase.expected, failedCase.output)}</p>}
                 {!previewMode && streak >= 2 && result.status !== "passed" && hints.length > hintsShown && <button type="button" className="small hint-offer" onClick={() => { setHintsShown(hintsShown + 1); setTab("hints"); }}>Открыть подсказку {hintsShown + 1}</button>}
-                {result.output && (
-                  <pre>{result.output.join("\n") || "(нет вывода)"}</pre>
+                {result.scene && <><PlaybackBar playback={playback} /><SceneView scene={result.scene} t={playback.t} /></>}
+                {shownOutput && (shownOutput.length > 0 || !result.scene) && (
+                  <pre>{shownOutput.join("\n") || "(нет вывода)"}</pre>
                 )}
                 {result.cases?.map((c: Row) => (
                   <div className="case-result" key={c.index}>
@@ -462,10 +469,14 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
                     </span>
                     {!c.hidden && !c.passed && (
                       <>
+                        {c.scene_message && <p className="difference">{c.scene_message}</p>}
+                        {c.expected_scene && <SceneView scene={c.expected_scene} title="Должно получиться" />}
+                        {c.text_checked !== false && <>
                         <small>Ожидается</small>
                         <pre>{c.expected || "(пусто)"}</pre>
                         <small>Твоя программа напечатала</small>
                         <pre>{c.output || "(ничего)"}</pre>
+                        </>}
                       </>
                     )}
                   </div>
@@ -480,10 +491,13 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
           <details className="runtime-info">
             <summary>Возможности учебного Python</summary>
             <p>
-              print, input, int, str, len для списков, range, переменные,
-              списки, условия, циклы, функции. Отступ — 4 пробела. Импорты,
-              библиотеки, файлы и сеть не поддерживаются.
+              print, input, int, str, float, len, range, abs, round, pow, min,
+              max, sum, переменные, списки, кортежи, срезы, условия, циклы и
+              функции. Отступ — 4 пробела. Библиотеки: turtle, pyrob.api, math,
+              random, time, numpy, matplotlib.pyplot. Файлы, сеть и классы
+              недоступны.
             </p>
+            <a href="#python-help" target="_blank" rel="noopener">Справка по библиотекам с примерами</a>
           </details>
         </section>
       </div>

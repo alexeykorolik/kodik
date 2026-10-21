@@ -1,4 +1,6 @@
-export type Value = string | number | boolean | Value[] | null
+import type { PyObject } from './python/values'
+export type Value = string | number | boolean | Value[] | null | PyObject
+export type Keyword = { name: string; value: Expr }
 export type Expr =
   | { kind: 'literal'; value: Value; float?: boolean }
   | { kind: 'name'; name: string }
@@ -6,20 +8,27 @@ export type Expr =
   | { kind: 'unary'; operator: string; value: Expr }
   | { kind: 'binary'; operator: string; left: Expr; right: Expr }
   | { kind: 'compare'; operands: Expr[]; operators: string[] }
-  | { kind: 'call'; name: string; args: Expr[] }
+  | { kind: 'call'; name: string; args: Expr[]; callee?: Expr; keywords?: Keyword[] }
   | { kind: 'index'; target: Expr; index: Expr }
+  | { kind: 'attribute'; target: Expr; name: string }
+  | { kind: 'tuple'; items: Expr[] }
+  | { kind: 'slice'; start?: Expr; stop?: Expr; step?: Expr }
 export type Statement =
   | { kind: 'assign'; name: string; index?: Expr; value: Expr }
   | { kind: 'expression'; value: Expr }
   | { kind: 'if'; branches: { condition: Expr; body: Statement[] }[]; otherwise: Statement[] }
   | { kind: 'for'; name: string; iterable: Expr; body: Statement[] }
   | { kind: 'while'; condition: Expr; body: Statement[] }
-  | { kind: 'function'; name: string; params: string[]; body: Statement[] }
+  | { kind: 'function'; name: string; params: string[]; body: Statement[]; decorators?: Expr[] }
   | { kind: 'return'; value: Expr }
   | { kind: 'pass' }
+  | { kind: 'import'; modules: { name: string; alias?: string }[] }
+  | { kind: 'from'; module: string; names: { name: string; alias?: string }[]; star?: boolean }
+  | { kind: 'unpack'; names: string[]; value: Expr }
 
+import type { Scene } from './python/scene'
 export type Segment = { x1: number; y1: number; x2: number; y2: number }
-export type CourseRun = { output: string[]; segments: Segment[]; error?: string; operations: number }
+export type CourseRun = { output: string[]; segments: Segment[]; error?: string; operations: number; scene?: Scene; outputTimes?: number[] }
 export type CourseCheck = CourseRun & { passed: boolean; message: string }
 
 const namePattern = /^[\p{L}_][\p{L}\p{N}_]*$/u
@@ -42,7 +51,7 @@ function tokenize(source: string): string[] {
     if (number) { tokens.push(number[0]); position += number[0].length; continue }
     const name = /^[\p{L}_][\p{L}\p{N}_]*/u.exec(rest)
     if (name) { tokens.push(name[0]); position += name[0].length; continue }
-    const operator = /^(==|!=|>=|<=|\*\*|\/\/|[+\-*/%><(),\[\]])/.exec(rest)
+    const operator = /^(==|!=|>=|<=|\*\*|\/\/|[+\-*/%><(),\[\].:=])/.exec(rest)
     if (operator) { tokens.push(operator[0]); position += operator[0].length; continue }
     syntax(`Незнакомый фрагмент «${rest.slice(0, 12)}». Проверь синтаксис.`)
   }
@@ -83,6 +92,15 @@ class ExpressionParser {
     if (this.peek()) syntax(`Лишний фрагмент «${this.peek()}» в выражении.`)
     return value
   }
+  /** A statement-level value: `a, b` without brackets is a tuple, as in Python. */
+  parseTuple(): Expr {
+    const first = this.expression(0)
+    if (this.peek() !== ',') { if (this.peek()) syntax(`Лишний фрагмент «${this.peek()}» в выражении.`); return first }
+    const items = [first]
+    while (this.peek() === ',') { this.take(); if (!this.peek()) break; items.push(this.expression(0)) }
+    if (this.peek()) syntax(`Лишний фрагмент «${this.peek()}» в выражении.`)
+    return { kind: 'tuple', items }
+  }
   private expression(minPrecedence: number): Expr {
     let left = this.primary()
     const precedence: Record<string, number> = { or: 1, and: 2, '==': 3, '!=': 3, '>': 3, '>=': 3, '<': 3, '<=': 3, '+': 4, '-': 4, '*': 5, '/': 5, '//': 5, '%': 5, '**': 6 }
@@ -104,7 +122,18 @@ class ExpressionParser {
     if (!token) syntax('После знака не хватает значения.')
     let value: Expr
     if (token === '-' || token === '+' || token === 'not') value = { kind: 'unary', operator: token, value: this.expression(token==='not'?3:6) }
-    else if (token === '(') { value = this.expression(0); this.expect(')') }
+    else if (token === '(') {
+      if (this.peek() === ')') { this.take(); value = { kind: 'tuple', items: [] } }
+      else {
+        value = this.expression(0)
+        if (this.peek() === ',') {
+          const items = [value]
+          while (this.peek() === ',') { this.take(); if (this.peek() === ')') break; if (!this.peek()) syntax('Не хватает закрывающей скобки «)» в конце.'); items.push(this.expression(0)) }
+          value = { kind: 'tuple', items }
+        }
+        this.expect(')')
+      }
+    }
     else if (token === '[') {
       const items: Expr[] = []
       while (this.peek() !== ']') { if (!this.peek()) syntax('Не хватает закрывающей скобки «]» у списка.'); items.push(this.expression(0)); if (!this.peek()) syntax('Не хватает закрывающей скобки «]» у списка.'); if (this.peek() !== ']') this.expect(',') }
@@ -118,23 +147,59 @@ class ExpressionParser {
     }
     else if (token === 'True' || token === 'False') value = { kind: 'literal', value: token === 'True' }
     else if (token === 'None') value = { kind: 'literal', value: null }
-    else if (validName(token)) value = { kind: 'name', name: token }
+    else if (validName(token) || token === '__name__') value = { kind: 'name', name: token }
     else syntax(`Неожиданный знак «${token}».`)
-    while (this.peek() === '(' || this.peek() === '[') {
-      if (this.peek() === '(') {
+    while (this.peek() === '(' || this.peek() === '[' || this.peek() === '.') {
+      if (this.peek() === '.') {
+        this.take(); const name = this.take()
+        if (!name || !validName(name)) syntax('После точки запиши имя функции или значения из библиотеки.')
+        value = { kind: 'attribute', target: value, name }
+      } else if (this.peek() === '(') {
         this.take()
-        if (value.kind !== 'name') syntax('Перед скобками вызова запиши имя функции.')
-        const args: Expr[] = []
-        while (this.peek() !== ')') { if (!this.peek()) syntax('Не хватает закрывающей скобки «)» в конце команды.'); args.push(this.expression(0)); if (!this.peek()) syntax('Не хватает закрывающей скобки «)» в конце команды.'); if (this.peek() !== ')') this.expect(',') }
-        this.expect(')'); value = { kind: 'call', name: value.name, args }
+        if (value.kind !== 'name' && value.kind !== 'attribute') syntax('Перед скобками вызова запиши имя функции.')
+        const args: Expr[] = [], keywords: Keyword[] = []
+        while (this.peek() !== ')') {
+          if (!this.peek()) syntax('Не хватает закрывающей скобки «)» в конце команды.')
+          if (validName(this.peek()) && this.tokens[this.index + 1] === '=') {
+            const name = this.take(); this.take()
+            if (keywords.some(item => item.name === name)) syntax(`Аргумент «${name}» указан дважды.`)
+            keywords.push({ name, value: this.expression(0) })
+          } else {
+            if (keywords.length) syntax('Обычные аргументы пишутся до именованных (имя=значение).')
+            args.push(this.expression(0))
+          }
+          if (!this.peek()) syntax('Не хватает закрывающей скобки «)» в конце команды.'); if (this.peek() !== ')') this.expect(',')
+        }
+        this.expect(')')
+        // Old programs keep exactly their old tree: optional parts appear only when used.
+        value = value.kind === 'name' ? { kind: 'call', name: value.name, args } : { kind: 'call', name: value.name, args, callee: value }
+        if (keywords.length) value.keywords = keywords
       } else {
-        this.take(); const index = this.expression(0); this.expect(']'); value = { kind: 'index', target: value, index }
+        this.take()
+        const items = [this.subscript()]; let trailing = false
+        while (this.peek() === ',') { this.take(); if (this.peek() === ']') { trailing = true; break } items.push(this.subscript()) }
+        this.expect(']')
+        value = { kind: 'index', target: value, index: items.length === 1 && !trailing ? items[0] : { kind: 'tuple', items } }
       }
     }
     return value
   }
+  /** One position inside [ ]: an index or a slice start:stop:step. */
+  private subscript(): Expr {
+    let start: Expr | undefined
+    if (!this.peek()) syntax('Не хватает закрывающей скобки «]».')
+    if (this.peek() !== ':') { start = this.expression(0); if (this.peek() !== ':') return start }
+    this.take()
+    let stop: Expr | undefined, step: Expr | undefined
+    if (this.peek() && ![':', ']', ','].includes(this.peek())) stop = this.expression(0)
+    if (this.peek() === ':') { this.take(); if (this.peek() && ![']', ','].includes(this.peek())) step = this.expression(0) }
+    return { kind: 'slice', ...(start ? { start } : {}), ...(stop ? { stop } : {}), ...(step ? { step } : {}) }
+  }
 }
 function expression(source: string) { return new ExpressionParser(tokenize(source)).parse() }
+function tupleExpression(source: string, line: { number: number }) {
+  try { return new ExpressionParser(tokenize(source)).parseTuple() } catch (e) { const message = (e as Error).message; throw new Error(message.startsWith('Строка') ? message : `Строка ${line.number}: ${message[0].toLowerCase()}${message.slice(1)}`) }
+}
 /** The same parse, with the line named so a child knows where to look. */
 function lineExpression(source: string, line: { number: number }) {
   try { return expression(source) } catch (e) { const message = (e as Error).message; throw new Error(message.startsWith('Строка') ? message : `Строка ${line.number}: ${message[0].toLowerCase()}${message.slice(1)}`) }
@@ -163,14 +228,36 @@ export function parseCourseProgram(source: string): Statement[] {
   let cursor = 0
   const block = (indent: number,functionDepth=0): Statement[] => {
     const result: Statement[] = []
+    let decorators: Expr[] = []
     while (cursor < lines.length) {
       const line = lines[cursor]
       if (line.indent < indent) break
       if (line.indent > indent) syntax(`Строка ${line.number}: неожиданный отступ.`)
       if (line.text === 'else:' || line.text.startsWith('elif ')) break
       cursor++
+      if (decorators.length && !line.text.startsWith('def ') && !line.text.startsWith('@')) syntax(`Строка ${line.number}: после декоратора @ нужна строка def.`)
       const nested = (functionBody=false) => { const body = block(indent + 4,functionDepth+(functionBody?1:0)); if (!body.length) syntax(`Строка ${line.number}: после двоеточия нужна команда с отступом.`); return body }
       let match: RegExpExecArray | null
+      if ((match = /^@(.+)$/.exec(line.text))) { decorators.push(lineExpression(match[1], line)); continue }
+      if ((match = /^import\s+(.+)$/.exec(line.text))) {
+        const modules = match[1].split(',').map(part => {
+          const item = /^\s*([\p{L}_][\p{L}\p{N}_]*(?:\s*\.\s*[\p{L}_][\p{L}\p{N}_]*)*)(?:\s+as\s+([\p{L}_][\p{L}\p{N}_]*))?\s*$/u.exec(part)
+          if (!item || item[2] && !validName(item[2])) syntax(`Строка ${line.number}: запиши импорт как import имя или import имя as короткое_имя.`)
+          return { name: item[1].replace(/\s+/g, ''), ...(item[2] ? { alias: item[2] } : {}) }
+        })
+        result.push({ kind: 'import', modules }); continue
+      }
+      if ((match = /^from\s+([\p{L}_][\p{L}\p{N}_]*(?:\s*\.\s*[\p{L}_][\p{L}\p{N}_]*)*)\s+import\s+(.+)$/u.exec(line.text))) {
+        const module = match[1].replace(/\s+/g, ''), list = match[2].trim().replace(/^\((.*)\)$/, '$1').trim()
+        if (list === '*') { result.push({ kind: 'from', module, names: [], star: true }); continue }
+        const names = list.split(',').filter((part, i, all) => part.trim() || i < all.length - 1).map(part => {
+          const item = /^\s*([\p{L}_][\p{L}\p{N}_]*)(?:\s+as\s+([\p{L}_][\p{L}\p{N}_]*))?\s*$/u.exec(part)
+          if (!item || !validName(item[1]) || item[2] && !validName(item[2])) syntax(`Строка ${line.number}: запиши импорт как from модуль import имя, имя2 или from модуль import *.`)
+          return { name: item[1], ...(item[2] ? { alias: item[2] } : {}) }
+        })
+        result.push({ kind: 'from', module, names }); continue
+      }
+      if (/^(import|from)/.test(line.text)) syntax(`Строка ${line.number}: запиши импорт как import модуль или from модуль import имя.`)
       if ((match = /^if\s+(.+):$/.exec(line.text))) {
         const branches = [{ condition: lineExpression(match[1], line), body: nested() }]
         while (lines[cursor]?.indent === indent && (match = /^elif\s+(.+):$/.exec(lines[cursor].text))) { const elifLine = lines[cursor]; cursor++; branches.push({ condition: lineExpression(match[1], elifLine), body: nested() }) }
@@ -187,23 +274,40 @@ export function parseCourseProgram(source: string): Statement[] {
         if(functionDepth)syntax('Вложенные функции пока не поддерживаются. Опиши функции отдельно.')
         const params = match[2].trim() ? match[2].split(',').map(item => item.trim()) : []
         if (!variableName(match[1]) || params.some(name => !variableName(name)) || new Set(params).size !== params.length) syntax(`Строка ${line.number}: проверь имя функции и параметры; имена встроенных команд не переопределяй.`)
-        result.push({ kind: 'function', name: match[1], params, body: nested(true) }); continue
+        const fn: Statement = { kind: 'function', name: match[1], params, body: nested(true) }
+        if (decorators.length) { fn.decorators = decorators; decorators = [] }
+        result.push(fn); continue
       }
-      if ((match = /^return\s+(.+)$/.exec(line.text))) { result.push({ kind: 'return', value: lineExpression(match[1], line) }); continue }
+      if ((match = /^return\s+(.+)$/.exec(line.text))) { result.push({ kind: 'return', value: tupleExpression(match[1], line) }); continue }
       if(line.text==='return'){result.push({kind:'return',value:{kind:'literal',value:null}});continue}
       if (line.text === 'pass') { result.push({ kind: 'pass' }); continue }
+      // Index targets are parsed as one expression so `a[1, 2]` and `a[1:3]` read like everywhere else.
+      const indexOf = (name: string, inside: string) => { const target = lineExpression(`${name}[${inside}]`, line); if (target.kind !== 'index' || target.target.kind !== 'name') syntax(`Строка ${line.number}: меняй элемент так: имя[индекс] = значение.`); return target.index }
+      if ((match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*(\*\*|\/\/|[+\-*/%])=\s*(.+)$/u.exec(line.text))) {
+        if (!variableName(match[1])) syntax(`Строка ${line.number}: неверное имя переменной; имена встроенных команд не переопределяй.`)
+        const index = match[2] ? indexOf(match[1], match[2]) : undefined, current: Expr = index ? { kind: 'index', target: { kind: 'name', name: match[1] }, index } : { kind: 'name', name: match[1] }
+        result.push({ kind: 'assign', name: match[1], index, value: { kind: 'binary', operator: match[3], left: current, right: lineExpression(match[4], line) } }); continue
+      }
+      if ((match = /^([\p{L}_][\p{L}\p{N}_]*(?:\s*,\s*[\p{L}_][\p{L}\p{N}_]*)+)\s*,?\s*=(?!=)\s*(.+)$/u.exec(line.text))) {
+        const names = match[1].split(',').map(name => name.trim())
+        if (names.some(name => !variableName(name)) || new Set(names).size !== names.length) syntax(`Строка ${line.number}: неверное имя переменной; имена встроенных команд не переопределяй.`)
+        result.push({ kind: 'unpack', names, value: tupleExpression(match[2], line) }); continue
+      }
       if ((match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*=\s*(.+)$/u.exec(line.text))) {
         if (!variableName(match[1])) syntax(`Строка ${line.number}: неверное имя переменной; имена встроенных команд не переопределяй.`)
-        result.push({ kind: 'assign', name: match[1], index: match[2] ? lineExpression(match[2], line) : undefined, value: lineExpression(match[3], line) }); continue
+        result.push({ kind: 'assign', name: match[1], index: match[2] ? indexOf(match[1], match[2]) : undefined, value: tupleExpression(match[3], line) }); continue
       }
+      if (/^[\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*)+\s*=(?!=)/u.test(line.text)) syntax(`Строка ${line.number}: менять свойства через точку нельзя — вызови функцию, например t.color("red").`)
       if (/^(if|elif|else|while|for|def)\b/.test(line.text)) syntax(`Строка ${line.number}: после условия, цикла или def нужны двоеточие и строка с отступом.`)
       const value = lineExpression(line.text, line)
       if (value.kind !== 'call') syntax(`Строка ${line.number}: здесь нужна команда или присваивание.`)
       result.push({ kind: 'expression', value })
     }
+    if (decorators.length) syntax('После декоратора @ нужна строка def.')
     return result
   }
   const program = block(0)
+  if (cursor < lines.length && lines[cursor].text.startsWith('@')) syntax(`Строка ${lines[cursor].number}: после декоратора @ нужна строка def.`)
   if (cursor < lines.length) syntax(`Строка ${lines[cursor].number}: else или elif должны идти сразу после if.`)
   return program
 }

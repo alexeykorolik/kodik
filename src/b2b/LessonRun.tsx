@@ -4,14 +4,20 @@ import {Workspace} from './Workspace';
 import {HelpButton} from './PilotPanels';
 import {useConfirm} from './confirm';
 import {runCourseProgram} from '../pythonExecution';
+import {PlaybackBar,SceneView,usePlayback} from './SceneView';
+import type {Scene} from '../python/scene';
 const labels:Record<string,string>={text:'Объяснение',code:'Пример кода',practice:'Практика',question:'Вопрос',final:'Самостоятельная задача',summary:'Итог'};
 /** Runs the lesson's example in the browser: the child sees what it prints right on the step. */
-function ExampleRunner({code}:{code:string}){
-  const needsInput=/input\s*\(/.test(code),[input,setInput]=useState('4'),[out,setOut]=useState<{output:string[];error?:string}|null>(null);
+export function ExampleRunner({code}:{code:string}){
+  const needsInput=/input\s*\(/.test(code),[input,setInput]=useState('4'),[out,setOut]=useState<{output:string[];error?:string;scene?:Scene;times?:number[]}|null>(null);
+  // Each press is a new run: fresh modules, a clean scene and the animation from the start.
+  const playback=usePlayback(out?.scene?.duration??0,out);
+  const lines=out&&out.times&&playback.state!=='done'?out.output.filter((_,i)=>out.times![i]<=playback.t):out?.output;
   return <div className="example-runner">
     {needsInput&&<label className="example-input">Что ввести<input value={input} onChange={e=>setInput(e.target.value)} maxLength={40}/></label>}
-    <button type="button" className="primary small" onClick={()=>{try{const r=runCourseProgram(code,needsInput?input.split('\n'):[]);setOut({output:r.output,error:r.error})}catch(e){setOut({output:[],error:(e as Error).message})}}}>▷ Запустить пример</button>
-    {out&&<pre className="example-output" role="status" aria-label="Что напечатал пример">{out.error?`Ошибка: ${out.error}`:out.output.join('\n')||'(ничего)'}</pre>}
+    <button type="button" className="primary small" onClick={()=>{try{const r=runCourseProgram(code,needsInput?input.split('\n'):[]);setOut({output:r.output,error:r.error,scene:r.scene,times:r.outputTimes})}catch(e){setOut({output:[],error:(e as Error).message})}}}>{out?'↻ Запустить ещё раз':'▷ Запустить пример'}</button>
+    {out?.scene&&<><PlaybackBar playback={playback}/><SceneView scene={out.scene} t={playback.t}/></>}
+    {out&&(!out.scene||out.error||(lines?.length??0)>0)&&<pre className="example-output" role="status" aria-label="Что напечатал пример">{out.error&&(playback.state==='done'||!out.scene)?`${lines?.length?lines.join('\n')+'\n':''}Ошибка: ${out.error}`:lines?.join('\n')||'(ничего)'}</pre>}
   </div>;
 }
 /**
@@ -61,7 +67,7 @@ export function LessonRun({id,state,refresh,onBack,onAttempt,refreshedAt}:{id:st
       {step&&<><span className="overline">Шаг {index+1} из {steps.length}{student?'':` · ${labels[step.type]}`}</span><h2>{step.title}</h2>
         {step.type==='question'&&example&&<pre className="lesson-code question-example" aria-label="Пример из урока">{example}</pre>}
         <p className="lesson-prose">{step.body}</p>
-        {step.type==='code'&&<><pre className="lesson-code">{step.code}</pre>{student&&<ExampleRunner code={step.code}/>}</>}
+        {step.type==='code'&&<><pre className="lesson-code">{step.code}</pre><ExampleRunner key={step.id} code={step.code}/></>}
         {!student&&assignment&&<><h3>{assignment.task.title}</h3><p>{assignment.task.instruction}</p><p className="muted">Результат появится в таблице выше.</p></>}
         {step.type==='question'&&<fieldset className="question-choices" disabled={busy||!writable||feedback?.correct||passed&&student}>{step.choices.map((choice:string,i:number)=><label className={`question-choice${answer===i?' chosen':''}${!student&&i===step.correct_index?' correct':''}`} key={i}><input type="radio" name={`answer-${step.id}`} checked={answer===i} onChange={()=>{setAnswer(i);if(!feedback?.correct)setFeedback(null)}}/><span>{choice}{!student&&i===step.correct_index?' · правильный ответ':''}</span></label>)}</fieldset>}
         {feedback&&<div className={`answer-feedback ${feedback.correct?'right':'wrong'}`} role="status"><b>{feedback.correct?'✓ ':''}{feedback.message}</b>{feedback.explanation&&<p>{feedback.explanation}</p>}</div>}

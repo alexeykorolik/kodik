@@ -8,6 +8,36 @@ import { BlockEditor } from './BlockEditor';
 import { BLOCKS } from '../adaptive/blockProgram';
 import { EMPTY_CONFIG, SKILLS } from '../adaptive/learningConfig';
 import {analyzeReference,skillLabel} from '../adaptive/referenceAnalysis';
+import { WorldPreview } from './SceneView';
+
+const SAMPLE_WORLD = "+-+-+-+-+-+\n|R . . . *|\n+ + +-+ + +\n|. . . . .|\n+-+-+-+-+-+";
+const CHECK_NAMES: [string, string][] = [["output", "Текст вывода"], ["drawing", "Рисунок черепахи — как у эталона"], ["robot", "Робот выполнил поле"], ["plot", "Графики — как у эталона"]];
+/** What a test checks besides the printed text, and the Robot's field for this test. */
+function TestChecks({ test, onChange }: { test: Row; onChange: (patch: Row) => void }) {
+  const checks: string[] = test.checks ?? ["output"], hasWorld = test.world !== undefined;
+  const toggle = (key: string, on: boolean) => {
+    let next = on ? [...checks, key] : checks.filter((c) => c !== key);
+    if (!next.length) next = ["output"];
+    const patch: Row = { checks: next.length === 1 && next[0] === "output" ? undefined : CHECK_NAMES.map(([k]) => k).filter((k) => next.includes(k)) };
+    if (key === "robot" && on && !hasWorld) patch.world = SAMPLE_WORLD;
+    onChange(patch);
+  };
+  return <div className="test-checks">
+    <fieldset>
+      <legend>Что проверять</legend>
+      {CHECK_NAMES.map(([key, label]) => <label className="checkbox" key={key}><input type="checkbox" checked={checks.includes(key)} onChange={(e) => toggle(key, e.target.checked)} />{label}</label>)}
+    </fieldset>
+    {(checks.includes("drawing") || checks.includes("plot")) && <p className="field-hint">Рисунок и графики сравниваются с закрытым эталоном, запущенным на тех же данных и поле. Порядок рисования линий не важен; цвета, надписи, заголовки и подписи осей важны, если их задаёт эталон.</p>}
+    {hasWorld ? <div className="world-editor">
+      <label>Поле Робота
+        <textarea className="code-field" rows={7} spellCheck={false} value={test.world} onChange={(e) => onChange({ world: e.target.value })} />
+      </label>
+      <div className="world-preview"><small>Так поле увидит ученик</small><WorldPreview text={test.world} /></div>
+      <p className="field-hint">R — Робот, * — нужно закрасить, # — уже закрашено, P — парковка, Q — Робот на парковке, X — Робот на клетке «*». Стены между клетками: «|» и «-». Внешняя рамка — тоже стена.</p>
+      {!checks.includes("robot") && <button type="button" className="link subtle" onClick={() => onChange({ world: undefined })}>Убрать поле</button>}
+    </div> : <button type="button" className="link subtle" onClick={() => onChange({ world: SAMPLE_WORLD })}>+ Поле Робота для этого теста</button>}
+  </div>;
+}
 const steps = [
   "Основная информация",
   "Содержимое",
@@ -107,11 +137,18 @@ export function Builder({
     }
   }
   function changeTest(i: number, key: string, value: unknown) {
+    changeTestFields(i, { [key]: value });
+  }
+  /** Several fields of one test at once; undefined removes an optional field (field of the Robot, checks). */
+  function changeTestFields(i: number, patch: Row) {
     set(
       "tests",
-      task.tests.map((t: Row, n: number) =>
-        n === i ? { ...t, [key]: value } : t,
-      ),
+      task.tests.map((t: Row, n: number) => {
+        if (n !== i) return t;
+        const next: Row = { ...t, ...patch };
+        for (const key of Object.keys(patch)) if (patch[key] === undefined) delete next[key];
+        return next;
+      }),
     );
   }
   return (
@@ -346,10 +383,13 @@ export function Builder({
               <details className="runtime-info">
                 <summary>Возможности учебного Python</summary>
                 <p>
-                  print, input, int, str, len (списки), range, переменные,
-                  списки, if/else, for/while и функции. Используйте отступы в 4
-                  пробела. Импорты, файлы, сеть, классы и внешние библиотеки
-                  недоступны. Это учебное подмножество Python.
+                  print, input, int, str, float, len, range, abs, round, pow,
+                  min, max, sum, переменные, списки, кортежи, срезы, if/else,
+                  for/while и функции. Используйте отступы в 4 пробела.
+                  Подключаются turtle, pyrob.api, math, random, time, numpy и
+                  matplotlib.pyplot. Файлы, сеть, классы и другие библиотеки
+                  недоступны. Это учебное подмножество Python.{" "}
+                  <a href="#python-help" target="_blank" rel="noopener">Справка по библиотекам</a>
                 </p>
               </details>
             </>
@@ -445,6 +485,7 @@ export function Builder({
                         />
                         Скрытый тест
                       </label>
+                      <TestChecks test={t} onChange={(patch) => changeTestFields(i, patch)} />
                     </div>
                   ))}
                   <button

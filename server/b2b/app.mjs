@@ -21,6 +21,7 @@ import {createTaskQuality,runtimeFor} from './task-quality.mjs';
 import {createPilot} from './pilot.mjs';
 import {createLearningEvidence} from './learning-evidence.mjs';
 import {createStarterCourse} from './starter-course.mjs';
+import {createLibraryCourse} from './library-course.mjs';
 import learningRules from '../../src/b2b/learningRules.json' with {type:'json'};
 
 const scrypt = promisify(scryptCallback);
@@ -164,7 +165,7 @@ export function createApp({
       hints: JSON.parse(task.hints),
       examples: JSON.parse(tests)
         .filter((t) => !t.hidden)
-        .map((t) => ({ inputs: t.inputs, expected: t.expected })),
+        .map((t) => ({ inputs: t.inputs, expected: t.expected, ...(t.world !== undefined ? { world: t.world } : {}), ...(t.checks ? { checks: t.checks } : {}) })),
       ...(user.role === "student" ? {} : {tests:JSON.parse(tests),reference_solution:reference_solution||'',wrong_solutions:JSON.parse(wrong_solutions||'[]'),preview_solution:preview_solution||'',template_id:template_id||'',verification:taskQuality.approval(task)}),
     };
   }
@@ -190,7 +191,15 @@ export function createApp({
         typeof t.hidden !== "boolean"
       )
         fail(400, "Неверный формат теста.");
-      return { inputs: t.inputs, expected: t.expected, hidden: t.hidden };
+      // Optional parts of a test: the Robot's field and what is checked besides (or instead of) text.
+      if (t.world !== undefined) {
+        if (typeof t.world !== "string" || t.world.length > 2000) fail(400, "Поле Робота — текст до 2000 символов.");
+        try { adaptive.parseWorld(t.world); } catch (e) { fail(400, `Поле Робота в тесте: ${e.message}`); }
+      }
+      if (t.checks !== undefined && (!Array.isArray(t.checks) || !t.checks.length || new Set(t.checks).size !== t.checks.length || t.checks.some((c) => !adaptive.SCENE_CHECKS.includes(c))))
+        fail(400, "Что проверять в тесте: текст, рисунок, Робот или график.");
+      if (t.checks?.includes("robot") && t.world === undefined) fail(400, "Для проверки Робота добавьте в тест поле.");
+      return { inputs: t.inputs, expected: t.expected, hidden: t.hidden, ...(t.world !== undefined ? { world: t.world } : {}), ...(t.checks !== undefined ? { checks: t.checks } : {}) };
     });
     if (
       !Array.isArray(b.hints) ||
@@ -489,6 +498,7 @@ export function createApp({
     {const accepted=/^\/api\/tasks\/([^/]+)\/(?:submissions|submit)$/.exec(path);if(accepted&&method==='POST'&&user.role==='student'){const replayed=submissions.replayAccepted(user,accepted[1],b);if(replayed){if(replayed.error)fail(replayed.status,replayed.error,replayed.details);return replayed}}}
     if(!['GET','HEAD'].includes(method)&&!path.endsWith('/draft'))pilot.checkLicense(user);
     if(path==='/api/starter-course/install'&&method==='POST')return await createStarterCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user);
+    if(path==='/api/library-course/install'&&method==='POST')return await createLibraryCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user);
     const pilotResult=await pilot.handle(path,method,b,user,req,res);
     if(pilotResult!==undefined)return pilotResult;
     const learningResult=await learningEvidence.handle(path,method,b,user,req);
@@ -529,7 +539,7 @@ export function createApp({
           user.org_id,
         ),
         courses = all(
-          "SELECT c.*,(SELECT status FROM course_imports i WHERE i.course_id=c.id) import_status FROM courses c WHERE org_id=? ORDER BY created_at",
+          "SELECT c.*,(SELECT status FROM course_imports i WHERE i.course_id=c.id) import_status,(SELECT template FROM course_imports i WHERE i.course_id=c.id) import_template FROM courses c WHERE org_id=? ORDER BY created_at",
           user.org_id,
         );
       if (user.role === "student") {
@@ -633,7 +643,8 @@ export function createApp({
       const learning=adaptive.validateLearningConfig(b.learning_config);
       if(learning.error)fail(400,learning.error);
       const program=await programOf(user,{learning_config:learning.config},b);
-      return {...await execute(program.code,inputs,{tenant:user.org_id}),mode:program.mode,...(program.mode==='python'?{}:{python:program.code,translator:program.translator,warnings:program.warnings})};
+      if(b.world!==undefined&&(typeof b.world!=='string'||b.world.length>2000))fail(400,'Поле Робота — текст до 2000 символов.');
+      return {...await execute(program.code,inputs,{tenant:user.org_id,world:b.world}),mode:program.mode,...(program.mode==='python'?{}:{python:program.code,translator:program.translator,warnings:program.warnings})};
     }
     if (path === "/api/preview" && method === "POST") {
       teacher(user);
@@ -641,7 +652,7 @@ export function createApp({
       const values = validateTask(b.task, user);
       const program = await programOf(user, { learning_config: values[17] }, b);
       const result = await grade(
-        { check_mode: values[9], tests: values[10],learning_rules:values[16] },
+        { check_mode: values[9], tests: values[10],learning_rules:values[16],reference_solution:values[11] },
         program.code,
         { tenant: user.org_id },
       );
@@ -1232,7 +1243,9 @@ export function createApp({
         const inputs = inputsOf(b.inputs);
         limit(`execute:${user.id}`, 50, 60000);
         const program = await programOf(user, task, b);
-        const result = await execute(program.code, inputs, { tenant: user.org_id });
+        // A trial run uses the Robot field of the first test that has one (the public one first).
+        const tests = JSON.parse(task.tests || "[]"), field = (tests.find((t) => t.world !== undefined && !t.hidden) ?? tests.find((t) => t.world !== undefined))?.world;
+        const result = await execute(program.code, inputs, { tenant: user.org_id, world: field });
         // The mirror shows exactly the program that ran.
         return { ...result, mode, ...(mode === "python" ? {} : { python: program.code, translator: program.translator, warnings: program.warnings }) };
       }

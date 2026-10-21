@@ -13,14 +13,16 @@ export function TaskPreview({task:original,state,refresh,onBack,onPublish}:{task
   const [workspace,setWorkspace]=useState(task.learning_config?.starter_blocks ?? null);
   const supported=supportedModes(task.learning_config),policy=defaultPolicy(supported);
   const modes=useSolvingModes({...task,learning:task.learning_config,modes:{...policy,supported,current:policy.start,offered:null}},state,async()=>{},{workspace,change:setWorkspace,persist:async()=>true});
+  // The trial run uses the Robot field of the first test with one, as the learner's run does.
+  const field:string|undefined=(task.tests.find((t:Row)=>t.world!==undefined&&!t.hidden)??task.tests.find((t:Row)=>t.world!==undefined))?.world;
   async function run(check:boolean){setBusy(true);setError('');setResult(null);try{
     if(!await persist())return;
     const program=modes.requestBody()??{mode:'python',code};
-    const response=check?await api('/preview',{task,...program}):await api('/preview/run',{...program,learning_config:task.learning_config,inputs:inputs===''?[]:inputs.split('\n')});
+    const response=check?await api('/preview',{task,...program}):await api('/preview/run',{...program,learning_config:task.learning_config,inputs:inputs===''?[]:inputs.split('\n'),...(field!==undefined?{world:field}:{})});
     setResult(response);
     if(check)setAttempts(items=>[{id:crypto.randomUUID(),status:response.status,result:response,feedback:'',created_at:new Date().toISOString()},...items]);
   }catch(e){setError((e as Error).message)}finally{setBusy(false)}}
-  const visible={...task,examples:task.tests.filter((t:Row)=>!t.hidden).map((t:Row)=>({inputs:t.inputs,expected:t.expected})),group_title:'Пробное прохождение'};
+  const visible={...task,examples:task.tests.filter((t:Row)=>!t.hidden).map((t:Row)=>({inputs:t.inputs,expected:t.expected,...(t.world!==undefined?{world:t.world}:{}),...(t.checks?{checks:t.checks}:{})})),group_title:'Пробное прохождение'};
   const model:WorkspaceModel={modes,task:visible,attempts,studentDraft:{change,error:author.error,conflict:null,resolve:async()=>{}},code,persist,saved:author.status==='saved'?'Пример сохранён отдельно от стартового кода':author.status==='saving'?'Сохраняем пример…':'Пример сохранён на компьютере',revision,refresh,onBack,nextTask:{title:'Публикация задания'},onNext:onPublish,backLabel:'← К конструктору задания',readOnly:false,viewNote:'',lessonContext:undefined,onLessonOverview:undefined,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission:{submit:async()=>{},cancel:async()=>{},retry:()=>{},phase:'idle',notice:null,sentAt:null,waiting:false,busy:false,label:'',error:'',canCancel:false},run,previewMode:true,checkLabel:'Проверить пример решения',nextLabel:'К публикации',referenceAction:()=>modes.mode==='python'?change(task.reference_solution||''):setWorkspace(task.block_solution??null)};
   return <WorkspaceView model={model}/>;
 }

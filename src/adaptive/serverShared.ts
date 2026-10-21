@@ -6,3 +6,5 @@ export { MODES, MODE_LABEL, isMode, supportedModes, defaultPolicy, validatePolic
 export { validateWorkspaceShape, BLOCKS, LIMITS, TRANSLATOR_VERSION, WORKSPACE_FORMAT } from './blockProgram'
 export { parseLearningConfig, validateLearningConfig, publicLearningConfig, SKILLS, EMPTY_CONFIG } from './learningConfig'
 export { programShape, sameProgram, isUnchangedStart } from './evidence'
+export { parseWorld } from '../python/robotWorld'
+export { SCENE_CHECKS } from '../python/sceneCheck'

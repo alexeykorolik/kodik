@@ -58,7 +58,10 @@ export function analyzeReference(source: string): Compatibility {
       case 'compare':
         if (e.operands.length > 2) no('Цепочка сравнений вида 1 < x < 5 пока не имеет блока. Разбейте её на два сравнения с «и».')
         use('comparison', 'logic_compare'); e.operands.forEach(expr); return
+      case 'attribute': case 'tuple': case 'slice':
+        no('Библиотеки, кортежи и срезы доступны только в режиме Python.'); return
       case 'call':
+        if (e.callee || e.keywords) { no('Функции библиотек и именованные аргументы доступны только в режиме Python.'); return }
         if (e.name === 'int' && e.args.length === 1 && e.args[0].kind === 'call' && e.args[0].name === 'input' && e.args[0].args.length === 0) { use('input', 'kodik_input_int'); return }
         if (e.name === 'input' && e.args.length === 0) { use('input', 'kodik_input_text'); return }
         if (e.name === 'input') { no('input с подсказкой пока не имеет блока: подсказка попадёт в вывод.'); return }
@@ -75,7 +78,10 @@ export function analyzeReference(source: string): Compatibility {
           use('variables', 'variables_set')
           if (s.value.kind === 'binary' && s.value.operator === '+' && s.value.left.kind === 'name' && s.value.left.name === s.name && !isStringy(s.value)) palette.add('math_change')
           expr(s.value); break
+        case 'import': case 'from': no('Подключение библиотек (import) доступно только в режиме Python.'); break
+        case 'unpack': no('Присваивание нескольких значений сразу доступно только в режиме Python.'); break
         case 'expression':
+          if (s.value.kind === 'call' && (s.value.callee || s.value.keywords)) { no('Функции библиотек и именованные аргументы доступны только в режиме Python.'); break }
           if (s.value.kind === 'call' && s.value.name === 'print') {
             use('output', 'text_print')
             if (s.value.args.length !== 1) no('print с несколькими значениями через запятую пока не имеет блока. Соедините их в одну строку.')
@@ -95,6 +101,7 @@ export function analyzeReference(source: string): Compatibility {
         case 'function':
           { const p = nameProblem(s.name); if (p) no(`Функция эталона: ${p.replace('У переменной', 'У функции')}`) }
           if (depth > 0) no('Вложенные функции не поддерживаются.')
+          if (s.decorators) no('Декораторы (@task) доступны только в режиме Python.')
           if (s.params.length) no('Функции с параметрами пока доступны только в режиме Python.')
           use('functions', 'kodik_define', 'kodik_call'); statements(s.body, depth + 1); break
         case 'return': no('return пока доступен только в режиме Python.'); break

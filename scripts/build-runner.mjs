@@ -1,6 +1,6 @@
 import { build } from "esbuild";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // 1. Sandboxed learning-Python executor (also translates blocks; see runner-entry.ts).
@@ -48,6 +48,7 @@ const python = digest([
   "src/pythonRuntime.ts",
   "src/pythonExecution.ts",
   "src/pythonStructure.ts",
+  ...readdirSync("src/python").filter((name) => name.endsWith(".ts")).sort().map((name) => `src/python/${name}`),
   "src/b2b/learningRules.json",
   "src/b2b/learningRules.ts",
   "server/b2b/runner-entry.ts",

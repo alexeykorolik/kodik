@@ -20,6 +20,7 @@ import {GroupsList,GroupPage,type GroupActions} from './Groups';
 import {useConfirm} from './confirm';
 import {learnerStatus} from './feedback';
 import {friendlyPassword} from './passwords';
+import {PythonHelp} from './PythonHelp';
 
 export function Glyph({ name = "grid" }: { name?: string }) {
   const paths: Record<string, string> = {
@@ -863,6 +864,7 @@ export default function B2BApp() {
   }
   let content: ReactNode;
   if(s.user.platform_owner)content=<Owner/>;
+  else if(page==='python-help')content=<PythonHelp/>;
   else if(page==='school'&&s.user.role==='admin')content=<SchoolPanel state={s} refresh={refresh}/>;
   else if(page==='modes'&&!student)content=<ModeManagement state={s}/>;
   else if(page==='classroom'&&!student)content=<ClassroomPanel/>;
@@ -1083,7 +1085,14 @@ export default function B2BApp() {
       <Empty title="Курс не найден" text="Вернитесь к списку курсов." />
     );
   } else if (page === "courses") {
-    const starterInstalled = s.courses.some((c) => c.import_status);
+    const starterInstalled = s.courses.some((c) => c.import_status && c.import_template !== "libraries/v1");
+    const librariesInstalled = s.courses.some((c) => c.import_template === "libraries/v1");
+    const installLibraries = () => void act(async () => {
+      setToast({ text: "Готовим пять уроков с черепахой, Роботом и графиками и проверяем образцы. Это может занять около минуты.", sticky: true });
+      const course = await mutate("/library-course/install", {});
+      setToast({ text: "Курс «Python с библиотеками» готов. Теперь выдайте его группе.", action: { label: "К группам", path: "groups" } });
+      go(`courses/${course.id}`);
+    });
     const installStarter = () => void act(async () => {
       setToast({ text: "Готовим шесть уроков и проверяем образцы. Это может занять около минуты.", sticky: true });
       const course = await mutate("/starter-course/install", {});
@@ -1098,6 +1107,9 @@ export default function B2BApp() {
         >
           {!student && !starterInstalled && s.courses.length > 0 && (
             <button className="primary" onClick={installStarter}>Добавить стартовый курс · 6 уроков</button>
+          )}
+          {!student && !librariesInstalled && s.courses.length > 0 && (
+            <button onClick={installLibraries}>Добавить курс «Python с библиотеками» · 5 уроков</button>
           )}
           {!student && (
             <button className={starterInstalled ? "primary" : ""} onClick={createCourse}>
@@ -1119,6 +1131,7 @@ export default function B2BApp() {
             </div>
             <div className="actions">
               <button className="primary" onClick={installStarter}>Добавить стартовый курс · 6 уроков</button>
+              <button onClick={installLibraries}>Курс «Python с библиотеками» · 5 уроков</button>
               <button className="link" onClick={createCourse}>или создать свой курс</button>
             </div>
           </section>
@@ -1604,6 +1617,7 @@ export default function B2BApp() {
         ["overview", "grid", "Обзор"],
         ["courses", "book", "Мои курсы"],
         ["results", "chart", "Мой прогресс"],
+        ["python-help", "code", "Справка Python"],
       ]
     : [
         ["overview", "grid", "Обзор", "СЕГОДНЯ"],
@@ -1612,12 +1626,13 @@ export default function B2BApp() {
         ["users", "person", "Участники"],
         ["courses", "book", "Курсы", "МАТЕРИАЛЫ"],
         ["tasks", "edit", "Задания"],
+        ["python-help", "code", "Справка Python"],
         ["journal", "journal", "Журнал и проверка", "РЕЗУЛЬТАТЫ"],
         ["results", "chart", "Результаты"],
         ["modes", "switch", "Способы решения"],
         ...(s.user.role==='admin'?[["school","school","Управление школой","ШКОЛА"] as [string,string,string,string]]:[]),
       ];
-  const pageTitle = nav.find((n) => n[0] === page)?.[2] || ({ builder: "Конструктор задания", group: "Учебная группа", program: "Программа", "lesson-run": "Занятие", assignment: "Задание", preview: "Предпросмотр", "lesson-editor": "Сценарий урока" } as Record<string, string>)[page] || "Kodik";
+  const pageTitle = nav.find((n) => n[0] === page)?.[2] || ({ builder: "Конструктор задания", group: "Учебная группа", program: "Программа", "lesson-run": "Занятие", assignment: "Задание", preview: "Предпросмотр", "python-help": "Справка по Python", "lesson-editor": "Сценарий урока" } as Record<string, string>)[page] || "Kodik";
   return (
     <div className={`b2b-shell ${compactSidebar ? "sidebar-collapsed" : ""}${drawer ? " drawer-open" : ""}`}>
       {drawer && <button className="drawer-backdrop" aria-label="Закрыть меню" onClick={() => setDrawer(false)} />}

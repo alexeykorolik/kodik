@@ -50,7 +50,7 @@ test('publication requires private, revision-bound executable evidence and rejec
       await h.restart();assert.equal((await current()).verification.revision,revision);
     });
     await t.test('all teacher templates validate their reference and characteristic wrong solutions',async()=>{
-      const templates=(await h.request('/task-templates',undefined,admin)).items;assert.equal(templates.length,7);
+      const templates=(await h.request("/task-templates",undefined,admin)).items;assert.equal(templates.length,12);
       for(const template of templates){const created=await h.request('/tasks',{...template.task,template_id:template.id,lesson_id:lesson.id},admin);const proof=await h.request(`/tasks/${created.id}/verify`,{revision:1},admin);assert.equal(proof.status,'approved',template.id);await h.request(`/tasks/${created.id}/publish`,{published:true,revision:1},admin)}
       const manual=await h.task(admin,lesson,{check_mode:'manual',tests:[],reference_solution:'',wrong_solutions:[],manual_criteria:''});
       await h.request(`/tasks/${manual.id}/verify`,{revision:1},admin,400);
