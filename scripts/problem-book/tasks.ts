@@ -1,7 +1,8 @@
 // «Задачник Kodik»: original practice problems in the order of a classic school problem book
 // (input/output, arithmetic, integer division, digits, logic, branching, while, for, loops with
-// conditions). Every task fits the teaching interpreter and is exported, checked against CPython
-// and installed by scripts/export-problem-book.ts → server/b2b/problem-book.json.
+// conditions, strings, the Robot, the turtle). Every task fits the teaching interpreter and is
+// exported, checked (against CPython where there is text to compare) and installed by
+// scripts/export-problem-book.ts → server/b2b/problem-book.json.
 // `wrong` is a characteristic mistake (a boundary, / instead of //, a loop that starts at 0): the
 // quality gate proves the tests catch it.
 
@@ -11,7 +12,11 @@ const py = (strings: TemplateStringsArray) => {
   const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.match(/^ */)![0].length));
   return lines.map((l) => l.slice(indent)).join("\n");
 };
-export type Problem = { key: string; title: string; text: string; code: string; inputs?: string[][]; wrong: string; hint: string };
+/** A Robot field written row by row (see src/python/robotWorld.ts: R robot, * to fill, P parking). */
+const field = (...rows: string[]) => rows.join("\n");
+// A Robot task gives `worlds` (one test per field, checked by "robot"); a turtle task sets `draw`
+// (one test per input set, the picture compared with the reference's).
+export type Problem = { key: string; title: string; text: string; code: string; inputs?: string[][]; worlds?: string[]; draw?: true; wrong: string; hint: string };
 export type Chapter = { key: string; title: string; description: string; theory: string; rules: string[]; question: [string, string[], number, string]; learned: string[]; tasks: Problem[] };
 
 export const chapters: Chapter[] = [
@@ -441,6 +446,402 @@ export const chapters: Chapter[] = [
         for x in nums:
             if x > average:
                 print(x)`, wrong: "n = int(input())\nnums = []\nfor i in range(n):\n    nums.append(int(input()))\naverage = sum(nums) / n\nfor x in nums:\n    if x >= average:\n        print(x)", hint: "Сначала сохрани все числа в список: среднее можно посчитать только после чтения всех." },
+    ],
+  },
+  {
+    key: "strings", title: "Строки и индексы", description: "Длина строки, символы по номерам, срезы и склейка.",
+    theory: "Строка — это последовательность символов. len(s) — её длина. Символы нумеруются с нуля: s[0] — первый, s[-1] — последний (то же, что s[len(s) - 1]). Срез s[1:4] берёт символы с номерами 1, 2 и 3, а s[::-1] переворачивает строку. Строки соединяются знаком +, str(n) превращает число в строку. Методы строк вроде s.upper() учебный Python не поддерживает: всё делаем индексами, срезами и циклами.",
+    rules: [], learned: ["Узнавать длину строки через len", "Брать символы по номеру, в том числе с конца", "Вырезать часть строки срезом"],
+    question: ["Что напечатает print(\"кодик\"[1] + \"кодик\"[-1])?", ["ок", "кк", "од"], 0, "\"кодик\"[1] — вторая буква «о», [-1] — последняя «к»."],
+    tasks: [
+      { key: "len", title: "Длина слова", text: "Прочитай слово и выведи, сколько в нём букв.", inputs: [["кот"], ["Python"], ["я"], ["программирование"]], code: py`
+        word = input()
+        print(len(word))`, wrong: "word = input()\nprint(len(word) - 1)", hint: "len(word) — число символов. Номер последнего символа на единицу меньше, но спрашивают именно длину." },
+      { key: "ends", title: "Первая и последняя", text: "Прочитай слово и выведи через пробел его первую и последнюю буквы.", inputs: [["кот"], ["Python"], ["я"]], code: py`
+        word = input()
+        print(word[0], word[-1])`, wrong: "word = input()\nprint(word[0], word[len(word)])", hint: "Номера идут с нуля, поэтому последний символ — word[-1] или word[len(word) - 1]." },
+      { key: "middle", title: "Средняя буква", text: "Прочитай слово с нечётным числом букв и выведи букву ровно посередине.", inputs: [["кот"], ["радар"], ["я"], ["шоколад"]], code: py`
+        word = input()
+        print(word[len(word) // 2])`, wrong: "word = input()\nprint(word[len(word) / 2])", hint: "Номер — целое число: дели длину нацело, через //." },
+      { key: "inner", title: "Без краёв", text: "Прочитай строку и выведи её без первого и последнего символа. Например, из «[кот]» получится «кот».", inputs: [["[кот]"], ["(скобки)"], ["«ура»"]], code: py`
+        s = input()
+        print(s[1:-1])`, wrong: "s = input()\nprint(s[1:len(s)])", hint: "Срез s[1:-1] начинается со второго символа и заканчивается перед последним." },
+      { key: "initials", title: "Инициалы", text: "Прочитай имя и фамилию (каждое на своей строке) и выведи инициалы с точками через пробел: для «Мира» и «Котова» — «М. К.».", inputs: [["Мира", "Котова"], ["Ян", "Ли"], ["Олег", "Петров"]], code: py`
+        name = input()
+        surname = input()
+        print(name[0] + ". " + surname[0] + ".")`, wrong: "name = input()\nsurname = input()\nprint(name[0], surname[0])", hint: "Склей первую букву имени, точку с пробелом, первую букву фамилии и точку." },
+      { key: "reverse", title: "Задом наперёд", text: "Прочитай слово и выведи его задом наперёд.", inputs: [["кот"], ["Python"], ["ракета"]], code: py`
+        word = input()
+        print(word[::-1])`, wrong: "word = input()\nprint(word[-1])", hint: "Срез с шагом -1 — word[::-1] — идёт от конца к началу." },
+      { key: "digits", title: "Сколько цифр", text: "Прочитай натуральное число и выведи, сколько в нём цифр.", inputs: [["7"], ["2025"], ["100000"]], code: py`
+        n = int(input())
+        print(len(str(n)))`, wrong: "n = int(input())\nprint(len(n))", hint: "У числа нет длины. Преврати его в строку через str(n) и посчитай символы." },
+      { key: "palindrome", title: "Перевёртыш", text: "Прочитай слово. Если оно одинаково читается слева направо и справа налево, выведи «да», иначе «нет».", inputs: [["шалаш"], ["кот"], ["абба"], ["абра"]], code: py`
+        word = input()
+        if word == word[::-1]:
+            print("да")
+        else:
+            print("нет")`, wrong: "word = input()\nif word[0] == word[-1]:\n    print(\"да\")\nelse:\n    print(\"нет\")", hint: "Сравни всё слово с перевёрнутым word[::-1], а не только крайние буквы." },
+    ],
+  },
+  {
+    key: "string-loops", title: "Перебор строки", description: "Цикл for проходит по буквам: считаем, переворачиваем и собираем новые строки.",
+    theory: "for ch in word: перебирает символы строки по одному. Можно идти и по номерам: for i in range(len(word)): — тогда символ равен word[i]. Чтобы собрать новую строку, начни с пустой res = \"\" и приписывай к ней символы: res = res + ch. Оператор in в условиях и методы строк учебный Python не поддерживает: символы сравнивай через ==.",
+    rules: ["kind:for"], learned: ["Перебирать символы строки циклом for", "Считать нужные символы", "Собирать новую строку из старой"],
+    question: ["Что напечатает программа?\nres = \"\"\nfor ch in \"кот\":\n    res = ch + res\nprint(res)", ["кот", "ток", "ккоотт"], 1, "Каждая буква приписывается в начало: «к», «ок», «ток»."],
+    tasks: [
+      { key: "letters", title: "По буквам", text: "Прочитай слово и выведи каждую его букву на отдельной строке.", inputs: [["кот"], ["Python"], ["да"]], code: py`
+        word = input()
+        for ch in word:
+            print(ch)`, wrong: "word = input()\nprint(word)", hint: "for ch in word: — в ch по очереди оказывается каждая буква." },
+      { key: "count-a", title: "Сколько букв «а»", text: "Прочитай слово из строчных русских букв и выведи, сколько в нём букв «а».", inputs: [["банан"], ["папа"], ["аааа"], ["арбуз"]], code: py`
+        word = input()
+        count = 0
+        for ch in word:
+            if ch == "а":
+                count = count + 1
+        print(count)`, wrong: "word = input()\ncount = 0\nfor ch in word:\n    if ch == \"а\":\n        print(ch)\n    count = count + 1\nprint(count)", hint: "Счётчик увеличивается только внутри if — следи за отступом." },
+      { key: "reverse", title: "Переворот циклом", text: "Прочитай слово и выведи его задом наперёд, собрав новую строку в цикле (без среза [::-1]).", inputs: [["кот"], ["Python"], ["ракета"]], code: py`
+        word = input()
+        res = ""
+        for ch in word:
+            res = ch + res
+        print(res)`, wrong: "word = input()\nres = \"\"\nfor ch in word:\n    res = res + ch\nprint(res)", hint: "Приписывай очередную букву в начало: res = ch + res." },
+      { key: "stars", title: "Через звёздочку", text: "Прочитай слово (не короче двух букв) и выведи его буквы через звёздочку: «кот» → «к*о*т». После последней буквы звёздочки нет.", inputs: [["кот"], ["да"], ["Kodik"]], code: py`
+        word = input()
+        res = word[0]
+        for i in range(1, len(word)):
+            res = res + "*" + word[i]
+        print(res)`, wrong: "word = input()\nres = \"\"\nfor ch in word:\n    res = res + ch + \"*\"\nprint(res)", hint: "Начни с первой буквы, а дальше перед каждой следующей ставь звёздочку." },
+      { key: "digit-sum", title: "Сумма цифр", text: "Прочитай строку из цифр и выведи сумму этих цифр.", inputs: [["2025"], ["999"], ["10"]], code: py`
+        s = input()
+        total = 0
+        for ch in s:
+            total = total + int(ch)
+        print(total)`, wrong: "s = input()\ntotal = 0\nfor ch in s:\n    total = int(ch)\nprint(total)", hint: "Каждую цифру-символ преврати через int(ch) и прибавь к сумме, а не запиши вместо неё." },
+      { key: "even-pos", title: "Через одну", text: "Прочитай слово и выведи его буквы с номерами 0, 2, 4 и так далее одной строкой: «программа» → «пормм».", inputs: [["программа"], ["кот"], ["Kodik"]], code: py`
+        word = input()
+        res = ""
+        for i in range(0, len(word), 2):
+            res = res + word[i]
+        print(res)`, wrong: "word = input()\nres = \"\"\nfor i in range(1, len(word), 2):\n    res = res + word[i]\nprint(res)", hint: "Номера начинаются с нуля: range(0, len(word), 2)." },
+      { key: "underscores", title: "Подчёркивания", text: "Прочитай фразу и выведи её, заменив каждый пробел знаком «_».", inputs: [["привет мир"], ["раз два три"], ["Kodik"]], code: py`
+        s = input()
+        res = ""
+        for ch in s:
+            if ch == " ":
+                res = res + "_"
+            else:
+                res = res + ch
+        print(res)`, wrong: "s = input()\nres = \"\"\nfor ch in s:\n    if ch != \" \":\n        res = res + ch\nprint(res)", hint: "На месте пробела нужно добавить «_», а не просто пропустить его." },
+      { key: "double", title: "Эхо букв", text: "Прочитай слово и повтори каждую букву дважды: «кот» → «ккоотт».", inputs: [["кот"], ["да"], ["Python"]], code: py`
+        word = input()
+        res = ""
+        for ch in word:
+            res = res + ch + ch
+        print(res)`, wrong: "word = input()\nprint(word + word)", hint: "Удваивать нужно каждую букву по отдельности, внутри цикла." },
+    ],
+  },
+  {
+    key: "robot", title: "Робот: первые шаги", description: "Робот ходит по клеточному полю, закрашивает клетки и паркуется.",
+    theory: "from pyrob.api import * подключает Робота. move_right(), move_left(), move_up() и move_down() — шаг в сторону; в скобках можно указать число шагов: move_right(3). fill_cell() закрашивает клетку, где стоит Робот. Поле задано в задании: клетки со звёздочкой нужно закрасить, P — парковка, где Робот должен закончить путь. Врезаться в стену нельзя: программа остановится.",
+    rules: [], learned: ["Двигать Робота на нужное число клеток", "Закрашивать клетки", "Обходить стены и заканчивать путь на парковке"],
+    question: ["Робот стоит в левом верхнем углу поля. Где он окажется после move_right(2) и move_down()?", ["Строка 2, столбец 3", "Строка 3, столбец 2", "Строка 1, столбец 3"], 0, "Два шага вправо — третий столбец, шаг вниз — вторая строка."],
+    tasks: [
+      { key: "step", title: "Через две клетки", text: "Закрась клетку со звёздочкой: она на две клетки правее Робота.", worlds: [field("R . *")], code: py`
+        from pyrob.api import *
+
+        move_right(2)
+        fill_cell()`, wrong: "from pyrob.api import *\n\nmove_right()\nfill_cell()", hint: "move_right(2) — два шага вправо, затем fill_cell()." },
+      { key: "corner", title: "В угол", text: "Робот в левом верхнем углу поля 3×3. Закрась клетку в правом нижнем углу.", worlds: [field("R . .", ". . .", ". . *")], code: py`
+        from pyrob.api import *
+
+        move_down(2)
+        move_right(2)
+        fill_cell()`, wrong: "from pyrob.api import *\n\nmove_down()\nmove_right(2)\nfill_cell()", hint: "До нижнего ряда два шага вниз, до правого столбца — два шага вправо." },
+      { key: "every-other", title: "Через клетку", text: "Закрась три клетки со звёздочками: они идут через одну.", worlds: [field("R * . * . *")], code: py`
+        from pyrob.api import *
+
+        move_right()
+        fill_cell()
+        move_right(2)
+        fill_cell()
+        move_right(2)
+        fill_cell()`, wrong: "from pyrob.api import *\n\nmove_right()\nfill_cell()\nmove_right()\nfill_cell()\nmove_right()\nfill_cell()", hint: "Между закрашенными клетками — одна пустая: от одной звёздочки до другой два шага." },
+      { key: "around", title: "Обход стены", text: "Справа от Робота стена. Обойди её снизу и закончи путь на парковке P.", worlds: [field("+-+-+-+", "|R|. P|", "+ + + +", "|. . .|", "+-+-+-+")], code: py`
+        from pyrob.api import *
+
+        move_down()
+        move_right(2)
+        move_up()`, wrong: "from pyrob.api import *\n\nmove_right(2)", hint: "Сначала шаг вниз, под стеной два шага вправо, потом шаг вверх." },
+      { key: "square", title: "Квадратик", text: "Закрась квадрат 2×2 из клеток со звёздочками.", worlds: [field("R . . .", ". * * .", ". * * .", ". . . .")], code: py`
+        from pyrob.api import *
+
+        move_down()
+        move_right()
+        fill_cell()
+        move_right()
+        fill_cell()
+        move_down()
+        fill_cell()
+        move_left()
+        fill_cell()`, wrong: "from pyrob.api import *\n\nmove_down()\nmove_right()\nfill_cell()\nmove_right()\nfill_cell()\nmove_down()\nfill_cell()", hint: "Обойди квадрат по кругу и закрась все четыре клетки." },
+      { key: "back", title: "Туда и обратно", text: "Робот стоит на парковке. Закрась дальнюю клетку и вернись на парковку.", worlds: [field("Q . . *")], code: py`
+        from pyrob.api import *
+
+        move_right(3)
+        fill_cell()
+        move_left(3)`, wrong: "from pyrob.api import *\n\nmove_right(3)\nfill_cell()", hint: "После закрашивания столько же шагов обратно влево." },
+    ],
+  },
+  {
+    key: "robot-while", title: "Робот: цикл while", description: "Датчики стен и цикл while: одна программа проходит поле любой длины.",
+    theory: "В каждом тесте поле разной длины, поэтому число шагов заранее неизвестно. Датчики wall_is_on_the_right(), wall_is_on_the_left(), wall_is_above() и wall_is_beneath() отвечают True, если с этой стороны стена; край поля — тоже стена. while not wall_is_on_the_right(): повторяет шаг вправо, пока справа свободно.",
+    rules: ["kind:while"], learned: ["Проверять стены датчиками", "Идти до стены циклом while", "Писать программу, которая работает на поле любой длины"],
+    question: ["Робот в самой левой клетке коридора из 5 клеток. Сколько шагов он сделает?\nwhile not wall_is_on_the_right():\n    move_right()", ["4", "5", "6"], 0, "Из первой клетки в пятую — четыре шага; в пятой справа стена, и цикл останавливается."],
+    tasks: [
+      { key: "corridor", title: "Весь коридор", text: "Закрась все клетки коридора, включая ту, где стоит Робот. Длина коридора в тестах разная.", worlds: [field("X * * *"), field("X * * * * * *"), field("X *")], code: py`
+        from pyrob.api import *
+
+        fill_cell()
+        while not wall_is_on_the_right():
+            move_right()
+            fill_cell()`, wrong: "from pyrob.api import *\n\nwhile not wall_is_on_the_right():\n    move_right()\n    fill_cell()", hint: "Первую клетку закрась до цикла, остальные — внутри него после шага." },
+      { key: "down-back", title: "Вниз и обратно", text: "Робот на парковке наверху колонки. Закрась нижнюю клетку и вернись на парковку.", worlds: [field("Q", ".", ".", "*"), field("Q", "*"), field("Q", ".", ".", ".", ".", "*")], code: py`
+        from pyrob.api import *
+
+        while not wall_is_beneath():
+            move_down()
+        fill_cell()
+        while not wall_is_above():
+            move_up()`, wrong: "from pyrob.api import *\n\nwhile not wall_is_beneath():\n    move_down()\nfill_cell()", hint: "Второй цикл ведёт Робота вверх, пока сверху не окажется стена." },
+      { key: "far-corner", title: "Дальний угол", text: "Робот в левом верхнем углу. Закрась клетку в правом нижнем углу поля. Размеры поля в тестах разные.", worlds: [field("R . .", ". . .", ". . *"), field("R . . . .", ". . . . *"), field("R .", ". .", ". .", ". *")], code: py`
+        from pyrob.api import *
+
+        while not wall_is_on_the_right():
+            move_right()
+        while not wall_is_beneath():
+            move_down()
+        fill_cell()`, wrong: "from pyrob.api import *\n\nwhile not wall_is_on_the_right():\n    move_right()\nfill_cell()", hint: "Два цикла подряд: сначала до правой стены, потом до нижней." },
+      { key: "stairs", title: "Лесенка", text: "Закрась диагональ квадратного поля от Робота до правого нижнего угла. Размер поля в тестах разный.", worlds: [field("X . .", ". * .", ". . *"), field("X . . .", ". * . .", ". . * .", ". . . *"), field("X .", ". *")], code: py`
+        from pyrob.api import *
+
+        fill_cell()
+        while not wall_is_beneath():
+            move_right()
+            move_down()
+            fill_cell()`, wrong: "from pyrob.api import *\n\nfill_cell()\nwhile not wall_is_beneath():\n    move_down()\n    fill_cell()", hint: "Шаг по диагонали — это шаг вправо и шаг вниз." },
+      { key: "exit", title: "Выход из коридора", text: "Над коридором стена с одним проходом. Найди проход и поднимись на парковку P. Проход в тестах в разных местах.", worlds: [
+        field("+-+-+-+-+-+", "|. . P . .|", "+-+-+ +-+-+", "|R . . . .|", "+-+-+-+-+-+"),
+        field("+-+-+-+-+-+-+", "|. . . . . P|", "+-+-+-+-+-+ +", "|R . . . . .|", "+-+-+-+-+-+-+"),
+        field("+-+-+-+", "|. P .|", "+-+ +-+", "|R . .|", "+-+-+-+")], code: py`
+        from pyrob.api import *
+
+        while wall_is_above():
+            move_right()
+        move_up()`, wrong: "from pyrob.api import *\n\nmove_right(2)\nmove_up()", hint: "Иди вправо, пока сверху стена; где её нет — шаг вверх." },
+      { key: "left-wall", title: "К левой стене", text: "Робот где-то в коридоре. Дойди до левого края и закрась крайнюю клетку.", worlds: [field("* . R ."), field("* R"), field("* . . . . R")], code: py`
+        from pyrob.api import *
+
+        while not wall_is_on_the_left():
+            move_left()
+        fill_cell()`, wrong: "from pyrob.api import *\n\nwhile not wall_is_on_the_right():\n    move_right()\nfill_cell()", hint: "Нужен датчик wall_is_on_the_left() и шаг move_left()." },
+    ],
+  },
+  {
+    key: "robot-if", title: "Робот: условия", description: "Робот проверяет датчики и сам решает, куда идти и какие клетки закрашивать.",
+    theory: "if проверяет датчик и выбирает действие. cell_should_be_filled() отвечает True, если клетку нужно закрасить (на поле она со звёздочкой). Вместе с while условие проверяется в каждой клетке пути: пока впереди нет стены — шаг; если клетку нужно закрасить — закрась.",
+    rules: ["kind:if"], learned: ["Выбирать направление по датчику стены", "Закрашивать только нужные клетки", "Соединять while и if"],
+    question: ["Что делают эти строки?\nif wall_is_beneath():\n    fill_cell()", ["Закрашивают клетку, если снизу стена", "Ведут Робота вниз до стены", "Ставят стену снизу"], 0, "Датчик только проверяет; закрашивает fill_cell(), и только когда условие верно."],
+    tasks: [
+      { key: "choose", title: "Направо или вниз", text: "Если справа от Робота стена, шагни вниз, иначе — вправо. Закрась клетку, в которую пришёл.", worlds: [field("+-+-+", "|R|.|", "+ + +", "|* .|", "+-+-+"), field("R *", ". ."), field("+-+-+-+", "|R|. .|", "+ + + +", "|* . .|", "+-+-+-+")], code: py`
+        from pyrob.api import *
+
+        if wall_is_on_the_right():
+            move_down()
+        else:
+            move_right()
+        fill_cell()`, wrong: "from pyrob.api import *\n\nmove_right()\nfill_cell()", hint: "if wall_is_on_the_right(): — шаг вниз, else: — шаг вправо." },
+      { key: "marks", title: "Отметки в коридоре", text: "Пройди коридор до правой стены и закрась только клетки со звёздочками.", worlds: [field("R . * . * *"), field("R * * ."), field("R . . . *")], code: py`
+        from pyrob.api import *
+
+        while not wall_is_on_the_right():
+            move_right()
+            if cell_should_be_filled():
+                fill_cell()`, wrong: "from pyrob.api import *\n\nwhile not wall_is_on_the_right():\n    move_right()\n    fill_cell()", hint: "После шага спроси cell_should_be_filled() и закрашивай, только если ответ True." },
+      { key: "roof", title: "Под крышей", text: "Робот идёт вправо до стены. Закрась каждую клетку, над которой стена (и ту, где Робот стоит в начале, если над ней стена).", worlds: [
+        field("+-+-+-+-+-+", "|. . . . .|", "+-+ +-+ + +", "|X . * . .|", "+-+-+-+-+-+"),
+        field("+-+-+-+-+", "|. . . .|", "+ + +-+-+", "|R . * *|", "+-+-+-+-+"),
+        field("+-+-+-+-+-+-+", "|. . . . . .|", "+-+-+ + + +-+", "|X * . . . *|", "+-+-+-+-+-+-+")], code: py`
+        from pyrob.api import *
+
+        if wall_is_above():
+            fill_cell()
+        while not wall_is_on_the_right():
+            move_right()
+            if wall_is_above():
+                fill_cell()`, wrong: "from pyrob.api import *\n\nwhile not wall_is_on_the_right():\n    move_right()\n    if wall_is_above():\n        fill_cell()", hint: "Начальную клетку проверь отдельно, до цикла." },
+      { key: "every-other", title: "Через одну", text: "Закрась клетку Робота и дальше каждую вторую клетку коридора. Длина коридора в тестах разная.", worlds: [field("X . * . *"), field("X . * . * ."), field("X . * . * . *")], code: py`
+        from pyrob.api import *
+
+        n = 0
+        fill_cell()
+        while not wall_is_on_the_right():
+            move_right()
+            n = n + 1
+            if n % 2 == 0:
+                fill_cell()`, wrong: "from pyrob.api import *\n\nfill_cell()\nwhile not wall_is_on_the_right():\n    move_right()\n    fill_cell()", hint: "Считай шаги в переменной n и закрашивай, когда n делится на 2." },
+      { key: "marks-back", title: "Отметки и возврат", text: "Робот стоит на парковке. Пройди коридор до правой стены, закрась клетки со звёздочками и вернись на парковку.", worlds: [field("Q * . * ."), field("Q . . *"), field("Q * * . . *")], code: py`
+        from pyrob.api import *
+
+        while not wall_is_on_the_right():
+            move_right()
+            if cell_should_be_filled():
+                fill_cell()
+        while not wall_is_on_the_left():
+            move_left()`, wrong: "from pyrob.api import *\n\nwhile not wall_is_on_the_right():\n    move_right()\n    if cell_should_be_filled():\n        fill_cell()", hint: "После первого цикла нужен второй: обратно влево до стены." },
+    ],
+  },
+  {
+    key: "turtle", title: "Черепаха: фигуры и циклы", description: "Шаг и поворот в цикле for рисуют многоугольники, звёзды и спирали.",
+    theory: "import turtle и t = turtle.Turtle() — черепаха появляется в центре холста и смотрит вправо. t.forward(100) — шаг на 100 точек с линией, t.left(90) и t.right(90) — повороты в градусах. Правильный многоугольник с n сторонами — это n раз шаг и поворот на 360 / n градусов. t.penup() поднимает перо — черепаха идёт без линии, t.pendown() опускает его снова.",
+    rules: ["kind:for"], learned: ["Рисовать правильные многоугольники циклом", "Вычислять угол поворота", "Переходить без линии: penup и pendown"],
+    question: ["На какой угол поворачивать черепаху, чтобы нарисовать правильный шестиугольник?", ["60°", "120°", "90°"], 0, "Шесть поворотов вместе дают полный оборот: 360 / 6 = 60."],
+    tasks: [
+      { key: "triangle", title: "Треугольник", text: "Нарисуй правильный треугольник со стороной 100.", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        for i in range(3):
+            t.forward(100)
+            t.left(120)`, wrong: "import turtle\n\nt = turtle.Turtle()\nfor i in range(3):\n    t.forward(100)\n    t.left(60)", hint: "Поворачивать нужно на внешний угол: 360 / 3 = 120, а не на угол треугольника 60." },
+      { key: "pentagon", title: "Пятиугольник", text: "Нарисуй правильный пятиугольник со стороной 80.", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        for i in range(5):
+            t.forward(80)
+            t.left(72)`, wrong: "import turtle\n\nt = turtle.Turtle()\nfor i in range(4):\n    t.forward(80)\n    t.left(72)", hint: "Пять сторон — пять повторений; угол 360 / 5 = 72." },
+      { key: "polygon", title: "Любой многоугольник", text: "Прочитай число сторон n и нарисуй правильный n-угольник со стороной 60.", draw: true, inputs: [["3"], ["6"], ["8"]], code: py`
+        import turtle
+
+        n = int(input())
+        t = turtle.Turtle()
+        for i in range(n):
+            t.forward(60)
+            t.left(360 / n)`, wrong: "import turtle\n\nn = int(input())\nt = turtle.Turtle()\nfor i in range(n):\n    t.forward(60)\n    t.left(180 - 360 / n)", hint: "Угол поворота — 360 / n. Угол самого многоугольника здесь не нужен." },
+      { key: "star", title: "Звезда", text: "Нарисуй пятиконечную звезду с лучом 150: пять раз шаг вперёд и поворот направо на 144°.", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        for i in range(5):
+            t.forward(150)
+            t.right(144)`, wrong: "import turtle\n\nt = turtle.Turtle()\nfor i in range(5):\n    t.forward(150)\n    t.right(72)", hint: "Поворот на 72° даёт пятиугольник; у звезды угол 144°." },
+      { key: "stairs", title: "Лесенка", text: "Нарисуй лесенку из четырёх ступенек: каждая — 30 точек вверх и 30 вправо. Черепаха начинает, глядя вправо.", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        t.left(90)
+        for i in range(4):
+            t.forward(30)
+            t.right(90)
+            t.forward(30)
+            t.left(90)`, wrong: "import turtle\n\nt = turtle.Turtle()\nt.left(90)\nfor i in range(3):\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.left(90)", hint: "Сначала повернись вверх, а в цикле: вверх, поворот направо, вправо, поворот налево." },
+      { key: "squares", title: "Три квадрата", text: "Нарисуй в ряд три квадрата со стороной 40 с промежутком 20 между ними. Промежутки — без линий.", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        for k in range(3):
+            for i in range(4):
+                t.forward(40)
+                t.left(90)
+            t.penup()
+            t.forward(60)
+            t.pendown()`, wrong: "import turtle\n\nt = turtle.Turtle()\nfor k in range(3):\n    for i in range(4):\n        t.forward(40)\n        t.left(90)\n    t.forward(60)", hint: "Перед переходом к следующему квадрату подними перо, после — опусти." },
+      { key: "spiral", title: "Квадратная спираль", text: "Нарисуй спираль из 10 отрезков: первый длиной 10, каждый следующий на 10 длиннее; после каждого — поворот налево на 90°.", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        for i in range(1, 11):
+            t.forward(i * 10)
+            t.left(90)`, wrong: "import turtle\n\nt = turtle.Turtle()\nfor i in range(1, 11):\n    t.forward(10)\n    t.left(90)", hint: "Длина отрезка зависит от номера шага: i * 10." },
+    ],
+  },
+  {
+    key: "turtle-color", title: "Черепаха: цвет и координаты", description: "Цвет, заливка, окружности и точки, переходы по координатам.",
+    theory: "t.color(\"red\") меняет цвет линии, t.color(\"red\", \"yellow\") — цвет линии и заливки. Фигура между t.begin_fill() и t.end_fill() заливается. t.goto(x, y) ведёт черепаху в точку: центр холста — (0, 0), ось y направлена вверх. Чтобы перейти без линии, подними перо t.penup(), а потом опусти t.pendown(). t.circle(r) рисует окружность радиуса r; её центр на r выше черепахи, если та смотрит вправо. t.dot(30, \"red\") ставит круглую точку диаметром 30.",
+    rules: [], learned: ["Задавать цвет линии и заливки", "Переходить в точку через goto без лишних линий", "Рисовать окружности и точки"],
+    question: ["Черепаха смотрит вправо. Где центр окружности после t.goto(0, -50) и t.circle(50)?", ["В точке (0, 0)", "В точке (0, -50)", "В точке (0, -100)"], 0, "Центр на радиус выше черепахи: (0, -50 + 50) = (0, 0)."],
+    tasks: [
+      { key: "filled-square", title: "Голубой квадрат", text: "Нарисуй квадрат со стороной 100: линия синяя (\"blue\"), заливка голубая (\"lightblue\").", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        t.color("blue", "lightblue")
+        t.begin_fill()
+        for i in range(4):
+            t.forward(100)
+            t.left(90)
+        t.end_fill()`, wrong: "import turtle\n\nt = turtle.Turtle()\nt.color(\"blue\", \"lightblue\")\nfor i in range(4):\n    t.forward(100)\n    t.left(90)", hint: "Заливка появляется, только если фигура нарисована между begin_fill() и end_fill()." },
+      { key: "segment", title: "Отрезок по точкам", text: "Нарисуй один отрезок от точки (-100, 50) до точки (100, 50). Других линий быть не должно.", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        t.penup()
+        t.goto(-100, 50)
+        t.pendown()
+        t.goto(100, 50)`, wrong: "import turtle\n\nt = turtle.Turtle()\nt.goto(-100, 50)\nt.goto(100, 50)", hint: "Из центра до начала отрезка черепаха идёт с поднятым пером." },
+      { key: "traffic-light", title: "Светофор", text: "Поставь три точки диаметром 40: красную в (0, 60), жёлтую (\"yellow\") в (0, 0) и зелёную в (0, -60).", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        t.penup()
+        t.goto(0, 60)
+        t.dot(40, "red")
+        t.goto(0, 0)
+        t.dot(40, "yellow")
+        t.goto(0, -60)
+        t.dot(40, "green")`, wrong: "import turtle\n\nt = turtle.Turtle()\nt.penup()\nt.goto(0, 60)\nt.dot(40, \"green\")\nt.goto(0, 0)\nt.dot(40, \"yellow\")\nt.goto(0, -60)\nt.dot(40, \"red\")", hint: "Красный сверху: y = 60 — это выше центра." },
+      { key: "snowman", title: "Снеговик", text: "Нарисуй снеговика из трёх окружностей без соединяющих линий: радиус 60 с нижней точкой (0, -150), радиус 40 с нижней точкой (0, -30) и радиус 25 с нижней точкой (0, 50).", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        t.penup()
+        t.goto(0, -150)
+        t.pendown()
+        t.circle(60)
+        t.penup()
+        t.goto(0, -30)
+        t.pendown()
+        t.circle(40)
+        t.penup()
+        t.goto(0, 50)
+        t.pendown()
+        t.circle(25)`, wrong: "import turtle\n\nt = turtle.Turtle()\nt.goto(0, -150)\nt.circle(60)\nt.goto(0, -30)\nt.circle(40)\nt.goto(0, 50)\nt.circle(25)", hint: "Перед каждым goto поднимай перо, перед circle — опускай." },
+      { key: "house", title: "Домик", text: "Нарисуй домик: квадрат со стороной 100 от центра холста вправо и вверх, а на нём крышу — правильный треугольник со стороной 100.", draw: true, code: py`
+        import turtle
+
+        t = turtle.Turtle()
+        for i in range(4):
+            t.forward(100)
+            t.left(90)
+        t.penup()
+        t.goto(0, 100)
+        t.pendown()
+        for i in range(3):
+            t.forward(100)
+            t.left(120)`, wrong: "import turtle\n\nt = turtle.Turtle()\nfor i in range(4):\n    t.forward(100)\n    t.left(90)\nt.penup()\nt.goto(0, 100)\nt.pendown()\nfor i in range(3):\n    t.forward(100)\n    t.right(120)", hint: "Крыша над квадратом: от левого верхнего угла поворачивай налево." },
+      { key: "target", title: "Мишень", text: "Прочитай n и нарисуй n окружностей с общим центром в (0, 0) и радиусами 20, 40, 60 и так далее. Переходы — без линий.", draw: true, inputs: [["2"], ["3"], ["5"]], code: py`
+        import turtle
+
+        n = int(input())
+        t = turtle.Turtle()
+        for i in range(n):
+            r = 20 * (i + 1)
+            t.penup()
+            t.goto(0, -r)
+            t.pendown()
+            t.circle(r)`, wrong: "import turtle\n\nn = int(input())\nt = turtle.Turtle()\nfor i in range(n):\n    r = 20 * (i + 1)\n    t.circle(r)", hint: "Центр окружности на r выше черепахи, поэтому начинать надо из точки (0, -r)." },
     ],
   },
 ];

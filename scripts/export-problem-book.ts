@@ -1,6 +1,8 @@
 // Exports «Задачник Kodik» (scripts/problem-book/tasks.ts) as ready school courses, one per chapter
 // (server/b2b/problem-book.mjs). For every task and every input set the reference program runs in
-// the teaching interpreter that grades the school and in CPython; the outputs must match. The
+// the teaching interpreter that grades the school and in CPython; the outputs must match. Robot and
+// turtle tasks print nothing to compare: the reference must solve every field (robot) or draw a
+// picture (drawing), and the school grader compares the learner's scene with it. The
 // characteristic wrong program must fail at least one test.
 //   npx tsx scripts/export-problem-book.ts          writes server/b2b/problem-book.json
 //   npx tsx scripts/export-problem-book.ts --check  fails if the file is out of date
@@ -9,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import { chapters } from "./problem-book/tasks";
 import { runCourseProgram } from "../src/pythonExecution";
 import { learningRules } from "../src/b2b/learningRules";
+import { checkScene } from "../src/python/sceneCheck";
 
 const target = new URL("../server/b2b/problem-book.json", import.meta.url);
 const ruleIds = new Set(learningRules.map((r: { id: string }) => r.id));
@@ -19,7 +22,9 @@ function cpython(code: string, inputs: string[]) {
   if (r.status !== 0) throw new Error(`CPython fails:\n${r.stderr}\n${code}`);
   return r.stdout.replace(/\r\n/g, "\n").replace(/\n$/, "");
 }
-const ours = (code: string, inputs: string[]) => { const r = runCourseProgram(code, inputs); return r.error ? { error: r.error } : { text: r.output.join("\n") }; };
+const ours = (code: string, inputs: string[], world?: string) => { const r = runCourseProgram(code, inputs, world === undefined ? {} : { world }); return r.error ? { error: r.error } : { text: r.output.join("\n"), scene: r.scene }; };
+// Scene tasks start from the import, so the learner writes only the solution.
+const starters = { robot: "from pyrob.api import *\n\n", drawing: "import turtle\n\nt = turtle.Turtle()\n" };
 
 const data = {
   template: "problems/v1",
@@ -30,6 +35,26 @@ const data = {
       id: ci + 1, title: chapter.title, description: chapter.description, question, choices, correct, explanation, learned: chapter.learned,
       tasks: chapter.tasks.map((p) => {
         const sets = p.inputs?.length ? p.inputs : [[]];
+        const kind = p.worlds ? "robot" : p.draw ? "drawing" : null;
+        if (kind) {
+          // No CPython here: it has neither the Robot nor a headless turtle. The reference must solve
+          // each field or draw something; the wrong program must differ from it on some test.
+          const checks = [kind];
+          const tests = (p.worlds ?? sets.map(() => undefined)).map((world, i) => {
+            const inputs = p.worlds ? [] : sets[i], r = ours(p.code, inputs, world);
+            if ("error" in r) throw new Error(`${chapter.key}/${p.key} test ${i + 1}: reference fails in Kodik: ${r.error}`);
+            const verdict = checkScene(checks, r.scene, r.scene);
+            if (!verdict.passed) throw new Error(`${chapter.key}/${p.key} test ${i + 1}: the reference does not solve it: ${verdict.message}`);
+            return { inputs, expected: "", hidden: i >= 2, checks, ...(world === undefined ? {} : { world }), scene: r.scene };
+          });
+          const caught = tests.some((t) => { const w = ours(p.wrong, t.inputs, t.world); return "error" in w || !checkScene(checks, w.scene, t.scene).passed; });
+          if (!caught) throw new Error(`${chapter.key}/${p.key}: the wrong program passes every test`);
+          return {
+            key: `${chapter.key}-${p.key}`, title: p.title, goal: chapter.title, aim: p.text, instruction: p.text, theory: chapter.theory,
+            hints: [p.hint], starter: starters[kind], code: p.code, wrong: [p.wrong], tests: tests.map(({ scene: _, ...t }) => t),
+            rules: [...chapter.rules, ...(p.inputs?.length ? ["input:1"] : [])],
+          };
+        }
         const tests = sets.map((inputs, i) => {
           const r = ours(p.code, inputs);
           if ("error" in r) throw new Error(`${chapter.key}/${p.key}: reference fails in Kodik: ${r.error}`);
@@ -69,5 +94,6 @@ if (process.argv.includes("--check")) {
   console.log(`✓ problem book data is current and matches CPython: ${data.chapters.length} courses, ${total} tasks`);
 } else {
   writeFileSync(target, json);
-  console.log(`wrote ${data.chapters.length} courses, ${total} tasks; every reference matches CPython on ${data.chapters.reduce((n, c) => n + c.tasks.reduce((m, t) => m + t.tests.length, 0), 0)} input sets`);
+  const tests = data.chapters.flatMap((c) => c.tasks.flatMap((t) => t.tests as { checks?: string[] }[])), scenes = tests.filter((t) => t.checks).length;
+  console.log(`wrote ${data.chapters.length} courses, ${total} tasks; every reference matches CPython on ${tests.length - scenes} input sets and solves ${scenes} Robot fields and drawings`);
 }

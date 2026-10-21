@@ -1067,7 +1067,7 @@ export default function B2BApp() {
     const starterInstalled = s.courses.some((c) => c.import_status && c.import_template !== "libraries/v1" && !c.import_template?.startsWith("legacy/") && !c.import_template?.startsWith("problems/"));
     const librariesInstalled = s.courses.some((c) => c.import_template === "libraries/v1");
     const readyOf = (prefix: string) => s.courses.filter((c) => c.import_template?.startsWith(prefix) && c.import_status === "ready").length;
-    const legacyInstalled = readyOf("legacy/v1/") >= 12, problemsInstalled = readyOf("problems/v1/") >= 9;
+    const legacyInstalled = readyOf("legacy/v1/") >= 12, problemsInstalled = readyOf("problems/v1/") >= 16;
     // 12 courses (one per chapter of the first version, 100 tasks) pass the quality gate one by one; the server limits checks per minute, so a
     // busy answer means "wait a little": everything already checked stays, the next call continues.
     // Course sets install one course per request through the quality gate; the server limits checks per
@@ -1095,7 +1095,7 @@ export default function B2BApp() {
       throw new Error("Курсы не успели подготовиться. Нажмите кнопку ещё раз — готовые курсы сохранены.");
     });
     const installLegacy = installSet("/legacy-course/install", { start: "Готовим 12 курсов первой версии Kodik — 100 заданий. Каждое задание проходит проверку, это займёт пару минут.", progress: "Готовим курсы первой версии Kodik", done: "12 курсов первой версии Kodik готовы: 100 проверенных заданий. Выдайте нужный курс группе." });
-    const installProblems = installSet("/problem-book/install", { start: "Готовим задачник Kodik: 9 тем, 68 задач. Каждая задача проходит проверку, это займёт минуту-другую.", progress: "Готовим задачник Kodik", done: "Задачник Kodik готов: 9 курсов, 68 проверенных задач. Выдайте нужную тему группе." });
+    const installProblems = installSet("/problem-book/install", { start: "Готовим задачник Kodik: 16 тем, 114 задач. Каждая задача проходит проверку, это займёт несколько минут.", progress: "Готовим задачник Kodik", done: "Задачник Kodik готов: 16 курсов, 114 проверенных задач. Выдайте нужную тему группе." });
     const installLibraries = () => void act(async () => {
       setToast({ text: "Готовим пять уроков с черепахой, Роботом и графиками и проверяем образцы. Это может занять около минуты.", sticky: true });
       const course = await mutate("/library-course/install", {});
@@ -1121,7 +1121,7 @@ export default function B2BApp() {
                 {!starterInstalled && <button onClick={installStarter}><span><b>Первые шаги: от блоков к Python</b><small>6 уроков · блоки и Python</small></span></button>}
                 {!librariesInstalled && <button onClick={installLibraries}><span><b>Python с библиотеками</b><small>5 уроков · черепаха, Робот, графики</small></span></button>}
                 {!legacyInstalled && <button onClick={installLegacy}><span><b>Курсы первой версии Kodik</b><small>12 курсов, 100 заданий · от первых блоков до черепашки</small></span></button>}
-                {!problemsInstalled && <button onClick={installProblems}><span><b>Задачник Kodik</b><small>9 тем, 68 задач · от ввода-вывода до циклов с условиями</small></span></button>}
+                {!problemsInstalled && <button onClick={installProblems}><span><b>Задачник Kodik</b><small>16 тем, 114 задач · от ввода-вывода до строк, Робота и черепахи</small></span></button>}
               </div>
             </details>
           )}
@@ -1147,7 +1147,7 @@ export default function B2BApp() {
               <button className="primary" onClick={installStarter}>Добавить стартовый курс · 6 уроков</button>
               <button onClick={installLibraries}>Курс «Python с библиотеками» · 5 уроков</button>
               <button onClick={installLegacy}>Курсы первой версии Kodik · 12 курсов</button>
-              <button onClick={installProblems}>Задачник Kodik · 9 тем</button>
+              <button onClick={installProblems}>Задачник Kodik · 16 тем</button>
               <button className="link" onClick={createCourse}>или создать свой курс</button>
             </div>
           </section>
