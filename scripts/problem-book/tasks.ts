@@ -7,17 +7,21 @@
 // quality gate proves the tests catch it.
 
 /** Strips the first newline and the common indentation, so programs can be written in place. */
-const py = (strings: TemplateStringsArray) => {
+export const py = (strings: TemplateStringsArray) => {
   const lines = strings.raw.join("").replace(/^\n/, "").replace(/\s+$/, "").split("\n");
   const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.match(/^ */)![0].length));
   return lines.map((l) => l.slice(indent)).join("\n");
 };
 /** A Robot field written row by row (see src/python/robotWorld.ts: R robot, * to fill, P parking). */
-const field = (...rows: string[]) => rows.join("\n");
+export const field = (...rows: string[]) => rows.join("\n");
 // A Robot task gives `worlds` (one test per field, checked by "robot"); a turtle task sets `draw`
-// (one test per input set, the picture compared with the reference's).
-export type Problem = { key: string; title: string; text: string; code: string; inputs?: string[][]; worlds?: string[]; draw?: true; wrong: string; hint: string };
-export type Chapter = { key: string; title: string; description: string; theory: string; rules: string[]; question: [string, string[], number, string]; learned: string[]; tasks: Problem[] };
+// (one test per input set, the picture compared with the reference's). `mode` offers blocks: "blocks"
+// starts in blocks, "mixed" in blocks with their Python beside them (the block solution is built from
+// `code`); without it the task is solved in Python. `level` is the difficulty a teacher sees.
+export type Level = "easy" | "medium" | "hard";
+export type Mode = "blocks" | "mixed";
+export type Problem = { key: string; title: string; text: string; code: string; inputs?: string[][]; worlds?: string[]; draw?: true; wrong: string; hint: string; mode?: Mode; level?: Level; rules?: string[]; starter?: string };
+export type Chapter = { key: string; title: string; description: string; theory: string; rules: string[]; question: [string, string[], number, string]; learned: string[]; tasks: Problem[]; mode?: Mode; level?: Level };
 
 export const chapters: Chapter[] = [
   {

@@ -24,6 +24,7 @@ import {createStarterCourse} from './starter-course.mjs';
 import {createLibraryCourse} from './library-course.mjs';
 import {createLegacyCourse} from './legacy-course.mjs';
 import {createProblemBook} from './problem-book.mjs';
+import {createPracticum} from './practicum.mjs';
 import learningRules from '../../src/b2b/learningRules.json' with {type:'json'};
 
 const scrypt = promisify(scryptCallback);
@@ -503,6 +504,7 @@ export function createApp({
     if(path==='/api/library-course/install'&&method==='POST')return await createLibraryCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user);
     if(path==='/api/legacy-course/install'&&method==='POST')return await createLegacyCourse({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user,b);
     if(path==='/api/problem-book/install'&&method==='POST')return await createProblemBook({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user,b);
+    if(path==='/api/practicum/install'&&method==='POST')return await createPracticum({db,teacher,fail,tx,invoke:(target,body,verb='POST')=>route({method:verb,headers:req.headers,socket:req.socket,url:target},res,target,body)})(user,b);
     const pilotResult=await pilot.handle(path,method,b,user,req,res);
     if(pilotResult!==undefined)return pilotResult;
     const learningResult=await learningEvidence.handle(path,method,b,user,req);

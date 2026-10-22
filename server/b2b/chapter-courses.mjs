@@ -1,9 +1,10 @@
 // Ready course sets where every chapter becomes a separate school course with one lesson whose
-// practice steps are the chapter's tasks (the first-version courses, the problem book).
+// practice steps are the chapter's tasks (the first-version courses, the problem book, the practicum).
 // Data: { template, chapters: [{ title, description, question, choices, correct, explanation,
 // tasks: [{ key, title, goal, aim, instruction, theory, hints, starter, code, wrong, tests, rules,
-// blocks? }] }] }. Every task passes the same quality gates as teacher materials (reference passes,
-// the wrong example fails, the start does not pass, block solutions load and translate). One course
+// level?, blocks?: { solution, starter, palette, modes? } }] }] }; `level` is the difficulty, `modes`
+// the block modes (default blocks and mixed). Every task passes the same quality gates as teacher
+// materials (reference passes, the wrong example fails, the start does not pass, block solutions load and translate). One course
 // per request, so a teacher sees progress and an interrupted install continues where it stopped;
 // each course has its own import record `${template}/${number}`.
 import {randomUUID} from 'node:crypto';
@@ -31,8 +32,8 @@ export function createChapterCourses({db,teacher,invoke,fail,tx},data,naming){
           for(const [k,m] of chapter.tasks.entries()){
             let task=get('SELECT * FROM tasks WHERE lesson_id=? AND position=?',l.id,k);
             if(!task){
-              const blocks=m.blocks?{learning_config:{modes:['blocks','mixed'],palette:m.blocks.palette,...(m.blocks.starter?{starter_blocks:m.blocks.starter}:{})},block_solution:m.blocks.solution}:{learning_config:{modes:[]}};
-              const created=await invoke('/api/tasks',{client_key:`${data.template.replace(/[^a-zA-Z0-9_-]/g,'-')}-${l.id}-${m.key.replace(/[^a-zA-Z0-9_-]/g,'-')}`.slice(0,100),lesson_id:l.id,title:m.title,description:'',goal:m.goal,theory:m.theory,instruction:m.instruction,difficulty:'easy',starter:m.starter,hints:m.hints,check_mode:'tests',tests:m.tests,reference_solution:m.code,wrong_solutions:m.wrong,learning_rules:m.rules,...blocks});
+              const blocks=m.blocks?{learning_config:{modes:m.blocks.modes||['blocks','mixed'],palette:m.blocks.palette,...(m.blocks.starter?{starter_blocks:m.blocks.starter}:{})},block_solution:m.blocks.solution}:{learning_config:{modes:[]}};
+              const created=await invoke('/api/tasks',{client_key:`${data.template.replace(/[^a-zA-Z0-9_-]/g,'-')}-${l.id}-${m.key.replace(/[^a-zA-Z0-9_-]/g,'-')}`.slice(0,100),lesson_id:l.id,title:m.title,description:'',goal:m.goal,theory:m.theory,instruction:m.instruction,difficulty:m.level||'easy',starter:m.starter,hints:m.hints,check_mode:'tests',tests:m.tests,reference_solution:m.code,wrong_solutions:m.wrong,learning_rules:m.rules,...blocks});
               db.prepare('UPDATE tasks SET position=? WHERE id=?').run(k,created.id);task=get('SELECT * FROM tasks WHERE id=?',created.id);
             }
             if(!task.published){const proof=await invoke(`/api/tasks/${task.id}/verify`,{revision:task.revision});if(proof.status!=='approved')fail(409,`Курс «${chapter.title}», задание «${m.title}»: ${proof.message}`);await invoke(`/api/tasks/${task.id}/publish`,{revision:task.revision,published:true})}

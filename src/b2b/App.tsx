@@ -1063,10 +1063,10 @@ export default function B2BApp() {
   } else if (page === "practice") {
     content = <Practice user={s.user.id} mode={isPracticeMode(id) ? id : undefined} go={go} ask={confirm.ask} />;
   } else if (page === "courses") {
-    const starterInstalled = s.courses.some((c) => c.import_status && c.import_template !== "libraries/v1" && !c.import_template?.startsWith("legacy/") && !c.import_template?.startsWith("problems/"));
+    const starterInstalled = s.courses.some((c) => c.import_status && c.import_template !== "libraries/v1" && !c.import_template?.startsWith("legacy/") && !c.import_template?.startsWith("problems/") && !c.import_template?.startsWith("practicum/"));
     const librariesInstalled = s.courses.some((c) => c.import_template === "libraries/v1");
     const readyOf = (prefix: string) => s.courses.filter((c) => c.import_template?.startsWith(prefix) && c.import_status === "ready").length;
-    const legacyInstalled = readyOf("legacy/v1/") >= 12, problemsInstalled = readyOf("problems/v1/") >= 16;
+    const legacyInstalled = readyOf("legacy/v1/") >= 12, problemsInstalled = readyOf("problems/v1/") >= 16, practicumInstalled = readyOf("practicum/v1/") >= 18;
     // 12 courses (one per chapter of the first version, 100 tasks) pass the quality gate one by one; the server limits checks per minute, so a
     // busy answer means "wait a little": everything already checked stays, the next call continues.
     // Course sets install one course per request through the quality gate; the server limits checks per
@@ -1095,6 +1095,7 @@ export default function B2BApp() {
     });
     const installLegacy = installSet("/legacy-course/install", { start: "Готовим 12 курсов первой версии Kodik — 100 заданий. Каждое задание проходит проверку, это займёт пару минут.", progress: "Готовим курсы первой версии Kodik", done: "12 курсов первой версии Kodik готовы: 100 проверенных заданий. Выдайте нужный курс группе." });
     const installProblems = installSet("/problem-book/install", { start: "Готовим задачник Kodik: 16 тем, 114 задач. Каждая задача проходит проверку, это займёт несколько минут.", progress: "Готовим задачник Kodik", done: "Задачник Kodik готов: 16 курсов, 114 проверенных задач. Выдайте нужную тему группе." });
+    const installPracticum = installSet("/practicum/install", { start: "Готовим практикум Kodik: 18 тем, 200 задач в блоках и на Python. Каждая задача проходит проверку, это займёт несколько минут.", progress: "Готовим практикум Kodik", done: "Практикум Kodik готов: 18 курсов, 200 проверенных задач. Выдайте нужную тему группе." });
     const installLibraries = () => void act(async () => {
       setToast({ text: "Готовим пять уроков с черепахой, Роботом и графиками и проверяем образцы. Это может занять около минуты.", sticky: true });
       const course = await mutate("/library-course/install", {});
@@ -1113,7 +1114,7 @@ export default function B2BApp() {
           title={student ? "Мои курсы" : "Курсы"}
           text={student ? "Здесь всё, что выдал учитель." : "Готовые и свои программы. Выдают их группе на странице группы."}
         >
-          {!student && s.courses.length > 0 && (!starterInstalled || !librariesInstalled || !legacyInstalled || !problemsInstalled) && (
+          {!student && s.courses.length > 0 && (!starterInstalled || !librariesInstalled || !legacyInstalled || !problemsInstalled || !practicumInstalled) && (
             <details className="more-menu ready-courses">
               <summary>Готовые курсы</summary>
               <div className="more-menu-items">
@@ -1121,6 +1122,7 @@ export default function B2BApp() {
                 {!librariesInstalled && <button onClick={installLibraries}><span><b>Python с библиотеками</b><small>5 уроков · черепаха, Робот, графики</small></span></button>}
                 {!legacyInstalled && <button onClick={installLegacy}><span><b>Курсы первой версии Kodik</b><small>12 курсов, 100 заданий · от первых блоков до черепашки</small></span></button>}
                 {!problemsInstalled && <button onClick={installProblems}><span><b>Задачник Kodik</b><small>16 тем, 114 задач · от ввода-вывода до строк, Робота и черепахи</small></span></button>}
+                {!practicumInstalled && <button onClick={installPracticum}><span><b>Практикум Kodik</b><small>18 тем, 200 задач · блоки, блоки + Python и Python: от первых программ до списков и функций</small></span></button>}
               </div>
             </details>
           )}
@@ -1147,6 +1149,7 @@ export default function B2BApp() {
               <button onClick={installLibraries}>Курс «Python с библиотеками» · 5 уроков</button>
               <button onClick={installLegacy}>Курсы первой версии Kodik · 12 курсов</button>
               <button onClick={installProblems}>Задачник Kodik · 16 тем</button>
+              <button onClick={installPracticum}>Практикум Kodik · 18 тем</button>
               <button className="link" onClick={createCourse}>или создать свой курс</button>
             </div>
           </section>
