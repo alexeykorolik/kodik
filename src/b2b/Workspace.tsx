@@ -95,11 +95,13 @@ export function Workspace(props:Parameters<typeof useWorkspaceController>[0]){re
 export function WorkspaceView({model}:{model:WorkspaceModel}){
   const {modes,task,attempts,studentDraft,code,persist,saved,revision,refresh,onBack,nextTask,onNext,backLabel,readOnly,viewNote,lessonContext,onLessonOverview,inputs,setInputs,result,busy,error,tab,setTab,pane,setPane,fontSize,setFontSize,submission,run,previewMode,checkLabel,nextLabel,referenceAction}=model;
   const [inputsExpanded,setInputsExpanded]=useState(false),[hintsShown,setHintsShown]=useState(0),consoleRef=useRef<HTMLDivElement>(null),resultRef=useRef<HTMLDivElement>(null);
+  // Phones show one part of the screen at a time (styles.css, data-view); wider screens show all three.
+  const [view,setView]=useState<'task'|'code'|'result'>('task');
   // A run's picture replays on its own timeline; every new run starts from a clean scene.
   const playback=usePlayback(result?.scene?.duration??0,result);
   const shownOutput:string[]|undefined=result?.output&&result.output_times&&playback.state!=='done'?result.output.filter((_:string,i:number)=>result.output_times[i]<=playback.t):result?.output;
   // After a run or a check the result comes into view next to the buttons, without jumping the page.
-  useEffect(()=>{if(result){setInputsExpanded(false);if(consoleRef.current)consoleRef.current.scrollTop=0;resultRef.current?.scrollIntoView?.({block:'nearest'})}},[result]);
+  useEffect(()=>{if(result){setInputsExpanded(false);setView('result');if(consoleRef.current)consoleRef.current.scrollTop=0;resultRef.current?.scrollIntoView?.({block:'nearest'})}},[result]);
   // On-screen keyboard (phones, tablets): keep the field being typed in visible above it.
   useEffect(()=>{const vv=window.visualViewport;if(!vv)return;const keep=()=>{const el=document.activeElement as HTMLElement|null;if(el&&el!==document.body&&(el.closest('.coding-panel')||el.closest('.blocklyWidgetDiv')))el.scrollIntoView?.({block:'center'})};vv.addEventListener('resize',keep);return()=>vv.removeEventListener('resize',keep)},[]);
   const hints:string[]=(task.hints||[]).filter(Boolean),usesInput=(task.examples||[]).some((e:Row)=>e.inputs?.length>0)||/input/.test(`${task.instruction||''} ${task.theory||''} ${code} ${modes?.mirror.python||''}`)||inputs!=='';
@@ -161,8 +163,17 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
           </button>
         </section>
       )}
+      <div className="workspace-views" aria-label="Часть экрана">
+        {([["task","Условие"],["code","Код"],["result","Результат"]] as const).map(([key,name])=>(
+          <button key={key} type="button" className={view===key?"active":""} aria-pressed={view===key} onClick={()=>setView(key)}>
+            {name}
+            {key==="result"&&result&&<span className={`view-dot ${resultTone}`} role="img" aria-label={verdict}/>}
+          </button>
+        ))}
+      </div>
       <div
         className="workspace-grid"
+        data-view={view}
         style={{
           gridTemplateColumns: `minmax(260px,${pane}%) 8px minmax(0,1fr)`,
         }}
@@ -205,7 +216,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               </>
             ) : tab === "task" ? (
               <>
-                <h2>Твоя задача</h2>
+                <h2 className="visually-hidden">Твоя задача</h2>
                 {task.goal && <p className="learning-goal">{task.goal}</p>}
                 <p className="preserve">{task.instruction}</p>
                 {task.learning_rules?.length>0&&<section><h3>В решении нужно применить</h3><ul>{learningRules.filter(rule=>task.learning_rules.includes(rule.id)).map(rule=><li key={rule.id}>{rule.label}</li>)}</ul></section>}
@@ -259,7 +270,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               </>
             )}
           </article>
-          <div className="material-footer">Ошибки — это нормально: каждая попытка помогает</div>
+          <button type="button" className="primary to-code" onClick={()=>setView("code")}>К коду<Glyph name="arrow" /></button>
         </section>
         <div
           className="workspace-divider"
@@ -321,7 +332,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
               >
                 А−
               </button>
-              <span aria-label={`Размер текста ${fontSize}`}>Размер {fontSize}</span>
+              <span className="visually-hidden">Размер текста {fontSize}</span>
               <button
                 aria-label="Увеличить шрифт кода"
                 onClick={() => setFontSize((s) => Math.min(24, s + 1))}
@@ -402,7 +413,7 @@ export function WorkspaceView({model}:{model:WorkspaceModel}){
           </div>
           <div className="console" ref={consoleRef}>
             <div className="console-title">
-              <b>Что напечатает программа</b>
+              <b>Результат</b>
               <span>Результат запуска и проверки</span>
             </div>
             {usesInput && <details className="stdin-details" open={inputsExpanded} onToggle={e=>setInputsExpanded(e.currentTarget.open)}>

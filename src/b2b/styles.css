@@ -3491,3 +3491,88 @@ button.primary:active:not(:disabled) { box-shadow: 0 1px 2px #17352e1f; }
   :where(:root:not([data-theme="light"])) .palette-categories button[aria-selected="true"] { background: var(--surface); border-color: var(--line-strong); }
 }
 @media (max-width: 720px) { .palette-categories { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .palette-categories button { flex-shrink: 0; } }
+
+/* ==== Task screen, 21.10: one navigation, an empty editor that does not look like code,
+   a result area that grows, and one part of the screen at a time on phones ==== */
+/* Focus screens drop the icon rail: the menu button in the top bar opens the full navigation as a drawer. */
+@media (min-width: 1024px) {
+  .focus-page .sidebar { transform: translateX(-105%); visibility: hidden; transition: transform .2s, visibility .2s; box-shadow: 8px 0 30px #13281d33; z-index: 50; }
+  .focus-page.drawer-open .sidebar { transform: none; visibility: visible; }
+  .focus-page .main-column { margin-left: 0; width: 100%; }
+  .focus-page .drawer-backdrop { position: fixed; inset: 0; z-index: 40; background: #13281d55; border: 0; border-radius: 0; padding: 0; }
+}
+/* The empty editor's hint is plain words in the interface font, not a line of code. */
+.minimal-code-editor textarea::placeholder { font-family: "Kodik Sans", Arial, sans-serif; font-style: italic; color: var(--text-2); opacity: .7; }
+
+/* Output: printed text sits on a dark "screen", like the example in the task. Once a run has
+   something to show, the area takes a fair share of the panel instead of a thin strip. */
+.workspace-page .result-box pre, .workspace-page .case-result pre { background: #22312a; color: #e9f2e4; border: 0; border-radius: 8px; padding: 10px 12px; font-size: 15px; }
+.focus-page .workspace-page .coding-panel > .console:has(> .result-box) { flex: 1 1 0; min-height: 160px; max-height: 50%; }
+.focus-page .workspace-page .coding-panel > .console:has(> .result-box .scene-view) { max-height: 60%; }
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) .workspace-page :is(.result-box, .case-result) pre { background: var(--sunken); color: var(--ink); }
+}
+
+/* Phones: "Task · Code · Result" switch; the chosen part fills the screen, actions stay under it. */
+.workspace-views, .material-panel > .to-code { display: none; }
+@media (max-width: 720px) {
+  .focus-page .workspace-page { height: calc(100dvh - 52px); min-height: 0; overflow: hidden; padding: 8px 12px 10px; display: flex; flex-direction: column; }
+  .focus-page .workspace-head { margin-bottom: 8px; min-height: 0; }
+  .focus-page .workspace-heading { margin-bottom: 4px; }
+  .focus-page .workspace-title { gap: 4px 10px; align-items: center; }
+  .focus-page .workspace-title .overline { flex-basis: 100%; font-size: 11px; }
+  .focus-page .workspace-title h1 { font-size: 19px; flex: 1 1 0; min-width: 0; }
+  .focus-page .workspace-title .help-trigger, .focus-page .workspace-title > button { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+  .workspace-views { display: flex; flex-shrink: 0; gap: 4px; margin-bottom: 8px; padding: 4px; border-radius: 12px; background: var(--sunken, #eef1ea); }
+  .workspace-views button { flex: 1; min-height: 40px; padding: 6px 8px; border: 0; border-radius: 9px; background: transparent; color: var(--text-2); font-weight: 700; gap: 6px; }
+  .workspace-views button.active { background: var(--surface, #fff); color: var(--ink); box-shadow: 0 1px 2px #17352e1f; }
+  .view-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-2); }
+  .view-dot.passed { background: var(--success, #2f7d4a); }
+  .view-dot:is(.failed, .runtime_error, .checker_error) { background: var(--warning, #b8681a); }
+  .workspace-page .workspace-grid[data-view] { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .workspace-grid[data-view] > .material-panel, .workspace-grid[data-view] > .coding-panel { flex: 1; min-height: 0; max-height: none; position: static; display: flex; flex-direction: column; overflow: hidden; }
+  .workspace-grid[data-view="task"] > .coding-panel, .workspace-grid:not([data-view="task"]) > .material-panel { display: none; }
+  .workspace-page .workspace-grid[data-view] .material-panel .task-material { flex: 1; min-height: 0; overflow: auto; }
+  .workspace-grid[data-view] > .material-panel > .to-code { display: inline-flex; justify-content: center; gap: 8px; margin: 0 12px 4px; min-height: 48px; flex-shrink: 0; }
+  .workspace-page .workspace-grid[data-view] .coding-panel > .editor-bottom { order: 10; position: static; box-shadow: none; }
+  .workspace-page .workspace-grid[data-view] .editor-bottom .actions { flex-wrap: nowrap; }
+  .workspace-page .workspace-grid[data-view] .editor-bottom .actions button { flex: 0 0 auto; padding: 10px 12px; }
+  .workspace-page .workspace-grid[data-view] .editor-bottom .actions button.primary { flex: 1 1 0; min-width: 0; white-space: normal; line-height: 1.2; }
+  .workspace-grid[data-view="result"] .editor-bottom .check-summary { display: none; }
+  .workspace-grid[data-view="code"] .coding-panel > .console { display: none; }
+  .workspace-page .workspace-grid[data-view="code"] .coding-panel > :is(fieldset, .block-area) { flex: 1 1 0; height: auto; min-height: 0; }
+  .workspace-page .workspace-grid[data-view="code"] .minimal-code-editor textarea { min-height: 0; }
+  .workspace-grid[data-view="result"] .coding-panel > :is(.mode-bar, .editor-toolbar, fieldset, .block-area) { display: none; }
+  .workspace-page .workspace-grid[data-view="result"] .coding-panel > .console { flex: 1 1 0; min-height: 0; max-height: none; overflow: auto; }
+}
+
+/* Learner overview: progress lives in the next-step card instead of a row of counters. */
+.banner-progress { position: relative; display: grid; gap: 6px; max-width: 360px; margin: 4px 0 18px; padding-top: 10px; }
+.banner-progress::before { content: ""; grid-area: 1 / 1; height: 8px; border-radius: 999px; background: #ffffffb3; }
+.banner-progress > span { grid-area: 1 / 1; height: 8px; min-width: 8px; border-radius: 999px; background: var(--green); }
+.banner-progress small { font-size: 13px; font-weight: 700; color: var(--text-2); }
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) .banner-progress::before { background: #ffffff1f; }
+  :where(:root:not([data-theme="light"])) .banner-progress > span { background: var(--accent); }
+}
+
+/* ==== Simpler teacher screens, 22.10 ====
+   Long lists fold: tasks by course, rare journal filters, the history of proposals.
+   Course covers keep their colours at half the height. */
+.course-art { height: 64px; padding: 14px 18px; }
+.course-art > span { top: 14px; }
+.course-art > strong { display: none; }
+details.task-course > summary, .recommendations-history summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; }
+details.task-course > summary::-webkit-details-marker, .recommendations-history summary::-webkit-details-marker { display: none; }
+details.task-course > summary::after, .recommendations-history summary::after { content: ""; width: 9px; height: 9px; margin-left: 4px; border-right: 2px solid var(--text-2); border-bottom: 2px solid var(--text-2); rotate: -45deg; transition: rotate .2s var(--ease-out); flex-shrink: 0; }
+details.task-course[open] > summary::after, .recommendations-history details[open] > summary::after { rotate: 45deg; }
+details.task-course > summary h2 { margin-right: auto; }
+details.task-course:not([open]) > summary { border-bottom: 0; }
+details.task-course { margin-bottom: 10px; }
+.task-course-link { display: inline-block; margin: 4px 24px 18px; }
+.recommendations-history summary h2 { margin: 0; }
+.journal-filters { align-items: flex-end; flex-wrap: wrap; }
+.more-filters { flex-basis: 100%; }
+.more-filters > summary { cursor: pointer; width: fit-content; font-size: 14px; font-weight: 700; color: var(--green); padding: 4px 0; }
+.more-filters[open] > summary { margin-bottom: 8px; }
+.member .actions .more-menu > summary { font-size: 14px; }

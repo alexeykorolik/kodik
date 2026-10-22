@@ -47,6 +47,8 @@ async function signIn(page: Page, kid: Kid) {
 }
 /** The neighbouring tab: Аня signs out there and Боря signs in, as children do at a shared computer. */
 async function switchTo(page: Page, kid: Kid) {
+  // The task screen keeps navigation in the menu drawer.
+  if (await page.getByRole("button", { name: "Открыть меню" }).isVisible()) await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await signIn(page, kid);
 }

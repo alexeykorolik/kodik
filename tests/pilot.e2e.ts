@@ -73,6 +73,7 @@ test('lost issuance response survives reload; retry, deadline change and explici
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const changed=(await call(page,'/state')).assignments;
   expect(changed).toHaveLength(1);expect(changed[0].id).toBe(issued[0].id);expect(changed[0].due_at).toBe('2026-12-15T00:00:00.000Z');
+  await page.getByLabel('Ещё действия с заданием').first().click();
   await page.getByRole('button',{name:'Назначить повторно',exact:true}).click();
   await expect(page.getByRole('dialog')).toContainText('отдельное прохождение');
   await page.getByRole('dialog').getByRole('button',{name:'Назначить повторно',exact:true}).click();
@@ -383,6 +384,8 @@ test("session expiry keeps the offline draft with its owner; lost submit respons
     }
     await login(bLogin);
     await expect(page.locator("#python-answer")).toHaveValue("");
+    // The task screen keeps navigation in the menu drawer.
+    if (await page.getByRole("button", { name: "Открыть меню" }).isVisible()) await page.getByRole("button", { name: "Открыть меню" }).click();
     await page.getByRole("button", { name: "Выйти", exact: true }).click();
     await login(aLogin, "Renewed-browser-pass-321!");
     await expect(page.locator("#python-answer")).toHaveValue(

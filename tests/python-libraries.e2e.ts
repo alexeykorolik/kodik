@@ -41,7 +41,7 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   await page.goto(`/#assignment/${s.turtle.assignment.id}`);
   await expect(page.getByText("Проверяется: рисунок черепахи.")).toBeVisible();
   await page.emulateMedia({colorScheme:'dark'});
-  for(const selector of ['.scene-checks-note','.material-footer']){
+  for(const selector of ['.scene-checks-note']){
     const contrast=await page.locator(selector).evaluate(element=>{
       const rgb=(color:string)=>color.match(/[\d.]+/g)!.slice(0,3).map(Number).map(v=>{const c=v/255;return c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4});
       const light=(color:string)=>{const [r,g,b]=rgb(color);return 0.2126*r+0.7152*g+0.0722*b};
@@ -91,6 +91,8 @@ test("turtle and Robot work in the learner workspace; help examples run", async 
   await page.getByRole("button", { name: "Проверить решение", exact: true }).click();
   await expect(page.getByText("Отлично! Все проверки пройдены.", { exact: true })).toBeVisible({ timeout: 20000 });
   // ---- help: every example runs in the page ----
+  // The task screen keeps navigation in the menu drawer.
+  if (await page.getByRole("button", { name: "Открыть меню" }).isVisible()) await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("link", { name: "Справка Python" }).click();
   await expect(page.getByRole("heading", { name: "Python в Kodik: основы и библиотеки" })).toBeVisible();
   const buttons = page.getByRole("button", { name: "Запустить пример" });

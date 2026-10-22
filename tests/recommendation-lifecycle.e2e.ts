@@ -141,6 +141,7 @@ test("volume: a live offer of group A stays visible and withdrawable beside 230 
   const card = live.getByTestId("recommendation-card").filter({ hasText: "Группа A" });
   await expect(card).toContainText("Отправлено ученику · ждёт его решения");
   await expect(history.getByRole("heading", { name: "История предложений: 230" })).toBeVisible();
+  await history.getByRole("heading", { name: "История предложений: 230" }).click();
   await expect(history.getByTestId("recommendation-card")).toHaveCount(10);
   await expect(history.getByText("1–10 из 230")).toBeVisible();
   await history.getByRole("button", { name: "Следующие" }).click();

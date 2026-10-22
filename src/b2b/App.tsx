@@ -411,13 +411,11 @@ export default function B2BApp() {
     [refreshedAt, setRefreshedAt] = useState(""),
     [refreshError, setRefreshError] = useState(""),
     [compactSidebar, setCompactSidebar] = useState(false),
-    // Solving a task is a focus screen: the navigation folds to its icon rail until the learner opens it.
-    [focusExpanded, setFocusExpanded] = useState(false),
+    // Solving a task is a focus screen: no navigation on screen, the menu button opens it as a drawer.
     [drawer, setDrawer] = useState(false),
     [switched, setSwitched] = useState<{ from: Row; to?: Row; signedOut?: boolean } | null>(null);
   const refreshSequence = useRef(0), shown = useRef<Row | null>(null), switchedRef = useRef(false);
   const confirm = useConfirm();
-  useEffect(() => setFocusExpanded(false), [route]);
   const [narrow, setNarrow] = useState(() => window.matchMedia?.("(max-width: 1023px)").matches ?? false);
   useEffect(() => { const q = window.matchMedia?.("(max-width: 1023px)"); if (!q) return; const on = () => setNarrow(q.matches); q.addEventListener("change", on); return () => q.removeEventListener("change", on); }, []);
   const [helpWaiting, setHelpWaiting] = useState(0), [toast, setToast] = useState<{ text: string; sticky?: boolean; action?: { label: string; path: string } } | null>(null);
@@ -821,9 +819,10 @@ export default function B2BApp() {
                   </>
                 ) : (
                   <div className="card-bottom">
-                    <Badge status={c.import_status === "building" ? "pending_review" : tasks.length && tasks.every((t) => t.published) ? "passed" : ""}>
+                    {/* A ready course needs no label; only unfinished states are worth a badge. */}
+                    {!(c.import_status !== "building" && tasks.length && tasks.every((t) => t.published)) && <Badge status={c.import_status === "building" ? "pending_review" : tasks.length && tasks.every((t) => t.published) ? "passed" : ""}>
                       {c.import_status === "building" ? "Готовим курс…" : !tasks.length ? "Пустой курс" : tasks.every((t) => t.published) ? "Готов к выдаче" : `Черновик · опубликовано ${tasks.filter((t) => t.published).length} из ${tasks.length}`}
-                    </Badge>
+                    </Badge>}
                     <button
                       className="link"
                       onClick={() => go(`courses/${c.id}`)}
@@ -1177,16 +1176,18 @@ export default function B2BApp() {
             + Создать задание
           </button>
         </Header>
+        {/* One line per course; a course opens to its lessons. A filter or a single course shows everything. */}
         {byCourse.map(({ c, tasks }) => (
-          <section className="panel spaced" key={c.id}>
-            <div className="panel-heading"><h2><a href={`#courses/${c.id}`}>{c.title}</a></h2><span className="muted">{plural(tasks.length, ["задание", "задания", "заданий"])}</span></div>
+          <details className="panel spaced task-course" key={`${c.id}:${filter}`} open={!!filter || byCourse.length === 1}>
+            <summary className="panel-heading"><h2>{c.title}</h2><span className="muted">{plural(tasks.length, ["задание", "задания", "заданий"])}</span></summary>
             {[...new Set(tasks.map((t) => t.lesson_id))].map((lid) => (
               <div key={lid} className="task-group">
                 <h3 className="task-group-title">{s.lessons.find((l) => l.id === lid)?.title}</h3>
                 {tasks.filter((t) => t.lesson_id === lid).map((t) => taskRow(t))}
               </div>
             ))}
-          </section>
+            <a className="link task-course-link" href={`#courses/${c.id}`}>Открыть курс →</a>
+          </details>
         ))}
         {!shown.length && (s.tasks.length ? <Empty title="Нет заданий с таким статусом" text="Выберите другой фильтр."><button onClick={() => go("tasks")}>Показать все</button></Empty> : (
           <Empty
@@ -1439,8 +1440,8 @@ export default function B2BApp() {
         )}
         <section className="panel">
           <div className="panel-heading">
-            <h2>История решений</h2>
-            <span className="muted">{plural(s.attempts.length, ["попытка", "попытки", "попыток"])}</span>
+            <h2>{student ? "История решений" : "Последние решения"}</h2>
+            {student ? <span className="muted">{plural(s.attempts.length, ["попытка", "попытки", "попыток"])}</span> : <a className="link" href="#journal">Все решения — в журнале →</a>}
           </div>
           {s.attempts.length ? (
             <table>
@@ -1454,7 +1455,8 @@ export default function B2BApp() {
                 </tr>
               </thead>
               <tbody>
-                {s.attempts.map((a) => (
+                {/* Teachers search and grade every attempt in the journal; here the latest ten are enough. */}
+                {(student ? s.attempts : s.attempts.slice(0, 10)).map((a) => (
                   <tr key={a.id}>
                     {!student && (
                       <td>{s.users.find((u) => u.id === a.user_id)?.name}</td>
@@ -1500,7 +1502,13 @@ export default function B2BApp() {
           <div>
             <Badge>ТВОЙ СЛЕДУЮЩИЙ ШАГ</Badge>
             <h2>{open ? `${open.completed ? "Продолжить" : "Начать"} урок: ${open.title}` : nextTask ? `Задача: ${nextTask.title}` : lessons.length && passedLessons === lessons.length ? "Все уроки пройдены!" : "Следующий урок откроет учитель"}</h2>
-            <p>{open ? `Шагов пройдено: ${open.completed} из ${open.total}. Ошибки — это нормально.` : nextTask ? "Открой задачу и попробуй решить." : "Пока можно повторить пройденное."}</p>
+            <p>{open ? `Шагов пройдено: ${open.completed} из ${open.total}.` : nextTask ? (nextTask.order_snapshot?.course_title ? `Курс «${nextTask.order_snapshot.course_title}»` : "Открой задачу и попробуй решить.") : "Пока можно повторить пройденное."}</p>
+            {s.tasks.length > 0 && (
+              <div className="banner-progress" role="img" aria-label={`Задач решено: ${solved} из ${s.tasks.length}`}>
+                <span style={{ width: `${Math.round((solved / s.tasks.length) * 100)}%` }} />
+                <small>Решено {solved} из {s.tasks.length}</small>
+              </div>
+            )}
             {open ? (
               <button className="primary big" onClick={() => go(`lesson-run/${open.id}`)}>{open.completed ? "Продолжить урок" : "Начать урок"} <Glyph name="arrow" /></button>
             ) : nextTask ? (
@@ -1509,15 +1517,7 @@ export default function B2BApp() {
               <button className="dark" onClick={() => go("results")}>Мой прогресс <Glyph name="arrow" /></button>
             )}
           </div>
-          <div className="banner-art" aria-hidden="true">
-            <span><Icon name="arrow-up-right" size="lg" /></span>
-            <code>{"{ учимся }"}</code>
-          </div>
         </section>
-        <div className="stats two">
-          <div><span>Уроков пройдено</span><strong>{passedLessons}</strong><small>из {lessons.length}</small></div>
-          <div><span>Задач решено</span><strong>{solved}</strong><small>из {s.tasks.length}</small></div>
-        </div>
         <div className="section-title">
           <h2>Мои курсы</h2>
           <a className="link" href="#courses">Все курсы →</a>
@@ -1650,7 +1650,7 @@ export default function B2BApp() {
         ...(s.user.role==='admin'?[["school","school","Управление школой","ШКОЛА"] as [string,string,string,string]]:[]),
       ];
   const focusPage = (student && ["assignment", "lesson-run"].includes(page)) || page === "preview" || (page === "practice" && isPracticeMode(id)),
-    collapsed = focusPage ? !focusExpanded : compactSidebar;
+    collapsed = !focusPage && compactSidebar, asDrawer = narrow || focusPage;
   const pageTitle = nav.find((n) => n[0] === page)?.[2] || ({ builder: "Конструктор задания", group: "Учебная группа", program: "Программа", "lesson-run": "Занятие", assignment: "Задание", preview: "Предпросмотр", "python-help": "Справка по Python", practice: "Практика", "lesson-editor": "Сценарий урока" } as Record<string, string>)[page] || "Kodik";
   return (
     <div className={`b2b-shell ${collapsed ? "sidebar-collapsed" : ""}${focusPage ? " focus-page" : ""}${drawer ? " drawer-open" : ""}`}>
@@ -1659,17 +1659,18 @@ export default function B2BApp() {
       <aside className="sidebar" id="sidebar">
         <a className="brand" href="#overview">
           <span className="brand-mark">k.</span>kodik
-          <span className="brand-suffix">школы</span>
+          {!student && <span className="brand-suffix">школы</span>}
         </a>
-        <div className="school-switch">
+        {/* A learner belongs to one school: the card would only repeat its name. */}
+        {!student && <div className="school-switch">
           <span className="school-avatar">
             {s.organization.name.slice(0, 1)}
           </span>
           <div>
             <b title={s.organization.name}>{s.organization.name}</b>
-            <small>{student ? "Моя школа" : "Пространство школы"}</small>
+            <small>Пространство школы</small>
           </div>
-        </div>
+        </div>}
         <nav aria-label="Разделы">
           {nav.map(([key, icon, label, section]) => (
             <span key={key} className="nav-item">
@@ -1738,44 +1739,27 @@ export default function B2BApp() {
         <header className="topbar">
           <button
             className="sidebar-toggle"
-            aria-label={narrow ? (drawer ? "Закрыть меню" : "Открыть меню") : collapsed ? "Развернуть навигацию" : "Свернуть навигацию"}
-            aria-expanded={narrow ? drawer : !collapsed}
+            aria-label={asDrawer ? (drawer ? "Закрыть меню" : "Открыть меню") : collapsed ? "Развернуть навигацию" : "Свернуть навигацию"}
+            aria-expanded={asDrawer ? drawer : !collapsed}
             aria-controls="sidebar"
-            onClick={() => (narrow ? setDrawer((v) => !v) : focusPage ? setFocusExpanded((v) => !v) : setCompactSidebar((v) => !v))}
+            onClick={() => (asDrawer ? setDrawer((v) => !v) : setCompactSidebar((v) => !v))}
           >
             <Icon name="menu" />
           </button>
           <nav className="crumbs" aria-label="Навигационная цепочка">
-            {s.organization.name}
-            <span className="topbar-divider" aria-hidden="true">/</span>
             {pageTitle}
           </nav>
           <span className="topbar-meta">
+            {refreshError && <span role="status" className="sync-warning">{student ? "Нет связи с сервером — работа сохраняется на этом компьютере" : "Нет связи с сервером"}</span>}
             {!student && (
-              <>
-                <span role="status" className={refreshError ? "sync-warning" : ""}>
-                  {refreshError
-                    ? "Нет связи с сервером"
-                    : refreshedAt
-                      ? `Обновлено в ${new Date(refreshedAt).toLocaleTimeString("ru")}`
-                      : "Обновляем…"}
-                </span>
-                <button
-                  className="link"
-                  onClick={() => act(refresh)}
-                  aria-label="Обновить данные"
-                >
-                  Обновить
-                </button>
-              </>
+              <button
+                className="link"
+                onClick={() => act(refresh)}
+                aria-label="Обновить данные"
+              >
+                Обновить
+              </button>
             )}
-            {student && refreshError && <span role="status" className="sync-warning">Нет связи с сервером — работа сохраняется на этом компьютере</span>}
-            <span className="topbar-date">
-              {new Date().toLocaleDateString("ru", {
-                day: "numeric",
-                month: "long",
-              })}
-            </span>
           </span>
         </header>
         <main

@@ -22,7 +22,7 @@ export function MinimalCodeEditor({ value, onChange, rows = 3, label }: { value:
     {focused && <span className="editor-active-line" aria-hidden="true" style={{ top: `calc(${16 + activeLine * 25.6}px + var(--editor-scroll, 0px))` }} />}
     <pre className="editor-line-numbers" aria-hidden="true">{numbers}</pre>
     <div className="editor-highlight" aria-hidden="true"><pre>{tokens.map((token, index) => <span key={index} className={token.startsWith('#') ? 'syntax-comment' : /^['"]/.test(token) ? 'syntax-string' : /^\d/.test(token) ? 'syntax-number' : /^(print|if|elif|else|for|while|in|range|def|return|input|int|str|len|pass|True|False|and|or|not)$/.test(token) ? 'syntax-keyword' : ''}>{token}</span>)}{'\n'}</pre></div>
-    <textarea ref={inputRef} id="python-answer" spellCheck={false} autoCapitalize="off" autoCorrect="off" wrap="off" value={value} rows={rows} placeholder="Напиши команду здесь"
+    <textarea ref={inputRef} id="python-answer" spellCheck={false} autoCapitalize="off" autoCorrect="off" wrap="off" value={value} rows={rows} placeholder="Здесь будет твоя программа"
       aria-label={label} aria-describedby={label ? hintId : undefined}
       onChange={event => { setCursor(event.target.selectionStart); onChange(event.target.value) }}
       onFocus={event => { setFocused(true); escaped.current = false; setCursor(event.target.selectionStart) }}

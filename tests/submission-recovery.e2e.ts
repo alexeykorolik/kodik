@@ -286,6 +286,8 @@ test("held, Python errors, refusals by mode and archive, and a shared computer",
   await page.route("**/api/tasks/*/submissions", (route) => route.abort("failed"));
   await page.context().setOffline(false);
   const mashaKey = JSON.parse((await storedOp(page, s, 0))!).request_key;
+  // The task screen keeps navigation in the menu drawer.
+  if (await page.getByRole("button", { name: "Открыть меню" }).isVisible()) await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await page.unroute("**/api/tasks/*/submissions");
   sent.length = 0;
@@ -295,6 +297,8 @@ test("held, Python errors, refusals by mode and archive, and a shared computer",
   await page.waitForTimeout(3000);
   expect(sent, "Лёва's page sends nothing of Маша's").toHaveLength(0);
   expect(counts(s.kids[1].id)).toEqual({ jobs: 0, attempts: 0 });
+  // The task screen keeps navigation in the menu drawer.
+  if (await page.getByRole("button", { name: "Открыть меню" }).isVisible()) await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await signIn(page, s.kids[0].login);
   await page.goto(`/#assignment/${s.assignment.id}`);

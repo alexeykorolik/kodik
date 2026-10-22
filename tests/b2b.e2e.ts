@@ -194,6 +194,8 @@ test("School → teacher → constructor → group → student → persisted res
     'print("Привет, мир!")',
   );
   await expect(page.getByRole("button", { name: "Попытки · 1", exact: true })).toBeVisible();
+  // The task screen keeps navigation in the menu drawer.
+  if (await page.getByRole("button", { name: "Открыть меню" }).isVisible()) await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await login(page, teacher);
 

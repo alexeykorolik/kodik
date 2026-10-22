@@ -157,11 +157,11 @@ export function ModeManagement({state}:{state:State}){
   </RecommendationCard>)}</ul>
   <Pager total={activeTotal} offset={activeOffset} size={REC_PAGE} setOffset={setActiveOffset} what="действующие предложения"/>
   </section>
-  <section className="panel recommendations-history inset" aria-labelledby="rec-history-title"><h2 id="rec-history-title">История предложений{recs?`: ${historyTotal}`:''}</h2>
+  <section className="panel recommendations-history inset" aria-labelledby="rec-history-title"><details><summary><h2 id="rec-history-title">История предложений{recs?`: ${historyTotal}`:''}</h2></summary>
   {recs&&!historyTotal&&<p>Закрытых предложений пока нет.</p>}
   <ul className="rec-list">{historyItems.map(r=><RecommendationCard key={r.id} r={r} current={r.assignment_id===id} onShow={show}/>)}</ul>
   <Pager total={historyTotal} offset={historyOffset} size={HISTORY_PAGE} setOffset={setHistoryOffset} what="история предложений"/>
-  </section></>;
+  </details></section></>;
 }
 function BulkModeBar({count,modes,busy,apply,clear}:{count:number;modes:string[];busy:boolean;apply:(mode:string,kind:string,reason:string)=>void;clear:()=>void}){
   const [mode,setMode]=useState(modes.at(-1)||'python'),[kind,setKind]=useState('offer');
@@ -241,20 +241,25 @@ export function Journal({state,onAttempt,refreshedAt}:{state:State;onAttempt:(id
   async function download(){try{const rows:Row[]=[];for(let off=0;;off+=100){const d=await api('/reports?'+query(100,off));rows.push(...d.items);if(rows.length>=d.total)break}const cell=(v:unknown)=>{let s=String(v??'');if(/^[\s=+\-@]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"'};const csv=[['Дата','Ученик','Группа','Урок','Задание','Версия','Способ','Результат','Комментарий'],...rows.map(r=>[when(r.created_at).replace(',',''),r.name,r.group_title,r.lesson_title,r.title,r.version_revision,label(r.mode),statusNames[r.status]||r.status,r.feedback])].map(r=>r.map(cell).join(';')).join('\r\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})),link=document.createElement('a');const g=state.groups.find(x=>x.id===group)?.title;link.href=url;link.download=`журнал${g?'-'+g:''}-${new Date().toISOString().slice(0,10)}.csv`;link.click();URL.revokeObjectURL(url)}catch(e){setError((e as Error).message)}}
   const lessons=[...new Set(state.lessons.map(l=>l.title))],learners=state.users.filter(u=>u.role==='student');
   const pages=data?Math.ceil(data.total/30):0;
+  // Columns that would be all dashes on this page are left out (one group, no lessons, no comments).
+  const items:Row[]=data?.items||[],cols={group:new Set(items.map(r=>r.group_title)).size>1||state.groups.length>1,lesson:items.some(r=>r.lesson_title),feedback:items.some(r=>r.feedback)};
   return <><Header title="Журнал и ручная проверка" text="Все работы учеников. Название и версия задания — на момент выполнения."><button onClick={()=>void download()}>Экспорт в CSV</button></Header>
   <div className="actions filters journal-filters">
     <label>Группа<select value={group} onChange={e=>{setGroup(e.target.value);setOffset(0)}}><option value="">Все доступные</option>{state.groups.map(g=><option key={g.id} value={g.id}>{g.title}</option>)}</select></label>
     <label>Ученик<select value={learner} onChange={e=>{setLearner(e.target.value);setOffset(0)}}><option value="">Все</option>{learners.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></label>
-    <label>Урок<select value={lesson} onChange={e=>{setLesson(e.target.value);setOffset(0)}}><option value="">Все</option>{lessons.map(l=><option key={l} value={l}>{l}</option>)}</select></label>
     <label>Состояние<select value={status} onChange={e=>{setStatus(e.target.value);setOffset(0)}}><option value="">Все</option><option value="pending_review">Ожидают ручной проверки</option><option value="passed">{statusNames.passed}</option><option value="failed">{statusNames.failed}</option><option value="runtime_error">{statusNames.runtime_error}</option><option value="checker_error">{statusNames.checker_error}</option></select></label>
-    <label>Способ<select value={mode} onChange={e=>{setMode(e.target.value);setOffset(0)}}><option value="">Все</option>{Object.entries(MODE_LABEL).map(([m,n])=><option key={m} value={m}>{n}</option>)}</select></label>
-    <label>С<input type="date" value={from} onChange={e=>{setFrom(e.target.value);setOffset(0)}}/></label>
-    <label>По<input type="date" value={to} onChange={e=>{setTo(e.target.value);setOffset(0)}}/></label>
+    {/* Rarely used filters stay folded until one of them is set. */}
+    <details className="more-filters" open={!!(lesson||mode||from||to)||undefined}><summary>Ещё фильтры</summary><div className="actions filters">
+      <label>Урок<select value={lesson} onChange={e=>{setLesson(e.target.value);setOffset(0)}}><option value="">Все</option>{lessons.map(l=><option key={l} value={l}>{l}</option>)}</select></label>
+      <label>Способ<select value={mode} onChange={e=>{setMode(e.target.value);setOffset(0)}}><option value="">Все</option>{Object.entries(MODE_LABEL).map(([m,n])=><option key={m} value={m}>{n}</option>)}</select></label>
+      <label>С<input type="date" value={from} onChange={e=>{setFrom(e.target.value);setOffset(0)}}/></label>
+      <label>По<input type="date" value={to} onChange={e=>{setTo(e.target.value);setOffset(0)}}/></label>
+    </div></details>
     {any&&<button className="link" onClick={reset}>Сбросить фильтры</button>}
   </div>
   <p role="status" className={stale?'sync-warning':'muted'} data-testid="journal-freshness">{!shownAt?'Загружаем журнал…':stale?`Нет связи с сервером. Показаны данные от ${new Date(shownAt).toLocaleTimeString('ru')}.`:filtersPending?'Применяем фильтр…':`Журнал обновлён в ${new Date(shownAt).toLocaleTimeString('ru')}`}</p>{error&&!stale&&<p role="alert" className="error">{error}</p>}
   {data&&<section className="panel journal-panel" aria-busy={filtersPending}><div className="panel-heading"><h2>Работ: {data.total}</h2>{pages>1&&<span className="muted">Страница {Math.floor(offset/30)+1} из {pages}</span>}</div>
-    {data.items.length?<div className="table-scroll"><table><thead><tr><th>Дата</th><th>Ученик</th><th>Группа</th><th>Урок</th><th>Задание</th><th>Способ</th><th>Результат</th><th>Комментарий</th></tr></thead><tbody>{data.items.map((r:Row)=><tr key={r.id}><td className="nowrap">{when(r.created_at)}</td><td>{r.name}</td><td>{r.group_title||'—'}</td><td>{r.lesson_title||'—'}</td><td><button className="link" title={`Версия задания ${r.version_revision}`} onClick={()=>onAttempt(r.id,status==='pending_review'?data.items.map((x:Row)=>x.id):undefined)}>{r.title}</button></td><td>{label(r.mode)}</td><td><Badge status={r.status}/></td><td>{r.feedback}</td></tr>)}</tbody></table></div>
+    {data.items.length?<div className="table-scroll"><table><thead><tr><th>Дата</th><th>Ученик</th>{cols.group&&<th>Группа</th>}{cols.lesson&&<th>Урок</th>}<th>Задание</th><th>Способ</th><th>Результат</th>{cols.feedback&&<th>Комментарий</th>}</tr></thead><tbody>{data.items.map((r:Row)=><tr key={r.id}><td className="nowrap">{when(r.created_at)}</td><td>{r.name}</td>{cols.group&&<td>{r.group_title||'—'}</td>}{cols.lesson&&<td>{r.lesson_title||'—'}</td>}<td><button className="link" title={`Версия задания ${r.version_revision}`} onClick={()=>onAttempt(r.id,status==='pending_review'?data.items.map((x:Row)=>x.id):undefined)}>{r.title}</button></td><td>{label(r.mode)}</td><td><Badge status={r.status}/></td>{cols.feedback&&<td>{r.feedback}</td>}</tr>)}</tbody></table></div>
     :<div className="empty"><h3>{status==='pending_review'&&!any?'Все работы проверены':any?'Нет работ по этому фильтру':'Работ пока нет'}</h3><p>{any?'Измените или сбросьте фильтры.':'Когда ученики отправят решения, они появятся здесь.'}</p>{any&&<button onClick={reset}>Сбросить фильтры</button>}</div>}
     {pages>1&&<nav className="actions pager" aria-label="Страницы журнала"><button disabled={!offset} onClick={()=>setOffset(Math.max(0,offset-30))}>Предыдущая страница</button><button disabled={offset+30>=data.total} onClick={()=>setOffset(offset+30)}>Следующая страница</button></nav>}
   </section>}</>;
