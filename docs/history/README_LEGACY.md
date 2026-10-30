@@ -16,7 +16,7 @@ npm run test:ui
 
 ## Единственный учебный маршрут
 
-`src/course.ts` объединяет `courseBase.ts` (первые22упражнения) и `extendedCourse.ts` (23–100). Материалы: `courseMaterials.ts`. Точные цели каждого нового упражнения и структурные ограничения: `lessonObjectives.ts`. Старые отдельные Course100, JSON и эталоны удалены. Старые QA-документы описывают исторические версии; актуальный отчёт — `docs/AUDIT_IMPLEMENTATION.md`.
+`src/course.ts` объединяет `courseBase.ts` (первые22упражнения) и `extendedCourse.ts` (23–100). Материалы: `courseMaterials.ts`. Точные цели каждого нового упражнения и структурные ограничения: `lessonObjectives.ts`. Старые отдельные Course100, JSON и эталоны удалены. Старые QA-документы описывают исторические версии; актуальный отчёт — `docs/history/AUDIT_IMPLEMENTATION.md`.
 
 Первые22упражнения используют Blockly → IR → Python и базовый интерпретатор `learningEngine.ts`/`textLearning.ts`. Продвинутые задания используют `pythonRuntime.ts` (AST parser), `pythonExecution.ts` (ограниченный запуск), `pythonStructure.ts` и `extendedChecker.ts` (проверка). Код не исполняется через eval, не импортирует модули, не имеет доступа к файлам/ОС/сети. Лимиты:10000операций,1000значений range,500строк/линий,40вложенных вызовов, числовые значения до10¹².
 
@@ -50,4 +50,4 @@ npm run test:ui
 
 ## Калибровка перед пилотом
 
-Новый отчёт: docs/ADAPTIVE_CALIBRATION.md. Постоянные ID/key, начальная помощь по навыку, целевые пропуски, версии событий и разделение legacy-данных. Применить также миграцию004; агрегаты supabase/pilot_report.sql. Правила пилота и переноса — docs/PILOT_PROTOCOL.md.
+Новый отчёт: docs/history/ADAPTIVE_CALIBRATION.md. Постоянные ID/key, начальная помощь по навыку, целевые пропуски, версии событий и разделение legacy-данных. Применить также миграцию004; агрегаты supabase/pilot_report.sql. Правила пилота и переноса — docs/PILOT_PROTOCOL.md.

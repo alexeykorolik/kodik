@@ -51,7 +51,7 @@
 - Сборка и весь smoke (включая отдельный новый test:calibration) успешны;16локальных UIсценариев, в том числе полный проход100заданий;14productionUI+повтор4сценариев на окончательном deployment с точным SHA.
 - В финальном Vercel только tutor/events. Временный deployment `kodiknew-p3vz2je0h-zhoper.vercel.app` удалён, provisioning endpoint отсутствует. Служебный token/info удаляется локально. Ключи Vercel/Groq/Supabase не читать и не выводить.
 
-Подробности `docs/ADAPTIVE_CALIBRATION.md`. Протокол/пустой CSV/SQL актуализированы. Production QA и автотесты не считаются learner cohort; для пилотного отчёта явно задать реальные даты/выборку участников, исключить QA. Физические iPhone/Safari, Android/Chrome и10новичков НЕ проверены. Следующий этап — они. Не переделывать ещё раз UX/курс до этих наблюдений. Архив исходников — git archive HEAD в ignored `artifacts/`, без .env.local/.vercel/node_modules/dist/logs.
+Подробности `docs/history/ADAPTIVE_CALIBRATION.md`. Протокол/пустой CSV/SQL актуализированы. Production QA и автотесты не считаются learner cohort; для пилотного отчёта явно задать реальные даты/выборку участников, исключить QA. Физические iPhone/Safari, Android/Chrome и10новичков НЕ проверены. Следующий этап — они. Не переделывать ещё раз UX/курс до этих наблюдений. Архив исходников — git archive HEAD в ignored `artifacts/`, без .env.local/.vercel/node_modules/dist/logs.
 
 Пользователь ранее разрешил GitHub main и Vercel deployment; не спрашивать повторно разрешение для уже выполненного. Голосовой сеанс завершён; capture_screen_context запрещён вне активного voice. Подагенты не запрошены. Новых незавершённых программных изменений нет.
 
@@ -61,7 +61,7 @@
 
 Пользователь подтвердил ВСЕ программные изменения P0/P1/P2 из аудита. Выполнены: адаптация23–100 guided→tokens→free безBlockly; индивидуальные навыки; AST/effect checker+скрытыепробы; безопасныйadvancedsummaryAI; corrective/review list/input/drawing; теориябезштрафа; progressskillsпервым; anonymouseventsSupabase; durableatomicAIbudget+signedcookie; codehighlight/accessory; cleanupCourse100/README; протокол10новичков/50–100пилота/физическихтелефонов.
 
-Подробности docs/AUDIT_IMPLEMENTATION.md. Протокол docs/PILOT_PROTOCOL.md, пустой docs/pilot-results.csv, агрегаты supabase/pilot_report.sql. Миграция003 выполнена в настоящейSupabase.20конкурентныхclaims:8разрешены,12отклонены; anon не может читатьсобытия/вызыватьlimiter.
+Подробности docs/history/AUDIT_IMPLEMENTATION.md. Протокол docs/PILOT_PROTOCOL.md, пустой docs/pilot-results.csv, агрегаты supabase/pilot_report.sql. Миграция003 выполнена в настоящейSupabase.20конкурентныхclaims:8разрешены,12отклонены; anon не может читатьсобытия/вызыватьlimiter.
 
 Проверены: сборка, весьsmoke, все94UIсценария (91вобщемпрогоне+исправленный100-tasktest+2AIвключённыхотдельно),16productionUI,2настоящихGroqответа while/function,доставка событий избраузера/ackqueue/reload,DBидемпотентность/отсутствиеcode/email/message. Временные4deploymentпровижининга удалены, вproduction2APIфункции. СерверныеVercelключи нельзяскачать,невыводить. ProductionAIквоты8наурок/сутки,30/минIP,80/суткиlearner,200/суткиIP,1000/суткиglobal;clientreloadнесбрасываетлимит.
 
