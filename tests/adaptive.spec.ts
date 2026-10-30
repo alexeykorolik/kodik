@@ -31,7 +31,7 @@ test('реальные решения проходят всю лестницу, 
   const strong = (skillId:string)=>({skillId,mastery:.8,attempts:2,successes:2,independentSuccesses:2,hintsUsed:0,consecutiveErrors:0})
   // Only historical preparation is seeded. Every new success below is checked through the UI.
   await page.addInitScript(data=>localStorage.setItem('kodik-progress-v1',JSON.stringify(data)),{version:4,completed:[1],currentLesson:13,started:true,introducedConcepts:['print','text_value'],skillStates:{print:strong('print'),string:strong('string')},supportOverrides:{13:'blocks'},supportCheckpoint:{successes:{print:2,string:2},errors:{}}})
-  await page.goto('/');await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await page.goto('/');await expect(page.locator('.app-shell')).toBeVisible({timeout:30000});await page.getByRole('button',{name:/Продолжить обучение/}).click()
   for (const level of ['blocks','blocks_with_code','guided_code','code_tokens']) {
     for(let success=0;success<2;success++) {
       expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).sessions['13'].supportLevel,progressKey)).toBe(level)
@@ -45,7 +45,7 @@ test('реальные решения проходят всю лестницу, 
 })
 test('пустые и повторные неизменённые проверки не создают доказательства затруднения',async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('kodik-progress-v1',JSON.stringify({version:4,completed:[1],currentLesson:13,started:true,introducedConcepts:['print','text_value']})))
-  await page.goto('/');await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await page.goto('/');await expect(page.locator('.app-shell')).toBeVisible({timeout:30000});await page.getByRole('button',{name:/Продолжить обучение/}).click()
   const initial = await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).skillStates,progressKey)
   for(let i=0;i<2;i++) {
     await page.getByRole('button',{name:/^Проверить(?: снова)?$/}).click()
@@ -68,7 +68,7 @@ test('пустые и повторные неизменённые проверк
 })
 test('адаптивные tokens восстанавливаются после обновления страницы',async({page})=>{
   await page.addInitScript(()=>{if(!localStorage.getItem('kodik-progress-v1'))localStorage.setItem('kodik-progress-v1',JSON.stringify({version:4,completed:[1],currentLesson:13,started:true,introducedConcepts:['print','text_value'],supportOverrides:{13:'code_tokens'}}))})
-  await page.goto('/');await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await page.goto('/');await expect(page.locator('.app-shell')).toBeVisible({timeout:30000});await page.getByRole('button',{name:/Продолжить обучение/}).click()
   await page.locator('.token-options button').last().click()
   const saved = await page.locator('.token-result').textContent()
   await page.reload();await page.getByRole('button',{name:/Продолжить обучение/}).click()
@@ -77,7 +77,7 @@ test('адаптивные tokens восстанавливаются после 
 })
 test('изменение только пробелов в том же неправильном коде не считается новой ошибкой',async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('kodik-progress-v1',JSON.stringify({version:4,completed:[1],currentLesson:13,started:true,introducedConcepts:['print','text_value'],supportOverrides:{13:'free_code'}})))
-  await page.goto('/');await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await page.goto('/');await expect(page.locator('.app-shell')).toBeVisible({timeout:30000});await page.getByRole('button',{name:/Продолжить обучение/}).click()
   for (const [index,answer] of ['print("ошибка")','print ( "ошибка" )'].entries()) {
     await page.getByLabel('Твой Python',{exact:true}).fill(answer)
     await page.getByRole('button',{name:/^Проверить(?: снова)?$/}).click()
@@ -90,7 +90,7 @@ test('изменение только пробелов в том же непра
 })
 test('выход из короткой практики через карту не отключает оценку основного урока',async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('kodik-progress-v1',JSON.stringify({version:4,completed:[1],currentLesson:13,started:true,introducedConcepts:['print','text_value'],activePractice:{id:'string-corrective-1',lessonId:-101,returnLessonId:13,message:'Закрепим',reason:'corrective'}})))
-  await page.goto('/');await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await page.goto('/');await expect(page.locator('.app-shell')).toBeVisible({timeout:30000});await page.getByRole('button',{name:/Продолжить обучение/}).click()
   await expect(page.locator('.practice-intro')).toBeVisible()
   await page.getByRole('button',{name:'К карте курса'}).click()
   await page.getByRole('button').filter({hasText:'Теперь — твоё сообщение'}).click()
@@ -102,7 +102,7 @@ test('выход из короткой практики через карту н
 for (const [width,height] of [[360,800],[375,812],[390,844],[430,932]]) test(`mobile feedback, повторная проверка и успех без перекрытия ${width}`,async({page})=>{
   await page.setViewportSize({width,height})
   await page.addInitScript(()=>localStorage.setItem('kodik-progress-v1',JSON.stringify({version:4,completed:[1],currentLesson:13,started:true,introducedConcepts:['print','text_value']})))
-  await page.goto('/');await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await page.goto('/');await expect(page.locator('.app-shell')).toBeVisible({timeout:30000});await page.getByRole('button',{name:/Продолжить обучение/}).click()
   await add(page,'Напечатать');await add(page,'Текст')
   const field=page.locator('.text .blocklyInputField')
   const edit=async(value:string)=>{await field.click();await page.locator('.blocklyHtmlInput').fill(value);await page.locator('.blocklyHtmlInput').press('Enter')}
@@ -169,7 +169,7 @@ for (const [width,height] of [[360,800],[375,812],[390,844],[430,932]]) test(`mo
 for(const width of [375,390]) test(`free code сохраняет строку и CTA при уменьшении viewport ${width}`,async({page})=>{
   await page.setViewportSize({width,height:844})
   await page.addInitScript(()=>{if(!localStorage.getItem('kodik-progress-v1'))localStorage.setItem('kodik-progress-v1',JSON.stringify({version:4,completed:[1],currentLesson:13,started:true,introducedConcepts:['print','text_value'],supportOverrides:{13:'free_code'}}))})
-  await page.goto('/');await page.getByRole('button',{name:/Продолжить обучение/}).click()
+  await page.goto('/');await expect(page.locator('.app-shell')).toBeVisible({timeout:30000});await page.getByRole('button',{name:/Продолжить обучение/}).click()
   const editor=page.getByLabel('Твой Python',{exact:true})
   await editor.fill('print("Мне нравится Python")');await editor.focus()
   // A reduced viewport exercises layout/scroll recovery; it is not a physical keyboard test.

@@ -1,0 +1,101 @@
+[
+  [
+    "keyboard: first 25 tab stops (overview)",
+    "Конструктор задания | Группа и результаты | Главная ученика | Задание ученика | Школа | Компоненты | Обзор | Курсы | Группы | Задания | Результаты | Школа | Данные | Новая школа | Загрузка | Ошибка | Создать группу | Создать задание | Все результаты | Проверить | Открыть | Открыть | Проверить | Все группы | Python · Старт 7АУрок 3 откр"
+  ],
+  [
+    "keyboard: stops without focus ring",
+    0
+  ],
+  [
+    "modal: focus moves in / trapped / returns",
+    [
+      true,
+      true,
+      "m-invite"
+    ]
+  ],
+  [
+    "editor: Tab indents / Esc+Tab leaves",
+    [
+      true,
+      true
+    ]
+  ],
+  [
+    "splitter: arrow key resizes panel",
+    "420 → 444"
+  ],
+  [
+    "builder: rail jump moves focus to",
+    "Типичная ошибка ученика"
+  ],
+  [
+    "overflow beyond viewport @1280×800",
+    {
+      "overview": 0,
+      "builder": 0,
+      "group": 0,
+      "student": 0,
+      "workspace": 0,
+      "school": 0,
+      "components": 0
+    }
+  ],
+  [
+    "overflow beyond viewport @1366×768",
+    {
+      "overview": 0,
+      "builder": 0,
+      "group": 0,
+      "student": 0,
+      "workspace": 0,
+      "school": 0,
+      "components": 0
+    }
+  ],
+  [
+    "overflow beyond viewport @1440×900",
+    {
+      "overview": 0,
+      "builder": 0,
+      "group": 0,
+      "student": 0,
+      "workspace": 0,
+      "school": 0,
+      "components": 0
+    }
+  ],
+  [
+    "overflow beyond viewport @1920×1080",
+    {
+      "overview": 0,
+      "builder": 0,
+      "group": 0,
+      "student": 0,
+      "workspace": 0,
+      "school": 0,
+      "components": 0
+    }
+  ],
+  [
+    "zoom 200% (720 css px): page scroll width",
+    1024
+  ],
+  [
+    "1366 @125% (1093 css px): horizontal overflow px",
+    {
+      "overview": 0,
+      "builder": 0,
+      "group": 0,
+      "student": 0,
+      "workspace": 0,
+      "school": 0,
+      "components": 0
+    }
+  ],
+  [
+    "console / page errors",
+    []
+  ]
+]

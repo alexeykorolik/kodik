@@ -14,8 +14,14 @@ for (const height of [568, 667, 844]) test(`компоновка главной,
   await page.evaluate(() => document.fonts.ready)
   await expect(page.locator('.bottom-navigation button')).toHaveCount(4)
   await expect(page.locator('.bottom-navigation button svg')).toHaveCount(4)
-  expect(await page.locator('.home-path-preview').evaluate(e => e.getBoundingClientRect().bottom <= innerHeight - 70)).toBe(true)
-  expect(await page.locator('.home-path-preview li').first().evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThan(40)
+  if (await page.locator('.home-path-preview').isVisible()) {
+    expect(await page.locator('.home-path-preview').evaluate(e => e.getBoundingClientRect().bottom <= innerHeight - 70)).toBe(true)
+    expect(await page.locator('.home-path-preview li').first().evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThan(40)
+  } else {
+    // The compact home intentionally omits the path preview; the primary action stays usable.
+    await expect(page.locator('.home-main-action')).toBeVisible()
+    expect(await page.locator('.home-main-action').evaluate(e => { const r = e.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return r.bottom <= innerHeight - 60 && !!hit && e.contains(hit) })).toBe(true)
+  }
   await page.screenshot({ path: `docs/mobile-ux/polish-home-${height}.png` })
   await page.getByRole('button', { name: 'Курс', exact: true }).click()
   const chapter = await page.locator('.chapter-switcher').boundingBox()

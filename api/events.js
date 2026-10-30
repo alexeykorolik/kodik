@@ -20,10 +20,10 @@ categories.practiceId = practiceIds;
 function cleanEventData(raw) {
   const result = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
-  for (const [key, value] of Object.entries(raw)) {
-    if (numbers.has(key) && typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= (key === "runStartedAt" ? 1e13 : 365 * 864e5)) result[key] = value;
-    if (booleans.has(key) && typeof value === "boolean") result[key] = value;
-    if (words.has(key) && typeof value === "string" && categories[key]?.has(value)) result[key] = value;
+  for (const [key2, value] of Object.entries(raw)) {
+    if (numbers.has(key2) && typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= (key2 === "runStartedAt" ? 1e13 : 365 * 864e5)) result[key2] = value;
+    if (booleans.has(key2) && typeof value === "boolean") result[key2] = value;
+    if (words.has(key2) && typeof value === "string" && categories[key2]?.has(value)) result[key2] = value;
   }
   return result;
 }
@@ -39,15 +39,15 @@ function eventRelease(raw) {
 
 // src/validation.ts
 function issue(message, fallbackSkills = []) {
-  const text3 = message.toLowerCase();
-  if (/отступ/.test(text3)) return { message, errorType: "wrong_indentation", affectedSkills: ["indentation"] };
-  if (/функц|вызов/.test(text3)) return { message, errorType: "wrong_function_call", affectedSkills: ["function"] };
-  if (/цикл|повтор|range/.test(text3)) return { message, errorType: "loop_error", affectedSkills: ["loop"] };
-  if (/сравнен|услов|равенств|≥|>=/.test(text3)) return { message, errorType: "wrong_condition", affectedSkills: text3.includes("\u0443\u0441\u043B\u043E\u0432") ? ["if", "comparison"] : ["comparison"] };
-  if (/порядок|сначала|затем/.test(text3)) return { message, errorType: "wrong_order", affectedSkills: ["sequence"] };
-  if (/пуст|добав|нужен блок|встав/.test(text3)) return { message, errorType: "missing_block", affectedSkills: fallbackSkills };
-  if (/синтакс|скоб|кавыч|команд/.test(text3)) return { message, errorType: "syntax_error", affectedSkills: ["text_syntax"] };
-  if (/значен|числ|текст/.test(text3)) return { message, errorType: "wrong_value", affectedSkills: fallbackSkills };
+  const text4 = message.toLowerCase();
+  if (/отступ/.test(text4)) return { message, errorType: "wrong_indentation", affectedSkills: ["indentation"] };
+  if (/функц|вызов/.test(text4)) return { message, errorType: "wrong_function_call", affectedSkills: ["function"] };
+  if (/цикл|повтор|range/.test(text4)) return { message, errorType: "loop_error", affectedSkills: ["loop"] };
+  if (/сравнен|услов|равенств|≥|>=/.test(text4)) return { message, errorType: "wrong_condition", affectedSkills: text4.includes("\u0443\u0441\u043B\u043E\u0432") ? ["if", "comparison"] : ["comparison"] };
+  if (/порядок|сначала|затем/.test(text4)) return { message, errorType: "wrong_order", affectedSkills: ["sequence"] };
+  if (/пуст|добав|нужен блок|встав/.test(text4)) return { message, errorType: "missing_block", affectedSkills: fallbackSkills };
+  if (/синтакс|скоб|кавыч|команд/.test(text4)) return { message, errorType: "syntax_error", affectedSkills: ["text_syntax"] };
+  if (/значен|числ|текст/.test(text4)) return { message, errorType: "wrong_value", affectedSkills: fallbackSkills };
   return { message, errorType: "wrong_structure", affectedSkills: fallbackSkills };
 }
 
@@ -57,7 +57,7 @@ var solution = (blocks) => {
   const visit = (value) => {
     if (Array.isArray(value)) return value.map(visit);
     if (!value || typeof value !== "object") return value;
-    const clone2 = Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, visit(nested)]));
+    const clone2 = Object.fromEntries(Object.entries(value).map(([key2, nested]) => [key2, visit(nested)]));
     if ((clone2.type === "variables_set" || clone2.type === "variables_get") && clone2.fields && typeof clone2.fields === "object") {
       const fields = clone2.fields;
       if (typeof fields.VAR === "string") {
@@ -73,7 +73,7 @@ var solution = (blocks) => {
     blocks: { languageVersion: 0, blocks: preparedBlocks }
   };
 };
-var textBlock = (text3) => ({ type: "text", fields: { TEXT: text3 } });
+var textBlock = (text4) => ({ type: "text", fields: { TEXT: text4 } });
 var numberBlock = (number3) => ({ type: "math_number", fields: { NUM: number3 } });
 var variableBlock = (name) => ({ type: "variables_get", fields: { VAR: name } });
 var lessons = [
@@ -397,157 +397,3264 @@ function supportForMode(mode = "blocks") {
   return "free_code";
 }
 
+// src/python/values.ts
+var PyObject = class {
+  /** Attribute lookup; undefined means "no such attribute". */
+  getattr(_name, _ctx) {
+    return void 0;
+  }
+  repr(_ctx) {
+    return `<${this.typeName} object>`;
+  }
+  str(ctx) {
+    return this.repr(ctx);
+  }
+  callable() {
+    return false;
+  }
+  call(_args, _kw, ctx) {
+    ctx.fail(`\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0442\u0438\u043F\u0430 ${this.typeName} \u043D\u0435\u043B\u044C\u0437\u044F \u0432\u044B\u0437\u0432\u0430\u0442\u044C \u043A\u0430\u043A \u0444\u0443\u043D\u043A\u0446\u0438\u044E.`);
+  }
+  /** Items of a `for` loop, unpacking, list(...)-like use; undefined: not iterable. */
+  iterate(_ctx) {
+    return void 0;
+  }
+  size() {
+    return void 0;
+  }
+  truth(_ctx) {
+    return true;
+  }
+};
+var PyNative = class extends PyObject {
+  constructor(name, fn, effect = false, decorate) {
+    super();
+    this.name = name;
+    this.fn = fn;
+    this.effect = effect;
+    this.decorate = decorate;
+  }
+  typeName = "builtin_function_or_method";
+  callable() {
+    return true;
+  }
+  call(args, kw, ctx) {
+    return this.fn(args, kw, ctx);
+  }
+  repr() {
+    return `<built-in function ${this.name}>`;
+  }
+};
+var PyModule = class extends PyObject {
+  constructor(name, attrs, exports = [...attrs.keys()].filter((key2) => !key2.startsWith("_"))) {
+    super();
+    this.name = name;
+    this.attrs = attrs;
+    this.exports = exports;
+  }
+  typeName = "module";
+  getattr(name) {
+    return this.attrs.get(name);
+  }
+  repr() {
+    return `<module '${this.name}'>`;
+  }
+};
+var PyTuple = class extends PyObject {
+  constructor(items) {
+    super();
+    this.items = items;
+  }
+  typeName = "tuple";
+  iterate(ctx) {
+    return ctx.items(this.items);
+  }
+  size() {
+    return this.items.length;
+  }
+  truth() {
+    return this.items.length > 0;
+  }
+};
+var Vec2D = class extends PyTuple {
+  constructor(x, y, xFloat = true, yFloat = true) {
+    super([x, y]);
+    this.x = x;
+    this.y = y;
+    this.xFloat = xFloat;
+    this.yFloat = yFloat;
+  }
+  typeName = "Vec2D";
+  repr() {
+    return `(${fixed2(this.x)},${fixed2(this.y)})`;
+  }
+  iterate() {
+    return [arg(this.x, this.xFloat), arg(this.y, this.yFloat)];
+  }
+};
+function fixed2(value) {
+  const rounded = pyRound(value, 2);
+  return (Object.is(rounded, -0) || rounded === 0) && value < 0 ? "-0.00" : rounded.toFixed(2);
+}
+var PySlice = class extends PyObject {
+  constructor(start, stop, step) {
+    super();
+    this.start = start;
+    this.stop = stop;
+    this.step = step;
+  }
+  typeName = "slice";
+  /** Python's slice.indices(length). */
+  indices(length, ctx) {
+    const step = this.step ?? 1;
+    if (step === 0) ctx.fail("\u0428\u0430\u0433 \u0441\u0440\u0435\u0437\u0430 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043D\u0443\u043B\u0451\u043C.");
+    const lower = step > 0 ? 0 : -1, upper = step > 0 ? length : length - 1;
+    const clamp = (value, fallback) => {
+      if (value === null) return fallback;
+      if (value < 0) {
+        value += length;
+        return value < lower ? lower : value;
+      }
+      return value > upper ? upper : value;
+    };
+    const start = clamp(this.start, step > 0 ? lower : upper), stop = clamp(this.stop, step > 0 ? upper : lower), result = [];
+    for (let i = start; step > 0 ? i < stop : i > stop; i += step) result.push(i);
+    return result;
+  }
+};
+var arg = (value, float = false) => float && typeof value === "number" ? { value, float: true } : { value };
+var floatArg = (value) => ({ value, float: true });
+var none = { value: null };
+function num(a, ctx, what = "\u0447\u0438\u0441\u043B\u043E") {
+  if (!a) return ctx.fail(`\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F: \u043D\u0443\u0436\u043D\u043E ${what}.`);
+  if (typeof a.value === "boolean") return Number(a.value);
+  if (typeof a.value === "number") return a.value;
+  return ctx.fail(`\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u043E ${what}, \u0430 \u043F\u0435\u0440\u0435\u0434\u0430\u043D\u043E ${typeLabel(a.value)}.`);
+}
+function int(a, ctx, what = "\u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E") {
+  const value = num(a, ctx, what);
+  if (a.float || !Number.isInteger(value)) ctx.fail(`\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u043E ${what}, \u0430 \u043F\u0435\u0440\u0435\u0434\u0430\u043D\u043E \u0434\u0440\u043E\u0431\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E.`);
+  return value;
+}
+function text2(a, ctx, what = "\u0441\u0442\u0440\u043E\u043A\u0430") {
+  if (!a || typeof a.value !== "string") return ctx.fail(`\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u0430 ${what} \u0432 \u043A\u0430\u0432\u044B\u0447\u043A\u0430\u0445.`);
+  return a.value;
+}
+function typeLabel(value) {
+  if (value === null) return "None";
+  if (typeof value === "string") return "\u0441\u0442\u0440\u043E\u043A\u0430";
+  if (typeof value === "boolean") return "\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435";
+  if (typeof value === "number") return "\u0447\u0438\u0441\u043B\u043E";
+  if (Array.isArray(value)) return "\u0441\u043F\u0438\u0441\u043E\u043A";
+  return value.typeName;
+}
+function bind(fn, args, kw, names, required = names.length, ctx) {
+  if (args.length > names.length) ctx.fail(`${fn}() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${names.length} \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.`);
+  const result = {};
+  names.forEach((name, i) => {
+    if (i < args.length) result[name] = args[i];
+  });
+  for (const [name, value] of kw) {
+    if (!names.includes(name)) ctx.fail(`\u0423 ${fn}() \u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${name}\xBB.`);
+    if (result[name]) ctx.fail(`\u0410\u0440\u0433\u0443\u043C\u0435\u043D\u0442 \xAB${name}\xBB \u0432 ${fn}() \u0443\u043A\u0430\u0437\u0430\u043D \u0434\u0432\u0430\u0436\u0434\u044B.`);
+    result[name] = value;
+  }
+  const missing = names.slice(0, required).find((name) => !result[name]);
+  if (missing) ctx.fail(`${fn}() \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${missing}\xBB.`);
+  return result;
+}
+var noKeywords = (fn, kw, ctx) => {
+  if (kw.size) ctx.fail(`\u0423 ${fn}() \u043D\u0435\u0442 \u0438\u043C\u0435\u043D\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.`);
+};
+function pyRound(x, digits = 0) {
+  if (!Number.isFinite(x)) return x;
+  if (digits > 22 || Math.abs(x) >= 2 ** 52 && digits >= 0) return x;
+  if (digits < 0) {
+    const scale = 10 ** -digits;
+    return roundHalfEven(x / scale) * scale;
+  }
+  const exact = Math.abs(x).toFixed(Math.min(100, digits + 25)), cut = exact.indexOf(".") + 1 + digits;
+  const tail = exact.slice(cut);
+  let result = Number(Math.abs(x).toFixed(digits));
+  if (/^50*$/.test(tail)) {
+    const kept = exact.slice(0, cut).replace(/\.$/, ""), last = Number(kept.replace(".", "").slice(-1));
+    if (last % 2 === 0) result = Number(kept);
+  }
+  return x < 0 ? -result : result;
+}
+function roundHalfEven(x) {
+  const floor = Math.floor(x), diff = x - floor;
+  if (diff > 0.5) return floor + 1;
+  if (diff < 0.5) return floor;
+  return floor % 2 === 0 ? floor : floor + 1;
+}
+
+// src/python/scene.ts
+var SceneBuilder = class {
+  turtle;
+  robot;
+  plots;
+  finishers = [];
+  onFinish(fn) {
+    this.finishers.push(fn);
+  }
+  finish(duration) {
+    for (const fn of this.finishers.splice(0)) {
+      try {
+        fn();
+      } catch {
+      }
+    }
+    if (!this.turtle && !this.robot && !this.plots) return void 0;
+    return { ...this.turtle ? { turtle: this.turtle } : {}, ...this.robot ? { robot: this.robot } : {}, ...this.plots ? { plots: this.plots } : {}, duration: Math.round(duration) };
+  }
+};
+
+// src/python/libNumpy.ts
+var MAX_SIZE = 1e4;
+var dtypeName = { int: "int64", float: "float64", bool: "bool" };
+var PyDType = class extends PyObject {
+  constructor(dtype) {
+    super();
+    this.dtype = dtype;
+  }
+  typeName = "numpy.dtype";
+  repr() {
+    return `dtype('${dtypeName[this.dtype]}')`;
+  }
+  str() {
+    return dtypeName[this.dtype];
+  }
+};
+var PyScalarType = class extends PyObject {
+  constructor(dtype) {
+    super();
+    this.dtype = dtype;
+  }
+  typeName = "type";
+  repr() {
+    return `<class 'numpy.${dtypeName[this.dtype]}'>`;
+  }
+  callable() {
+    return true;
+  }
+  call(args, kw, ctx) {
+    noKeywords(dtypeName[this.dtype], kw, ctx);
+    const v = num(args[0] ?? arg(0), ctx);
+    return this.dtype === "float" ? floatArg(v) : this.dtype === "bool" ? arg(v !== 0) : arg(Math.trunc(v));
+  }
+};
+var NdArray = class _NdArray extends PyObject {
+  constructor(data, shape, dtype) {
+    super();
+    this.data = data;
+    this.shape = shape;
+    this.dtype = dtype;
+  }
+  typeName = "numpy.ndarray";
+  get count() {
+    return this.data.length;
+  }
+  element(i) {
+    const v = this.data[i];
+    return this.dtype === "bool" ? arg(v !== 0) : this.dtype === "float" ? floatArg(v) : arg(v);
+  }
+  strides() {
+    const s = [];
+    let k = 1;
+    for (let i = this.shape.length - 1; i >= 0; i--) {
+      s[i] = k;
+      k *= this.shape[i];
+    }
+    return s;
+  }
+  /** Sub-array along the first axis (or an element of a 1-D array). */
+  row(i) {
+    if (this.shape.length === 1) return this.element(i);
+    const inner = this.shape.slice(1), size = inner.reduce((a, b) => a * b, 1);
+    return { value: new _NdArray(this.data.slice(i * size, (i + 1) * size), inner, this.dtype) };
+  }
+  iterate(ctx) {
+    if (!this.shape.length) ctx.fail("\u041D\u0435\u043B\u044C\u0437\u044F \u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C \u043C\u0430\u0441\u0441\u0438\u0432 \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u0439.");
+    ctx.tick(Math.ceil(this.shape[0] / 10));
+    return Array.from({ length: this.shape[0] }, (_, i) => this.row(i));
+  }
+  size() {
+    return this.shape[0] ?? 0;
+  }
+  truth(ctx) {
+    if (this.count === 1) return this.data[0] !== 0;
+    if (this.count === 0) return false;
+    return ctx.fail("\u041D\u0435\u043B\u044C\u0437\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u043C\u0430\u0441\u0441\u0438\u0432 \u0438\u0437 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u043A\u0430\u043A \u043E\u0434\u043D\u043E \u0443\u0441\u043B\u043E\u0432\u0438\u0435. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 a.any() \u0438\u043B\u0438 a.all().");
+  }
+  str(ctx) {
+    return formatArray(this, " ", "", ctx);
+  }
+  repr(ctx) {
+    return this.count === 0 ? `array([], dtype=${dtypeName[this.dtype]})` : `array(${formatArray(this, ", ", "array(", ctx)})`;
+  }
+  abs(ctx) {
+    return unary(this, Math.abs, ctx, this.dtype === "bool" ? "bool" : this.dtype);
+  }
+  getattr(name, ctx) {
+    if (name === "shape") return { value: ctx.tuple(this.shape.map((n) => arg(n))) };
+    if (name === "size") return arg(this.count);
+    if (name === "ndim") return arg(this.shape.length);
+    if (name === "dtype") return { value: new PyDType(this.dtype) };
+    if (name === "T") return { value: transpose(this, ctx) };
+    const method = arrayMethods[name];
+    return method ? { value: new PyNative(name, (args, kw, c) => method(this, args, kw, c)) } : void 0;
+  }
+};
+var scalarDType = (a) => typeof a.value === "boolean" ? "bool" : a.float ? "float" : "int";
+function promote(a, b) {
+  return a === "float" || b === "float" ? "float" : a === "int" || b === "int" ? "int" : "bool";
+}
+function cast(data, dtype) {
+  return dtype === "int" ? data.map(Math.trunc) : dtype === "bool" ? data.map((v) => v !== 0 ? 1 : 0) : data;
+}
+function parseDType(a, ctx) {
+  if (!a || a.value === null) return void 0;
+  const v = a.value;
+  if (v instanceof PyScalarType || v instanceof PyDType) return v.dtype;
+  if (v instanceof PyObject && "pythonType" in v) {
+    const t = v.pythonType;
+    if (t === "int" || t === "float" || t === "bool") return t;
+  }
+  if (typeof v === "string") {
+    const map = { int: "int", int64: "int", int32: "int", float: "float", float64: "float", float32: "float", bool: "bool" };
+    if (map[v]) return map[v];
+  }
+  return ctx.fail("\u0422\u0438\u043F \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432: int, float \u0438\u043B\u0438 bool (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, dtype=float).");
+}
+function toArray(a, ctx, dtype) {
+  if (a.value instanceof NdArray) return dtype && dtype !== a.value.dtype ? new NdArray(cast(a.value.data, dtype), a.value.shape, dtype) : a.value;
+  const data = [];
+  let shape, found = "bool", empty = true;
+  const walk2 = (item, depth, dims) => {
+    ctx.tick();
+    const v = item.value;
+    if (Array.isArray(v) || v instanceof PyTuple || v instanceof NdArray) {
+      const items = v instanceof NdArray ? v.iterate(ctx) : ctx.items(v);
+      dims = [...dims, items.length];
+      if (!items.length) {
+        if (!shape) shape = dims;
+        else if (shape.length !== dims.length) ragged();
+        return;
+      }
+      for (const child of items) walk2(child, depth + 1, dims);
+      return;
+    }
+    if (typeof v !== "number" && typeof v !== "boolean") ctx.fail(`\u041C\u0430\u0441\u0441\u0438\u0432 numpy \u0432 Kodik \u0445\u0440\u0430\u043D\u0438\u0442 \u0447\u0438\u0441\u043B\u0430 \u0438 \u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F, \u0430 \u0437\u0434\u0435\u0441\u044C ${typeLabel(v)}.`);
+    if (!shape) shape = dims;
+    else if (shape.length !== dims.length || shape.some((n, i) => n !== dims[i])) ragged();
+    empty = false;
+    found = promote(found, scalarDType(item));
+    data.push(Number(v));
+    if (data.length > MAX_SIZE) ctx.fail(`\u041C\u0430\u0441\u0441\u0438\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 ${MAX_SIZE} \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432.`);
+  };
+  const ragged = () => ctx.fail("\u0412\u0441\u0435 \u0432\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0435 \u0441\u043F\u0438\u0441\u043A\u0438 \u043C\u0430\u0441\u0441\u0438\u0432\u0430 \u0434\u043E\u043B\u0436\u043D\u044B \u0431\u044B\u0442\u044C \u043E\u0434\u043D\u043E\u0439 \u0434\u043B\u0438\u043D\u044B.");
+  walk2(a, 0, []);
+  const type = dtype ?? (empty ? "float" : found);
+  return new NdArray(cast(data, type), shape ?? [], type);
+}
+var isArrayLike = (v) => v instanceof NdArray || Array.isArray(v) || v instanceof PyTuple;
+var shapeOf = (a, ctx) => {
+  if (!a) return ctx.fail("\u0423\u043A\u0430\u0436\u0438 \u0440\u0430\u0437\u043C\u0435\u0440 \u043C\u0430\u0441\u0441\u0438\u0432\u0430.");
+  const dims = a.value instanceof PyTuple || Array.isArray(a.value) ? ctx.items(a.value).map((item) => int(item, ctx, "\u0440\u0430\u0437\u043C\u0435\u0440")) : [int(a, ctx, "\u0440\u0430\u0437\u043C\u0435\u0440")];
+  if (dims.some((n) => n < 0)) ctx.fail("\u0420\u0430\u0437\u043C\u0435\u0440 \u043C\u0430\u0441\u0441\u0438\u0432\u0430 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C.");
+  if (dims.reduce((x, y) => x * y, 1) > MAX_SIZE) ctx.fail(`\u041C\u0430\u0441\u0441\u0438\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 ${MAX_SIZE} \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432.`);
+  return dims;
+};
+function broadcast(a, b, ctx) {
+  const n = Math.max(a.shape.length, b.shape.length), sa = [...Array(n - a.shape.length).fill(1), ...a.shape], sb = [...Array(n - b.shape.length).fill(1), ...b.shape];
+  const shape = sa.map((x, i) => x === sb[i] ? x : x === 1 ? sb[i] : sb[i] === 1 ? x : ctx.fail(`\u0420\u0430\u0437\u043C\u0435\u0440\u044B \u043C\u0430\u0441\u0441\u0438\u0432\u043E\u0432 \u043D\u0435 \u0441\u043E\u0433\u043B\u0430\u0441\u0443\u044E\u0442\u0441\u044F: (${a.shape.join(", ")}) \u0438 (${b.shape.join(", ")}).`));
+  const size = shape.reduce((x, y) => x * y, 1);
+  if (size > MAX_SIZE) ctx.fail(`\u041C\u0430\u0441\u0441\u0438\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 ${MAX_SIZE} \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432.`);
+  ctx.tick(Math.ceil(size / 20));
+  const stride = (s) => {
+    const r = [];
+    let k = 1;
+    for (let i = s.length - 1; i >= 0; i--) {
+      r[i] = s[i] === 1 ? 0 : k;
+      k *= s[i];
+    }
+    return r;
+  };
+  const ta = stride(sa), tb = stride(sb), ia = [], ib = [];
+  for (let flat = 0; flat < size; flat++) {
+    let rest = flat, pa = 0, pb = 0;
+    for (let d = n - 1; d >= 0; d--) {
+      const coord = rest % shape[d];
+      rest = Math.floor(rest / shape[d]);
+      pa += coord * ta[d];
+      pb += coord * tb[d];
+    }
+    ia.push(pa);
+    ib.push(pb);
+  }
+  return { shape, ia, ib };
+}
+var floorDiv = (x, y) => Math.floor(x / y);
+var pyMod = (x, y) => {
+  const r = x % y;
+  return r !== 0 && r < 0 !== y < 0 ? r + y : r;
+};
+function arrayBinary(op, left, right, ctx) {
+  const a = toArray(left, ctx), b = toArray(right, ctx), { shape, ia, ib } = broadcast(a, b, ctx);
+  const compare2 = { "==": (x, y) => x === y, "!=": (x, y) => x !== y, "<": (x, y) => x < y, "<=": (x, y) => x <= y, ">": (x, y) => x > y, ">=": (x, y) => x >= y };
+  if (compare2[op]) return { value: new NdArray(ia.map((p, i) => compare2[op](a.data[p], b.data[ib[i]]) ? 1 : 0), shape, "bool") };
+  let type = promote(a.dtype, b.dtype);
+  if (type === "bool" && (op === "+" || op === "*")) return { value: new NdArray(ia.map((p, i) => op === "+" ? a.data[p] || b.data[ib[i]] ? 1 : 0 : a.data[p] && b.data[ib[i]] ? 1 : 0), shape, "bool") };
+  if (type === "bool") type = "int";
+  if (op === "/") type = "float";
+  const f = {
+    "+": (x, y) => x + y,
+    "-": (x, y) => x - y,
+    "*": (x, y) => x * y,
+    "/": (x, y) => x / y,
+    "//": (x, y) => type === "int" ? y === 0 ? 0 : floorDiv(x, y) : floorDiv(x, y),
+    "%": (x, y) => type === "int" ? y === 0 ? 0 : pyMod(x, y) : y === 0 ? NaN : pyMod(x, y),
+    "**": (x, y) => {
+      if (type === "int" && y < 0) ctx.fail("\u0426\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u043C\u0430\u0441\u0441\u0438\u0432\u0430 \u043D\u0435\u043B\u044C\u0437\u044F \u0432\u043E\u0437\u0432\u043E\u0434\u0438\u0442\u044C \u0432 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u0443\u044E \u0441\u0442\u0435\u043F\u0435\u043D\u044C. \u0421\u0434\u0435\u043B\u0430\u0439 \u043C\u0430\u0441\u0441\u0438\u0432 \u0434\u0440\u043E\u0431\u043D\u044B\u043C: a.astype(float).");
+      return x ** y;
+    }
+  };
+  if (!f[op]) return ctx.fail(`\u041E\u043F\u0435\u0440\u0430\u0446\u0438\u044F ${op} \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0434\u043B\u044F \u043C\u0430\u0441\u0441\u0438\u0432\u043E\u0432.`);
+  const data = ia.map((p, i) => f[op](a.data[p], b.data[ib[i]]));
+  if (type === "int" && data.some((v) => !Number.isSafeInteger(v))) ctx.fail("\u0426\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0432 \u043C\u0430\u0441\u0441\u0438\u0432\u0435 \u0432\u044B\u0448\u043B\u043E \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u044B \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430.");
+  return { value: new NdArray(data, shape, type) };
+}
+function unary(a, fn, ctx, type = "float") {
+  ctx.tick(Math.ceil(a.count / 20));
+  return { value: new NdArray(a.data.map(fn), a.shape, type) };
+}
+function arrayNegate(a, ctx) {
+  if (a.dtype === "bool") ctx.fail("\u041C\u0438\u043D\u0443\u0441 \u043F\u0435\u0440\u0435\u0434 \u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u043C \u043C\u0430\u0441\u0441\u0438\u0432\u043E\u043C \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F.");
+  return unary(a, (x) => -x, ctx, a.dtype);
+}
+function ufunc(name, fn, keepInt = false) {
+  return new PyNative(name, (args, kw, ctx) => {
+    noKeywords(`numpy.${name}`, kw, ctx);
+    if (args.length !== 1) ctx.fail(`numpy.${name}() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.`);
+    const a = args[0];
+    if (!isArrayLike(a.value)) {
+      const x = num(a, ctx);
+      return keepInt && !a.float ? arg(fn(x)) : floatArg(fn(x));
+    }
+    const array = toArray(a, ctx);
+    return unary(array, fn, ctx, keepInt && array.dtype !== "float" ? array.dtype === "bool" ? "int" : array.dtype : "float");
+  });
+}
+function positions(a, index, ctx) {
+  const v = index.value;
+  if (v instanceof NdArray && v.dtype === "bool" || Array.isArray(v) && v.length && v.every((x) => typeof x === "boolean")) {
+    const mask = toArray(index, ctx);
+    if (mask.shape.length !== a.shape.length || mask.shape.some((n, i) => n !== a.shape[i])) ctx.fail("\u041C\u0430\u0441\u043A\u0430 \u0434\u043E\u043B\u0436\u043D\u0430 \u0431\u044B\u0442\u044C \u0442\u043E\u0433\u043E \u0436\u0435 \u0440\u0430\u0437\u043C\u0435\u0440\u0430, \u0447\u0442\u043E \u0438 \u043C\u0430\u0441\u0441\u0438\u0432.");
+    const flat2 = mask.data.flatMap((m, i) => m ? [i] : []);
+    return { flat: flat2, shape: [flat2.length] };
+  }
+  if (v instanceof NdArray || Array.isArray(v)) {
+    const picks = toArray(index, ctx);
+    if (picks.dtype === "float") ctx.fail("\u0418\u043D\u0434\u0435\u043A\u0441\u044B \u043C\u0430\u0441\u0441\u0438\u0432\u0430 \u2014 \u0446\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430.");
+    const rows2 = picks.data.map((i) => normalize(i, a.shape[0], ctx)), inner = a.shape.slice(1), size = inner.reduce((x, y) => x * y, 1);
+    return { flat: rows2.flatMap((r) => Array.from({ length: size }, (_, k) => r * size + k)), shape: [...picks.shape, ...inner] };
+  }
+  const parts = v instanceof PyTuple ? ctx.items(v) : [index];
+  if (parts.length > a.shape.length) ctx.fail(`\u0423 \u043C\u0430\u0441\u0441\u0438\u0432\u0430 ${a.shape.length} \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u0439, \u0430 \u0438\u043D\u0434\u0435\u043A\u0441\u043E\u0432 ${parts.length}.`);
+  const axes = a.shape.map((length, d) => {
+    const part = parts[d];
+    if (!part) return { kind: "range", indices: Array.from({ length }, (_, i) => i) };
+    if (part.value instanceof PySlice) return { kind: "range", indices: part.value.indices(length, ctx) };
+    if (typeof part.value === "number" || typeof part.value === "boolean") return { kind: "int", index: normalize(int(part, ctx, "\u0446\u0435\u043B\u044B\u0439 \u0438\u043D\u0434\u0435\u043A\u0441"), length, ctx) };
+    return ctx.fail("\u0418\u043D\u0434\u0435\u043A\u0441 \u043C\u0430\u0441\u0441\u0438\u0432\u0430 \u2014 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E, \u0441\u0440\u0435\u0437 start:stop:step \u0438\u043B\u0438 \u043C\u0430\u0441\u043A\u0430.");
+  });
+  const strides = a.strides();
+  let flat = [0];
+  axes.forEach((axis, d) => {
+    const picks = axis.kind === "int" ? [axis.index] : axis.indices;
+    flat = flat.flatMap((base2) => picks.map((i) => base2 + i * strides[d]));
+  });
+  return { flat, shape: axes.flatMap((axis) => axis.kind === "range" ? [axis.indices.length] : []) };
+}
+function normalize(i, length, ctx) {
+  if (i < -length || i >= length) ctx.fail(`\u0418\u043D\u0434\u0435\u043A\u0441 ${i} \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043C\u0430\u0441\u0441\u0438\u0432\u0430 \u0434\u043B\u0438\u043D\u044B ${length}.`);
+  return i < 0 ? i + length : i;
+}
+function arrayGet(a, index, ctx) {
+  const { flat, shape } = positions(a, index, ctx);
+  ctx.tick(Math.ceil(flat.length / 20));
+  if (!shape.length) return a.element(flat[0]);
+  return { value: new NdArray(flat.map((i) => a.data[i]), shape, a.dtype) };
+}
+function arraySet(a, index, value, ctx) {
+  const { flat } = positions(a, index, ctx);
+  const source = isArrayLike(value.value) ? toArray(value, ctx).data : [num(value, ctx)];
+  if (source.length !== 1 && source.length !== flat.length) ctx.fail(`\u041D\u0435\u043B\u044C\u0437\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C ${source.length} \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439 \u0432 ${flat.length} \u043C\u0435\u0441\u0442 \u043C\u0430\u0441\u0441\u0438\u0432\u0430.`);
+  const converted = cast(source, a.dtype);
+  flat.forEach((p, i) => {
+    a.data[p] = converted[source.length === 1 ? 0 : i];
+  });
+  ctx.tick(Math.ceil(flat.length / 20));
+}
+function reduce(a, axisArg, ctx, fn, type) {
+  if (!a.count && ["min", "max"].includes(fn.name)) ctx.fail("\u041C\u0438\u043D\u0438\u043C\u0443\u043C \u0438 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043F\u0443\u0441\u0442\u043E\u0433\u043E \u043C\u0430\u0441\u0441\u0438\u0432\u0430 \u043D\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u044B.");
+  ctx.tick(Math.ceil(a.count / 20));
+  if (!axisArg || axisArg.value === null) {
+    const r = fn(a.data);
+    return type === "float" ? floatArg(r) : type === "bool" ? arg(r !== 0) : arg(r);
+  }
+  let axis = int(axisArg, ctx, "\u043D\u043E\u043C\u0435\u0440 \u043E\u0441\u0438");
+  if (axis < 0) axis += a.shape.length;
+  if (axis < 0 || axis >= a.shape.length) ctx.fail(`\u0423 \u043C\u0430\u0441\u0441\u0438\u0432\u0430 \u043D\u0435\u0442 \u043E\u0441\u0438 ${axis}.`);
+  const strides = a.strides(), outShape = a.shape.filter((_, d) => d !== axis), out = [];
+  const outSize = outShape.reduce((x, y) => x * y, 1);
+  for (let k = 0; k < outSize; k++) {
+    let rest = k, base2 = 0;
+    for (let d = a.shape.length - 1; d >= 0; d--) {
+      if (d === axis) continue;
+      const n = a.shape[d], coord = rest % n;
+      rest = Math.floor(rest / n);
+      base2 += coord * strides[d];
+    }
+    out.push(fn(Array.from({ length: a.shape[axis] }, (_, i) => a.data[base2 + i * strides[axis]])));
+  }
+  return { value: new NdArray(out, outShape, type) };
+}
+var sum = (v) => v.reduce((x, y) => x + y, 0);
+var mean = (v) => v.length ? sum(v) / v.length : NaN;
+var reducers = {
+  sum: { fn: sum, type: (d) => d === "float" ? "float" : "int" },
+  prod: { fn: (v) => v.reduce((x, y) => x * y, 1), type: (d) => d === "float" ? "float" : "int" },
+  mean: { fn: mean, type: () => "float" },
+  min: { fn: function min(v) {
+    return Math.min(...v);
+  }, type: (d) => d },
+  max: { fn: function max(v) {
+    return Math.max(...v);
+  }, type: (d) => d },
+  std: { fn: (v) => {
+    const m = mean(v);
+    return Math.sqrt(mean(v.map((x) => (x - m) ** 2)));
+  }, type: () => "float" },
+  median: { fn: (v) => {
+    const s = [...v].sort((x, y) => x - y), n = s.length;
+    return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+  }, type: () => "float" },
+  argmin: { fn: (v) => v.indexOf(Math.min(...v)), type: () => "int" },
+  argmax: { fn: (v) => v.indexOf(Math.max(...v)), type: () => "int" },
+  any: { fn: (v) => v.some((x) => x !== 0) ? 1 : 0, type: () => "bool" },
+  all: { fn: (v) => v.every((x) => x !== 0) ? 1 : 0, type: () => "bool" }
+};
+var dimsOf = (a, ctx) => a.value instanceof PyTuple || Array.isArray(a.value) ? ctx.items(a.value).map((x) => int(x, ctx, "\u0440\u0430\u0437\u043C\u0435\u0440")) : [int(a, ctx, "\u0440\u0430\u0437\u043C\u0435\u0440")];
+function reshape(a, dims, ctx) {
+  const unknown = dims.indexOf(-1), known = dims.filter((n) => n !== -1).reduce((x, y) => x * y, 1);
+  if (unknown >= 0) dims = dims.map((n) => n === -1 ? known ? a.count / known : 0 : n);
+  if (dims.some((n) => !Number.isInteger(n) || n < 0) || dims.reduce((x, y) => x * y, 1) !== a.count) ctx.fail(`\u041D\u0435\u043B\u044C\u0437\u044F \u0440\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u044C ${a.count} \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0432 \u0444\u043E\u0440\u043C\u0443 (${dims.join(", ")}).`);
+  return new NdArray([...a.data], dims, a.dtype);
+}
+function transpose(a, ctx) {
+  if (a.shape.length < 2) return a;
+  if (a.shape.length > 2) ctx.fail("\u0422\u0440\u0430\u043D\u0441\u043F\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0432 Kodik \u2014 \u0434\u043B\u044F \u0434\u0432\u0443\u043C\u0435\u0440\u043D\u044B\u0445 \u043C\u0430\u0441\u0441\u0438\u0432\u043E\u0432.");
+  const [r, c] = a.shape, data = [];
+  for (let j = 0; j < c; j++) for (let i = 0; i < r; i++) data.push(a.data[i * c + j]);
+  return new NdArray(data, [c, r], a.dtype);
+}
+function toList(a, ctx) {
+  return ctx.list(a.iterate(ctx).map((item) => item.value instanceof NdArray ? { value: toList(item.value, ctx) } : item));
+}
+var reducerMethod = (name) => (a, args, kw, ctx) => {
+  const { axis } = bind(`${name}`, args, kw, ["axis"], 0, ctx);
+  const r = reducers[name];
+  return reduce(a, axis, ctx, r.fn, r.type(a.dtype));
+};
+var arrayMethods = {
+  ...Object.fromEntries(Object.keys(reducers).filter((name) => name !== "median").map((name) => [name, reducerMethod(name)])),
+  reshape: (a, args, kw, ctx) => {
+    noKeywords("reshape", kw, ctx);
+    return { value: reshape(a, args.length === 1 ? dimsOf(args[0], ctx) : args.map((x) => int(x, ctx)), ctx) };
+  },
+  tolist: (a, args, kw, ctx) => {
+    noKeywords("tolist", kw, ctx);
+    return a.shape.length ? { value: toList(a, ctx) } : a.element(0);
+  },
+  copy: (a) => ({ value: new NdArray([...a.data], [...a.shape], a.dtype) }),
+  flatten: (a) => ({ value: new NdArray([...a.data], [a.count], a.dtype) }),
+  astype: (a, args, kw, ctx) => {
+    const { dtype } = bind("astype", args, kw, ["dtype"], 1, ctx);
+    const t = parseDType(dtype, ctx);
+    return { value: new NdArray(cast(a.data, t), [...a.shape], t) };
+  },
+  round: (a, args, kw, ctx) => {
+    const { decimals } = bind("round", args, kw, ["decimals"], 0, ctx);
+    return roundArray(a, decimals ? int(decimals, ctx) : 0, ctx);
+  },
+  sort: (a, args, kw, ctx) => {
+    noKeywords("sort", kw, ctx);
+    if (a.shape.length !== 1) ctx.fail("sort() \u0432 Kodik \u0441\u043E\u0440\u0442\u0438\u0440\u0443\u0435\u0442 \u043E\u0434\u043D\u043E\u043C\u0435\u0440\u043D\u044B\u0439 \u043C\u0430\u0441\u0441\u0438\u0432.");
+    a.data.sort((x, y) => x - y);
+    ctx.tick(Math.ceil(a.count / 10));
+  },
+  cumsum: (a, args, kw, ctx) => {
+    noKeywords("cumsum", kw, ctx);
+    let s = 0;
+    return { value: new NdArray(a.data.map((v) => s += v), [a.count], a.dtype === "float" ? "float" : "int") };
+  },
+  fill: (a, args, kw, ctx) => {
+    noKeywords("fill", kw, ctx);
+    const v = cast([num(args[0], ctx)], a.dtype)[0];
+    a.data.fill(v);
+  }
+};
+function roundArray(a, decimals, ctx) {
+  if (a.dtype !== "float") return { value: decimals >= 0 ? a : new NdArray(a.data.map((v) => roundHalfEven(v / 10 ** -decimals) * 10 ** -decimals), a.shape, a.dtype) };
+  return unary(a, (x) => decimals === 0 ? roundHalfEven(x) : pyRound(x, decimals), ctx, "float");
+}
+function positional(x, precision) {
+  if (Object.is(x, -0)) return "-0.";
+  const [whole, frac = ""] = String(x).split(".");
+  if (frac.length <= precision) return `${whole}.${frac}`;
+  const [w, f = ""] = x.toFixed(precision).replace(/0+$/, "").split(".");
+  return `${w}.${f}`;
+}
+function scientific(x, precision) {
+  let s = x.toExponential();
+  let [m, e] = s.split("e");
+  if ((m.split(".")[1] ?? "").length > precision) {
+    s = x.toExponential(precision);
+    [m, e] = s.split("e");
+    m = m.replace(/0+$/, "");
+  }
+  if (!m.includes(".")) m += ".";
+  return { mantissa: m, exp: e };
+}
+function floatFormatter(values) {
+  const finite2 = values.filter(Number.isFinite), nonzero = finite2.filter((v) => v !== 0).map(Math.abs);
+  let exp = false;
+  if (nonzero.length) {
+    const max2 = Math.max(...nonzero), min2 = Math.min(...nonzero);
+    exp = max2 >= 1e8 || min2 < 1e-4 || max2 / min2 > 1e3;
+  }
+  let padLeft = 0, padRight = 0, precision = 8, expSize = -1;
+  if (finite2.length && exp) {
+    const parts = finite2.map((v) => scientific(v, 8));
+    precision = Math.max(...parts.map((p) => p.mantissa.split(".")[1].length));
+    expSize = Math.max(...parts.map((p) => p.exp.replace(/^[+-]/, "").length), 2);
+    padLeft = Math.max(...parts.map((p) => p.mantissa.split(".")[0].length));
+    padRight = expSize + 2 + precision;
+  } else if (finite2.length) {
+    const parts = finite2.map((v) => positional(v, 8).split("."));
+    padLeft = Math.max(...parts.map((p) => p[0].length));
+    padRight = Math.max(...parts.map((p) => p[1].length));
+  }
+  if (finite2.length !== values.length) {
+    const neg = values.some((v) => v === -Infinity) ? 1 : 0;
+    padLeft = Math.max(padLeft, 3 - (padRight + 1), 3 + neg - (padRight + 1));
+  }
+  return (x) => {
+    if (!Number.isFinite(x)) {
+      const s = Number.isNaN(x) ? "nan" : x > 0 ? "inf" : "-inf";
+      return " ".repeat(Math.max(0, padLeft + padRight + 1 - s.length)) + s;
+    }
+    if (exp) {
+      const { mantissa, exp: e } = scientific(x, precision), [whole2, frac2] = mantissa.split("."), sign = e.startsWith("-") ? "-" : "+";
+      return whole2.padStart(padLeft) + "." + frac2.padEnd(precision, "0") + "e" + sign + e.replace(/^[+-]/, "").padStart(expSize, "0");
+    }
+    const [whole, frac] = positional(x, 8).split(".");
+    return whole.padStart(padLeft) + "." + frac.padEnd(padRight);
+  };
+}
+function formatArray(a, separator, prefix, ctx) {
+  ctx.tick(Math.ceil(a.count / 10));
+  if (!a.shape.length) return a.count ? elementFormatter(a)(a.data[0]) : "[]";
+  if (!a.count) return "[]";
+  const format = elementFormatter(a), lineWidth = prefix ? 74 : 75, nextPrefix = " " + " ".repeat(prefix.length);
+  const recurse = (offset, axis, hanging, width) => {
+    const length = a.shape[axis], inner = a.shape.slice(axis + 1).reduce((x, y) => x * y, 1), nextHanging = hanging + " ", nextWidth = width - 1;
+    let s = "";
+    if (axis === a.shape.length - 1) {
+      const elemWidth = width - Math.max(separator.trimEnd().length, 1);
+      let line = hanging;
+      const extend = (word) => {
+        if (line.length + word.length > elemWidth && line.length > hanging.length) {
+          s += line.trimEnd() + "\n";
+          line = hanging;
+        }
+        line += word;
+      };
+      for (let i = 0; i < length; i++) {
+        extend(format(a.data[offset + i]));
+        if (i < length - 1) line += separator;
+      }
+      s += line;
+    } else {
+      const lineSep = separator.trimEnd() + "\n".repeat(a.shape.length - axis - 1);
+      for (let i = 0; i < length; i++) s += hanging + recurse(offset + i * inner, axis + 1, nextHanging, nextWidth) + (i < length - 1 ? lineSep : "");
+    }
+    return "[" + s.slice(hanging.length) + "]";
+  };
+  return recurse(0, 0, nextPrefix, lineWidth);
+}
+function elementFormatter(a) {
+  if (a.dtype === "bool") return (x) => x ? " True" : "False";
+  if (a.dtype === "int") {
+    const width = Math.max(...a.data.map((v) => String(v).length));
+    return (x) => String(x).padStart(width);
+  }
+  return floatFormatter(a.data);
+}
+function numpyModule() {
+  const attrs = /* @__PURE__ */ new Map();
+  const def = (name, fn) => attrs.set(name, { value: new PyNative(name, fn) });
+  def("array", (args, kw, ctx) => {
+    const { object, dtype } = bind("numpy.array", args, kw, ["object", "dtype"], 1, ctx);
+    return { value: toArray(object, ctx, parseDType(dtype, ctx)) };
+  });
+  def("asarray", (args, kw, ctx) => {
+    const { a, dtype } = bind("numpy.asarray", args, kw, ["a", "dtype"], 1, ctx);
+    return { value: toArray(a, ctx, parseDType(dtype, ctx)) };
+  });
+  const filled = (name, value) => def(name, (args, kw, ctx) => {
+    const names = value === null ? ["shape", "fill_value", "dtype"] : ["shape", "dtype"], p = bind(`numpy.${name}`, args, kw, names, value === null ? 2 : 1, ctx);
+    const dims = shapeOf(p.shape, ctx), fill = value === null ? p.fill_value : floatArg(value), type = parseDType(p.dtype, ctx) ?? (value === null ? scalarDType(fill) : "float");
+    return { value: new NdArray(cast(Array(dims.reduce((x, y) => x * y, 1)).fill(num(fill, ctx)), type), dims, type) };
+  });
+  filled("zeros", 0);
+  filled("ones", 1);
+  filled("full", null);
+  def("arange", (args, kw, ctx) => {
+    const p = bind("numpy.arange", args, kw, ["start", "stop", "step", "dtype"], 1, ctx);
+    const hasStop = p.stop && p.stop.value !== null, start = hasStop ? num(p.start, ctx) : 0, stop = hasStop ? num(p.stop, ctx) : num(p.start, ctx), step = p.step ? num(p.step, ctx) : 1;
+    if (step === 0) ctx.fail("numpy.arange: \u0448\u0430\u0433 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043D\u0443\u043B\u0451\u043C.");
+    const length = Math.max(0, Math.ceil((stop - start) / step));
+    if (length > MAX_SIZE) ctx.fail(`\u041C\u0430\u0441\u0441\u0438\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 ${MAX_SIZE} \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432.`);
+    const type = parseDType(p.dtype, ctx) ?? ([p.start, p.stop, p.step].some((x) => x?.float) ? "float" : "int");
+    ctx.tick(Math.ceil(length / 20));
+    return { value: new NdArray(cast(Array.from({ length }, (_, i) => start + i * step), type), [length], type) };
+  });
+  def("linspace", (args, kw, ctx) => {
+    const p = bind("numpy.linspace", args, kw, ["start", "stop", "num", "endpoint"], 2, ctx);
+    const start = num(p.start, ctx), stop = num(p.stop, ctx), count = p.num ? int(p.num, ctx, "\u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0442\u043E\u0447\u0435\u043A") : 50, endpoint = p.endpoint ? ctx.truth(p.endpoint.value) : true;
+    if (count < 0) ctx.fail("numpy.linspace: \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0442\u043E\u0447\u0435\u043A \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C.");
+    if (count > MAX_SIZE) ctx.fail(`\u041C\u0430\u0441\u0441\u0438\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 ${MAX_SIZE} \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432.`);
+    const div = endpoint ? count - 1 : count, step = div > 0 ? (stop - start) / div : 0;
+    const data = Array.from({ length: count }, (_, i) => i * step + start);
+    if (endpoint && count > 1) data[count - 1] = stop;
+    ctx.tick(Math.ceil(count / 20));
+    return { value: new NdArray(data, [count], "float") };
+  });
+  def("reshape", (args, kw, ctx) => {
+    const { a, newshape } = bind("numpy.reshape", args, kw, ["a", "newshape"], 2, ctx);
+    return { value: reshape(toArray(a, ctx), dimsOf(newshape, ctx), ctx) };
+  });
+  def("transpose", (args, kw, ctx) => {
+    noKeywords("numpy.transpose", kw, ctx);
+    return { value: transpose(toArray(args[0], ctx), ctx) };
+  });
+  def("copy", (args, kw, ctx) => {
+    noKeywords("numpy.copy", kw, ctx);
+    const a = toArray(args[0], ctx);
+    return { value: new NdArray([...a.data], [...a.shape], a.dtype) };
+  });
+  def("concatenate", (args, kw, ctx) => {
+    noKeywords("numpy.concatenate", kw, ctx);
+    const parts = ctx.items(args[0]?.value ?? null, "numpy.concatenate").map((p) => toArray(p, ctx));
+    if (parts.some((p) => p.shape.length !== 1)) ctx.fail("numpy.concatenate \u0432 Kodik \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u0435\u0442 \u043E\u0434\u043D\u043E\u043C\u0435\u0440\u043D\u044B\u0435 \u043C\u0430\u0441\u0441\u0438\u0432\u044B.");
+    const type = parts.reduce((t, p) => promote(t, p.dtype), "bool"), data = cast(parts.flatMap((p) => p.data), type);
+    if (data.length > MAX_SIZE) ctx.fail(`\u041C\u0430\u0441\u0441\u0438\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 ${MAX_SIZE} \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432.`);
+    return { value: new NdArray(data, [data.length], type) };
+  });
+  for (const name of Object.keys(reducers)) def(name, (args, kw, ctx) => {
+    const { a, axis } = bind(`numpy.${name}`, args, kw, ["a", "axis"], 1, ctx);
+    const array = toArray(a, ctx), r = reducers[name];
+    return reduce(array, axis, ctx, r.fn, r.type(array.dtype));
+  });
+  attrs.set("amin", attrs.get("min"));
+  attrs.set("amax", attrs.get("max"));
+  def("cumsum", (args, kw, ctx) => arrayMethods.cumsum(toArray(args[0], ctx), [], kw, ctx));
+  def("sort", (args, kw, ctx) => {
+    noKeywords("numpy.sort", kw, ctx);
+    const a = toArray(args[0], ctx), copy = new NdArray([...a.data], [...a.shape], a.dtype);
+    arrayMethods.sort(copy, [], kw, ctx);
+    return { value: copy };
+  });
+  def("round", (args, kw, ctx) => {
+    const { a, decimals } = bind("numpy.round", args, kw, ["a", "decimals"], 1, ctx);
+    if (!isArrayLike(a.value)) {
+      const x = num(a, ctx), d = decimals ? int(decimals, ctx) : 0;
+      return a.float ? floatArg(d ? pyRound(x, d) : roundHalfEven(x)) : arg(x);
+    }
+    return roundArray(toArray(a, ctx), decimals ? int(decimals, ctx) : 0, ctx);
+  });
+  attrs.set("around", attrs.get("round"));
+  const ufuncs = [
+    ["sqrt", Math.sqrt],
+    ["sin", Math.sin],
+    ["cos", Math.cos],
+    ["tan", Math.tan],
+    ["arcsin", Math.asin],
+    ["arccos", Math.acos],
+    ["arctan", Math.atan],
+    ["exp", Math.exp],
+    ["log", Math.log],
+    ["log2", Math.log2],
+    ["log10", Math.log10],
+    ["abs", Math.abs, true],
+    ["absolute", Math.abs, true],
+    ["floor", Math.floor, true],
+    ["ceil", Math.ceil, true],
+    ["trunc", Math.trunc, true],
+    ["sign", Math.sign, true],
+    ["square", (x) => x * x, true],
+    ["degrees", (x) => x * (180 / Math.PI)],
+    ["radians", (x) => x * (Math.PI / 180)],
+    ["rad2deg", (x) => x * (180 / Math.PI)],
+    ["deg2rad", (x) => x * (Math.PI / 180)]
+  ];
+  for (const [name, fn, keep] of ufuncs) attrs.set(name, { value: ufunc(name, fn, keep) });
+  const binaryFn = (name, op) => def(name, (args, kw, ctx) => {
+    noKeywords(`numpy.${name}`, kw, ctx);
+    if (args.length !== 2) ctx.fail(`numpy.${name}() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u0432\u0430 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F.`);
+    return arrayBinary(op, args[0], args[1], ctx);
+  });
+  binaryFn("add", "+");
+  binaryFn("subtract", "-");
+  binaryFn("multiply", "*");
+  binaryFn("divide", "/");
+  binaryFn("power", "**");
+  binaryFn("mod", "%");
+  attrs.set("pow", attrs.get("power"));
+  def("dot", (args, kw, ctx) => {
+    noKeywords("numpy.dot", kw, ctx);
+    const a = toArray(args[0], ctx), b = toArray(args[1], ctx);
+    if (a.shape.length !== 1 || b.shape.length !== 1 || a.count !== b.count) ctx.fail("numpy.dot \u0432 Kodik \u2014 \u0441\u043A\u0430\u043B\u044F\u0440\u043D\u043E\u0435 \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u0434\u0432\u0443\u0445 \u043E\u0434\u043D\u043E\u043C\u0435\u0440\u043D\u044B\u0445 \u043C\u0430\u0441\u0441\u0438\u0432\u043E\u0432 \u043E\u0434\u043D\u043E\u0439 \u0434\u043B\u0438\u043D\u044B.");
+    const r = a.data.reduce((s, v, i) => s + v * b.data[i], 0);
+    return promote(a.dtype, b.dtype) === "float" ? floatArg(r) : arg(r);
+  });
+  attrs.set("pi", floatArg(Math.PI));
+  attrs.set("e", floatArg(Math.E));
+  attrs.set("inf", floatArg(Infinity));
+  attrs.set("nan", floatArg(NaN));
+  attrs.set("int64", { value: new PyScalarType("int") });
+  attrs.set("float64", { value: new PyScalarType("float") });
+  attrs.set("bool_", { value: new PyScalarType("bool") });
+  attrs.set("ndarray", { value: new PyNative("ndarray", (args, kw, ctx) => ctx.fail("\u0421\u043E\u0437\u0434\u0430\u0432\u0430\u0439 \u043C\u0430\u0441\u0441\u0438\u0432\u044B \u0447\u0435\u0440\u0435\u0437 numpy.array(...), numpy.zeros(...) \u0438\u043B\u0438 numpy.arange(...).")) });
+  attrs.set("random", { value: new PyModule("numpy.random", new Map(["rand", "randint", "random", "seed", "choice", "normal"].map((name) => [name, { value: new PyNative(name, (args, kw, ctx) => ctx.fail("numpy.random \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F. \u0414\u043B\u044F \u0441\u043B\u0443\u0447\u0430\u0439\u043D\u044B\u0445 \u0447\u0438\u0441\u0435\u043B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043C\u043E\u0434\u0443\u043B\u044C random.")) }]))) });
+  const exports = [...attrs.keys()].filter((name) => !["random", "ndarray"].includes(name));
+  return new PyModule("numpy", attrs, exports);
+}
+
+// src/python/libBasic.ts
+var native = (name, fn, effect = false) => new PyNative(name, fn, effect);
+var finite = (value, ctx, fn) => Number.isFinite(value) ? value : ctx.fail(`${fn}: \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0439 (math range error).`);
+var safeInt = (value, ctx) => Number.isSafeInteger(value) ? value : ctx.fail("\u0426\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u044B \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430.");
+var one = (fn, args, kw, ctx) => {
+  noKeywords(fn, kw, ctx);
+  if (args.length !== 1) ctx.fail(`${fn}() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.`);
+  return args[0];
+};
+function parseFloat(source, ctx) {
+  const s = source.trim().toLowerCase();
+  if (/^[+-]?(inf|infinity)$/.test(s)) return s.startsWith("-") ? -Infinity : Infinity;
+  if (/^[+-]?nan$/.test(s)) return NaN;
+  if (!/^[+-]?(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:e[+-]?\d(?:_?\d)*)?$/.test(s)) ctx.fail(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044C \xAB${source}\xBB \u0432 \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C float(...).`);
+  return Number(s.replace(/_/g, ""));
+}
+function extremum(name, args, kw, ctx) {
+  for (const key2 of kw.keys()) if (key2 !== "default") ctx.fail(`\u0423 ${name}() \u0432 Kodik \u0435\u0441\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442 default.`);
+  const items = args.length === 1 ? ctx.items(args[0].value, `${name}() \u043E\u0442 \u043E\u0434\u043D\u043E\u0433\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F`) : args;
+  if (args.length === 0) ctx.fail(`${name}() \u043D\u0443\u0436\u043D\u044B \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F.`);
+  if (!items.length) return kw.get("default") ?? ctx.fail(`${name}() \u043F\u043E\u043B\u0443\u0447\u0438\u043B \u043F\u0443\u0441\u0442\u0443\u044E \u043F\u043E\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C.`);
+  if (args.length > 1 && kw.has("default")) ctx.fail(`default \u0432 ${name}() \u043F\u0438\u0448\u0443\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0441 \u043E\u0434\u043D\u043E\u0439 \u043F\u043E\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C\u044E.`);
+  let best = items[0];
+  for (const item of items.slice(1)) {
+    ctx.tick();
+    if (ctx.compare(item.value, best.value, name === "min" ? "<" : ">")) best = item;
+  }
+  return best;
+}
+function builtinNatives() {
+  const items = [
+    ["float", (args, kw, ctx) => {
+      noKeywords("float", kw, ctx);
+      if (!args.length) return floatArg(0);
+      if (args.length > 1) ctx.fail("float() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.");
+      const v = args[0].value;
+      if (typeof v === "string") return floatArg(parseFloat(v, ctx));
+      if (typeof v === "number" || typeof v === "boolean") return floatArg(Number(v));
+      return ctx.fail(`\u0412 float \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0447\u0438\u0441\u043B\u043E \u0438\u043B\u0438 \u0441\u0442\u0440\u043E\u043A\u0443 \u0441 \u0447\u0438\u0441\u043B\u043E\u043C, \u0430 \u043D\u0435 ${typeLabel(v)}.`);
+    }],
+    ["abs", (args, kw, ctx) => {
+      const a = one("abs", args, kw, ctx);
+      if (a.value instanceof Object && "abs" in a.value) return a.value.abs(ctx);
+      return arg(Math.abs(num(a, ctx)), a.float);
+    }],
+    ["round", (args, kw, ctx) => {
+      const { number: number3, ndigits } = bind("round", args, kw, ["number", "ndigits"], 1, ctx);
+      const x = num(number3, ctx), digits = ndigits && ndigits.value !== null ? int(ndigits, ctx, "\u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0437\u043D\u0430\u043A\u043E\u0432") : void 0;
+      if (number3.float) {
+        if (!Number.isFinite(x)) ctx.fail("round(): \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u044C \u0431\u0435\u0441\u043A\u043E\u043D\u0435\u0447\u043D\u043E\u0441\u0442\u044C \u0438\u043B\u0438 nan.");
+        return digits === void 0 ? arg(safeInt(roundHalfEven(x), ctx)) : floatArg(pyRound(x, digits));
+      }
+      if (digits === void 0 || digits >= 0) return arg(x);
+      return arg(roundHalfEven(x / 10 ** -digits) * 10 ** -digits);
+    }],
+    ["pow", (args, kw, ctx) => {
+      const { base: base2, exp, mod } = bind("pow", args, kw, ["base", "exp", "mod"], 2, ctx);
+      const a = num(base2, ctx), b = num(exp, ctx);
+      if (mod && mod.value !== null) {
+        const m = int(mod, ctx);
+        int(base2, ctx);
+        if (b < 0 || !Number.isInteger(b) || exp.float) ctx.fail("pow \u0441 \u0442\u0440\u0435\u043C\u044F \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430\u043C\u0438 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u0441 \u043D\u0435\u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u0446\u0435\u043B\u043E\u0439 \u0441\u0442\u0435\u043F\u0435\u043D\u044C\u044E.");
+        if (m === 0) ctx.fail("pow(): \u0442\u0440\u0435\u0442\u0438\u0439 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043D\u0443\u043B\u0451\u043C.");
+        let result = 1n, square = (BigInt(a) % BigInt(m) + BigInt(m)) % BigInt(m), power = BigInt(b);
+        while (power > 0n) {
+          if (power & 1n) result = result * square % BigInt(m);
+          square = square * square % BigInt(m);
+          power >>= 1n;
+          ctx.tick();
+        }
+        const r = Number(result);
+        return arg(m < 0 && r > 0 ? r + m : r);
+      }
+      if (a === 0 && b < 0) ctx.fail("\u041D\u043E\u043B\u044C \u043D\u0435\u043B\u044C\u0437\u044F \u0432\u043E\u0437\u0432\u043E\u0434\u0438\u0442\u044C \u0432 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u0443\u044E \u0441\u0442\u0435\u043F\u0435\u043D\u044C.");
+      const value = a ** b, isFloat = !!base2.float || !!exp.float || b < 0;
+      if (!Number.isFinite(value) || Math.abs(value) > 1e12 && !isFloat) ctx.fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435.");
+      return arg(value, isFloat);
+    }],
+    ["min", (args, kw, ctx) => extremum("min", args, kw, ctx)],
+    ["max", (args, kw, ctx) => extremum("max", args, kw, ctx)],
+    ["sum", (args, kw, ctx) => {
+      const { iterable, start } = bind("sum", args, kw, ["iterable", "start"], 1, ctx);
+      if (typeof start?.value === "string") ctx.fail("\u0421\u0442\u0440\u043E\u043A\u0438 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0439 \u0447\u0435\u0440\u0435\u0437 +, \u0430 \u043D\u0435 \u0447\u0435\u0440\u0435\u0437 sum().");
+      let total = start ? num(start, ctx) : 0, floating = !!start?.float;
+      for (const item of ctx.items(iterable.value, "sum() \u043E\u0442 \u043E\u0434\u043D\u043E\u0433\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F")) {
+        ctx.tick();
+        if (typeof item.value === "string") ctx.fail("sum() \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442 \u0447\u0438\u0441\u043B\u0430, \u0430 \u0432 \u043F\u043E\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0435\u0441\u0442\u044C \u0441\u0442\u0440\u043E\u043A\u0430.");
+        total += num(item, ctx);
+        floating ||= !!item.float;
+      }
+      if (!Number.isFinite(total) && !floating) ctx.fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435.");
+      return arg(total, floating);
+    }]
+  ];
+  return new Map(items.map(([name, fn]) => [name, native(name, fn)]));
+}
+function mathModule() {
+  const attrs = /* @__PURE__ */ new Map();
+  const real = (name, fn) => attrs.set(name, { value: native(name, (args, kw, ctx) => floatArg(finite(fn(num(one(`math.${name}`, args, kw, ctx), ctx), ctx), ctx, `math.${name}`))) });
+  const domain = (fn) => {
+    throw new Error(`math.${fn}: \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0432\u043D\u0435 \u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u043E\u0439 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 (math domain error).`);
+  };
+  real("sqrt", (x) => x < 0 ? domain("sqrt") : Math.sqrt(x));
+  real("fabs", Math.abs);
+  real("exp", Math.exp);
+  real("sin", Math.sin);
+  real("cos", Math.cos);
+  real("tan", Math.tan);
+  real("asin", (x) => Math.abs(x) > 1 ? domain("asin") : Math.asin(x));
+  real("acos", (x) => Math.abs(x) > 1 ? domain("acos") : Math.acos(x));
+  real("atan", Math.atan);
+  real("degrees", (x) => x * (180 / Math.PI));
+  real("radians", (x) => x * (Math.PI / 180));
+  real("log2", (x) => x <= 0 ? domain("log2") : Math.log2(x));
+  real("log10", (x) => x <= 0 ? domain("log10") : Math.log10(x));
+  const integral = (name, fn) => attrs.set(name, { value: native(name, (args, kw, ctx) => {
+    const a = one(`math.${name}`, args, kw, ctx), x = num(a, ctx);
+    if (!a.float) return arg(x);
+    if (!Number.isFinite(x)) ctx.fail(`math.${name}: \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044C \u0431\u0435\u0441\u043A\u043E\u043D\u0435\u0447\u043D\u043E\u0441\u0442\u044C \u0438\u043B\u0438 nan \u0432 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E.`);
+    return arg(safeInt(fn(x), ctx));
+  }) });
+  integral("ceil", Math.ceil);
+  integral("floor", Math.floor);
+  integral("trunc", Math.trunc);
+  attrs.set("pow", { value: native("pow", (args, kw, ctx) => {
+    noKeywords("math.pow", kw, ctx);
+    if (args.length !== 2) ctx.fail("math.pow() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430.");
+    const a = num(args[0], ctx), b = num(args[1], ctx);
+    if (a === 0 && b < 0) domain("pow");
+    if (a < 0 && !Number.isInteger(b)) domain("pow");
+    return floatArg(finite(a ** b, ctx, "math.pow"));
+  }) });
+  attrs.set("atan2", { value: native("atan2", (args, kw, ctx) => {
+    noKeywords("math.atan2", kw, ctx);
+    if (args.length !== 2) ctx.fail("math.atan2(y, x) \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430.");
+    return floatArg(Math.atan2(num(args[0], ctx), num(args[1], ctx)));
+  }) });
+  attrs.set("hypot", { value: native("hypot", (args, kw, ctx) => {
+    noKeywords("math.hypot", kw, ctx);
+    return floatArg(Math.hypot(...args.map((a) => num(a, ctx))));
+  }) });
+  attrs.set("log", { value: native("log", (args, kw, ctx) => {
+    noKeywords("math.log", kw, ctx);
+    if (args.length < 1 || args.length > 2) ctx.fail("math.log(x) \u0438\u043B\u0438 math.log(x, \u043E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u0435).");
+    const x = num(args[0], ctx);
+    if (x <= 0) domain("log");
+    if (args.length === 1) return floatArg(Math.log(x));
+    const base2 = num(args[1], ctx);
+    if (base2 <= 0 || base2 === 1) domain("log");
+    return floatArg(Math.log(x) / Math.log(base2));
+  }) });
+  attrs.set("isqrt", { value: native("isqrt", (args, kw, ctx) => {
+    const n = int(one("math.isqrt", args, kw, ctx), ctx);
+    if (n < 0) domain("isqrt");
+    let r = Math.floor(Math.sqrt(n));
+    while (r * r > n) r--;
+    while ((r + 1) * (r + 1) <= n) r++;
+    return arg(r);
+  }) });
+  attrs.set("factorial", { value: native("factorial", (args, kw, ctx) => {
+    const n = int(one("math.factorial", args, kw, ctx), ctx);
+    if (n < 0) ctx.fail("math.factorial: \u043D\u0443\u0436\u043D\u043E \u043D\u0435\u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E.");
+    let r = 1;
+    for (let i = 2; i <= n; i++) {
+      r *= i;
+      ctx.tick();
+      if (r > Number.MAX_SAFE_INTEGER) ctx.fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435.");
+    }
+    return arg(r);
+  }) });
+  attrs.set("gcd", { value: native("gcd", (args, kw, ctx) => {
+    noKeywords("math.gcd", kw, ctx);
+    let g = 0;
+    for (const a of args) {
+      let b = Math.abs(int(a, ctx));
+      while (b) {
+        [g, b] = [b, g % b];
+        ctx.tick();
+      }
+    }
+    return arg(g);
+  }) });
+  attrs.set("isclose", { value: native("isclose", (args, kw, ctx) => {
+    const { a, b, rel_tol, abs_tol } = bind("math.isclose", args, kw, ["a", "b", "rel_tol", "abs_tol"], 2, ctx);
+    const x = num(a, ctx), y = num(b, ctx), rel = rel_tol ? num(rel_tol, ctx) : 1e-9, abs = abs_tol ? num(abs_tol, ctx) : 0;
+    if (x === y) return arg(true);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return arg(false);
+    const diff = Math.abs(y - x);
+    return arg(diff <= Math.abs(rel * y) || diff <= Math.abs(rel * x) || diff <= abs);
+  }) });
+  attrs.set("pi", floatArg(Math.PI));
+  attrs.set("e", floatArg(Math.E));
+  attrs.set("tau", floatArg(2 * Math.PI));
+  attrs.set("inf", floatArg(Infinity));
+  attrs.set("nan", floatArg(NaN));
+  return new PyModule("math", wrapDomain(attrs));
+}
+function wrapDomain(attrs) {
+  for (const [key2, value] of attrs) if (value.value instanceof PyNative) {
+    const inner = value.value;
+    attrs.set(key2, { value: native(inner.name, (args, kw, ctx) => {
+      try {
+        return inner.fn(args, kw, ctx);
+      } catch (e) {
+        if (e instanceof Error && e.message.startsWith("math.")) ctx.fail(e.message);
+        throw e;
+      }
+    }) });
+  }
+  return attrs;
+}
+var Twister = class {
+  mt = new Uint32Array(624);
+  index = 625;
+  seedInt(n) {
+    n = Math.abs(n);
+    const key2 = n === 0 ? [0] : [n % 2 ** 32, Math.floor(n / 2 ** 32)].filter((word, i) => i === 0 || word > 0);
+    this.seedArray(key2);
+  }
+  seedArray(key2) {
+    const mt = this.mt;
+    mt[0] = 19650218;
+    for (let i2 = 1; i2 < 624; i2++) mt[i2] = Math.imul(1812433253, mt[i2 - 1] ^ mt[i2 - 1] >>> 30) + i2 >>> 0;
+    let i = 1, j = 0;
+    for (let k = Math.max(624, key2.length); k; k--) {
+      mt[i] = (mt[i] ^ Math.imul(mt[i - 1] ^ mt[i - 1] >>> 30, 1664525)) + key2[j] + j >>> 0;
+      i++;
+      j++;
+      if (i >= 624) {
+        mt[0] = mt[623];
+        i = 1;
+      }
+      if (j >= key2.length) j = 0;
+    }
+    for (let k = 623; k; k--) {
+      mt[i] = (mt[i] ^ Math.imul(mt[i - 1] ^ mt[i - 1] >>> 30, 1566083941)) - i >>> 0;
+      i++;
+      if (i >= 624) {
+        mt[0] = mt[623];
+        i = 1;
+      }
+    }
+    mt[0] = 2147483648;
+    this.index = 624;
+  }
+  next() {
+    const mt = this.mt;
+    if (this.index >= 624) {
+      if (this.index === 625) this.seedInt(5489);
+      for (let k = 0; k < 624; k++) {
+        const y2 = mt[k] & 2147483648 | mt[(k + 1) % 624] & 2147483647;
+        mt[k] = mt[(k + 397) % 624] ^ y2 >>> 1 ^ (y2 & 1 ? 2567483615 : 0);
+      }
+      this.index = 0;
+    }
+    let y = mt[this.index++];
+    y ^= y >>> 11;
+    y ^= y << 7 & 2636928640;
+    y ^= y << 15 & 4022730752;
+    y ^= y >>> 18;
+    return y >>> 0;
+  }
+  random() {
+    const a = this.next() >>> 5, b = this.next() >>> 6;
+    return (a * 67108864 + b) * (1 / 9007199254740992);
+  }
+  bits(k) {
+    if (k <= 32) return k === 0 ? 0 : this.next() >>> 32 - k;
+    let result = 0, factor = 1;
+    for (; k > 0; k -= 32) {
+      let r = this.next();
+      if (k < 32) r >>>= 32 - k;
+      result += r * factor;
+      factor *= 2 ** 32;
+    }
+    return result;
+  }
+  below(n) {
+    if (n <= 0) return 0;
+    const k = n.toString(2).length;
+    let r = this.bits(k);
+    while (r >= n) r = this.bits(k);
+    return r;
+  }
+};
+function randomModule() {
+  const twister = new Twister();
+  const fresh = () => {
+    const words2 = new Uint32Array(624);
+    try {
+      globalThis.crypto.getRandomValues(words2);
+    } catch {
+      for (let i = 0; i < 624; i++) words2[i] = Math.floor(Math.random() * 2 ** 32);
+    }
+    twister.seedArray([...words2]);
+  };
+  fresh();
+  const attrs = /* @__PURE__ */ new Map();
+  const def = (name, fn) => attrs.set(name, { value: native(name, fn) });
+  const range = (fn, start, stop, step, ctx) => {
+    if (stop === void 0) {
+      if (start > 0) return twister.below(start);
+      return ctx.fail(`random.${fn}: \u043F\u0443\u0441\u0442\u043E\u0439 \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D.`);
+    }
+    const width = stop - start;
+    if (step === 1) {
+      if (width > 0) return start + twister.below(width);
+      return ctx.fail(`random.${fn}: \u043F\u0443\u0441\u0442\u043E\u0439 \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D (${start}, ${stop}).`);
+    }
+    const n = step > 0 ? Math.floor((width + step - 1) / step) : step < 0 ? Math.floor((width + step + 1) / step) : ctx.fail("random.randrange: \u0448\u0430\u0433 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043D\u0443\u043B\u0451\u043C.");
+    if (n <= 0) ctx.fail("random.randrange: \u043F\u0443\u0441\u0442\u043E\u0439 \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D.");
+    return start + step * twister.below(n);
+  };
+  def("seed", (args, kw, ctx) => {
+    const { a } = bind("random.seed", args, kw, ["a", "version"], 0, ctx);
+    if (!a || a.value === null) {
+      fresh();
+      return;
+    }
+    const v = a.value;
+    if (typeof v === "number" || typeof v === "boolean") {
+      const n = Number(v);
+      if (a.float && !Number.isInteger(n)) ctx.fail("\u0412 random.seed \u0432 Kodik \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E.");
+      twister.seedInt(safeInt(n, ctx));
+      return;
+    }
+    ctx.fail("\u0412 random.seed \u0432 Kodik \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 random.seed(42).");
+  });
+  def("random", (args, kw, ctx) => {
+    noKeywords("random.random", kw, ctx);
+    if (args.length) ctx.fail("random.random() \u0432\u044B\u0437\u044B\u0432\u0430\u044E\u0442 \u0431\u0435\u0437 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.");
+    return floatArg(twister.random());
+  });
+  def("uniform", (args, kw, ctx) => {
+    const { a, b } = bind("random.uniform", args, kw, ["a", "b"], 2, ctx);
+    const x = num(a, ctx), y = num(b, ctx);
+    return floatArg(x + (y - x) * twister.random());
+  });
+  def("randint", (args, kw, ctx) => {
+    const { a, b } = bind("random.randint", args, kw, ["a", "b"], 2, ctx);
+    return arg(range("randint", int(a, ctx), int(b, ctx) + 1, 1, ctx));
+  });
+  def("randrange", (args, kw, ctx) => {
+    const { start, stop, step } = bind("random.randrange", args, kw, ["start", "stop", "step"], 1, ctx);
+    if (stop?.value === null && step) ctx.fail("random.randrange: \u0431\u0435\u0437 stop \u0448\u0430\u0433 \u0443\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043D\u0435\u043B\u044C\u0437\u044F.");
+    return arg(range("randrange", int(start, ctx), stop && stop.value !== null ? int(stop, ctx) : void 0, step ? int(step, ctx) : 1, ctx));
+  });
+  def("choice", (args, kw, ctx) => {
+    const seq = one("random.choice", args, kw, ctx), items = ctx.items(seq.value, "random.choice");
+    if (!items.length) ctx.fail("random.choice: \u043F\u043E\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430.");
+    return items[twister.below(items.length)];
+  });
+  def("shuffle", (args, kw, ctx) => {
+    const seq = one("random.shuffle", args, kw, ctx);
+    if (!Array.isArray(seq.value)) ctx.fail("random.shuffle \u043F\u0435\u0440\u0435\u043C\u0435\u0448\u0438\u0432\u0430\u0435\u0442 \u0441\u043F\u0438\u0441\u043E\u043A.");
+    const items = ctx.items(seq.value);
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = twister.below(i + 1);
+      [items[i], items[j]] = [items[j], items[i]];
+      ctx.tick();
+    }
+    ctx.replace(seq.value, items);
+    return none;
+  });
+  return new PyModule("random", attrs);
+}
+var SLEEP_LIMIT_MS = 6e4;
+function pause(ctx, ms, fn) {
+  if (!Number.isFinite(ms) || ms < 0) ctx.fail(`${fn}: \u0432\u0440\u0435\u043C\u044F \u043F\u0430\u0443\u0437\u044B \u0434\u043E\u043B\u0436\u043D\u043E \u0431\u044B\u0442\u044C \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u043C \u043D\u0435\u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C.`);
+  const total = (ctx.state.get("paused") ?? 0) + ms;
+  if (total > SLEEP_LIMIT_MS) ctx.fail(`\u041F\u0430\u0443\u0437\u044B \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B \u0434\u043B\u044F\u0442\u0441\u044F \u0431\u043E\u043B\u044C\u0448\u0435 60 \u0441\u0435\u043A\u0443\u043D\u0434. \u0423\u043C\u0435\u043D\u044C\u0448\u0438 ${fn} \u0438\u043B\u0438 \u0447\u0438\u0441\u043B\u043E \u043A\u0430\u0434\u0440\u043E\u0432.`);
+  ctx.state.set("paused", total);
+  ctx.clock.sleep(ms);
+}
+function timeModule(ctx0) {
+  const epoch = Date.now() / 1e3;
+  const attrs = /* @__PURE__ */ new Map();
+  attrs.set("sleep", { value: native("sleep", (args, kw, ctx) => {
+    const seconds = num(one("time.sleep", args, kw, ctx), ctx, "\u0447\u0438\u0441\u043B\u043E \u0441\u0435\u043A\u0443\u043D\u0434");
+    if (!Number.isFinite(seconds) || seconds < 0) ctx.fail("time.sleep: \u0432\u0440\u0435\u043C\u044F \u043F\u0430\u0443\u0437\u044B \u0434\u043E\u043B\u0436\u043D\u043E \u0431\u044B\u0442\u044C \u043D\u0435\u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C.");
+    pause(ctx, seconds * 1e3, "time.sleep");
+  }, true) });
+  attrs.set("time", { value: native("time", (args, kw, ctx) => {
+    noKeywords("time.time", kw, ctx);
+    return floatArg(epoch + ctx.clock.now / 1e3);
+  }) });
+  attrs.set("monotonic", { value: native("monotonic", (args, kw, ctx) => floatArg(ctx.clock.now / 1e3)) });
+  attrs.set("perf_counter", { value: native("perf_counter", (args, kw, ctx) => floatArg(ctx.clock.now / 1e3)) });
+  void ctx0;
+  return new PyModule("time", attrs);
+}
+
+// src/python/colors.ts
+var namedColors = {
+  aliceblue: "#f0f8ff",
+  antiquewhite: "#faebd7",
+  aqua: "#00ffff",
+  aquamarine: "#7fffd4",
+  azure: "#f0ffff",
+  beige: "#f5f5dc",
+  bisque: "#ffe4c4",
+  black: "#000000",
+  blanchedalmond: "#ffebcd",
+  blue: "#0000ff",
+  blueviolet: "#8a2be2",
+  brown: "#a52a2a",
+  burlywood: "#deb887",
+  cadetblue: "#5f9ea0",
+  chartreuse: "#7fff00",
+  chocolate: "#d2691e",
+  coral: "#ff7f50",
+  cornflowerblue: "#6495ed",
+  cornsilk: "#fff8dc",
+  crimson: "#dc143c",
+  cyan: "#00ffff",
+  darkblue: "#00008b",
+  darkcyan: "#008b8b",
+  darkgoldenrod: "#b8860b",
+  darkgray: "#a9a9a9",
+  darkgreen: "#006400",
+  darkgrey: "#a9a9a9",
+  darkkhaki: "#bdb76b",
+  darkmagenta: "#8b008b",
+  darkolivegreen: "#556b2f",
+  darkorange: "#ff8c00",
+  darkorchid: "#9932cc",
+  darkred: "#8b0000",
+  darksalmon: "#e9967a",
+  darkseagreen: "#8fbc8f",
+  darkslateblue: "#483d8b",
+  darkslategray: "#2f4f4f",
+  darkslategrey: "#2f4f4f",
+  darkturquoise: "#00ced1",
+  darkviolet: "#9400d3",
+  deeppink: "#ff1493",
+  deepskyblue: "#00bfff",
+  dimgray: "#696969",
+  dimgrey: "#696969",
+  dodgerblue: "#1e90ff",
+  firebrick: "#b22222",
+  floralwhite: "#fffaf0",
+  forestgreen: "#228b22",
+  fuchsia: "#ff00ff",
+  gainsboro: "#dcdcdc",
+  ghostwhite: "#f8f8ff",
+  gold: "#ffd700",
+  goldenrod: "#daa520",
+  gray: "#808080",
+  green: "#008000",
+  greenyellow: "#adff2f",
+  grey: "#808080",
+  honeydew: "#f0fff0",
+  hotpink: "#ff69b4",
+  indianred: "#cd5c5c",
+  indigo: "#4b0082",
+  ivory: "#fffff0",
+  khaki: "#f0e68c",
+  lavender: "#e6e6fa",
+  lavenderblush: "#fff0f5",
+  lawngreen: "#7cfc00",
+  lemonchiffon: "#fffacd",
+  lightblue: "#add8e6",
+  lightcoral: "#f08080",
+  lightcyan: "#e0ffff",
+  lightgoldenrodyellow: "#fafad2",
+  lightgray: "#d3d3d3",
+  lightgreen: "#90ee90",
+  lightgrey: "#d3d3d3",
+  lightpink: "#ffb6c1",
+  lightsalmon: "#ffa07a",
+  lightseagreen: "#20b2aa",
+  lightskyblue: "#87cefa",
+  lightslategray: "#778899",
+  lightslategrey: "#778899",
+  lightsteelblue: "#b0c4de",
+  lightyellow: "#ffffe0",
+  lime: "#00ff00",
+  limegreen: "#32cd32",
+  linen: "#faf0e6",
+  magenta: "#ff00ff",
+  maroon: "#800000",
+  mediumaquamarine: "#66cdaa",
+  mediumblue: "#0000cd",
+  mediumorchid: "#ba55d3",
+  mediumpurple: "#9370db",
+  mediumseagreen: "#3cb371",
+  mediumslateblue: "#7b68ee",
+  mediumspringgreen: "#00fa9a",
+  mediumturquoise: "#48d1cc",
+  mediumvioletred: "#c71585",
+  midnightblue: "#191970",
+  mintcream: "#f5fffa",
+  mistyrose: "#ffe4e1",
+  moccasin: "#ffe4b5",
+  navajowhite: "#ffdead",
+  navy: "#000080",
+  oldlace: "#fdf5e6",
+  olive: "#808000",
+  olivedrab: "#6b8e23",
+  orange: "#ffa500",
+  orangered: "#ff4500",
+  orchid: "#da70d6",
+  palegoldenrod: "#eee8aa",
+  palegreen: "#98fb98",
+  paleturquoise: "#afeeee",
+  palevioletred: "#db7093",
+  papayawhip: "#ffefd5",
+  peachpuff: "#ffdab9",
+  peru: "#cd853f",
+  pink: "#ffc0cb",
+  plum: "#dda0dd",
+  powderblue: "#b0e0e6",
+  purple: "#800080",
+  rebeccapurple: "#663399",
+  red: "#ff0000",
+  rosybrown: "#bc8f8f",
+  royalblue: "#4169e1",
+  saddlebrown: "#8b4513",
+  salmon: "#fa8072",
+  sandybrown: "#f4a460",
+  seagreen: "#2e8b57",
+  seashell: "#fff5ee",
+  sienna: "#a0522d",
+  silver: "#c0c0c0",
+  skyblue: "#87ceeb",
+  slateblue: "#6a5acd",
+  slategray: "#708090",
+  slategrey: "#708090",
+  snow: "#fffafa",
+  springgreen: "#00ff7f",
+  steelblue: "#4682b4",
+  tan: "#d2b48c",
+  teal: "#008080",
+  thistle: "#d8bfd8",
+  tomato: "#ff6347",
+  turquoise: "#40e0d0",
+  violet: "#ee82ee",
+  wheat: "#f5deb3",
+  white: "#ffffff",
+  whitesmoke: "#f5f5f5",
+  yellow: "#ffff00",
+  yellowgreen: "#9acd32"
+};
+function cssColor(name) {
+  const key2 = name.toLowerCase().replace(/\s+/g, "");
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/.test(key2)) return key2.length === 4 ? "#" + [...key2.slice(1)].map((c) => c + c).join("") : key2;
+  if (namedColors[key2]) return namedColors[key2];
+  const gray = /^gr[ae]y(\d{1,3})$/.exec(key2);
+  if (gray && Number(gray[1]) <= 100) {
+    const v = Math.round(Number(gray[1]) * 2.55).toString(16).padStart(2, "0");
+    return `#${v}${v}${v}`;
+  }
+  return void 0;
+}
+
+// src/python/libPlot.ts
+function num2(...args) {
+  const value = num(...args);
+  if (!Number.isFinite(value)) args[1].fail("\u0413\u0440\u0430\u0444\u0438\u043A: \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0431\u0435\u0437 NaN \u0438 Infinity.");
+  return value;
+}
+var cycle = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
+var short = { b: "#0000ff", g: "#008000", r: "#ff0000", c: "#00bfbf", m: "#bf00bf", y: "#bfbf00", k: "#000000", w: "#ffffff" };
+var markers = /* @__PURE__ */ new Set(["o", ".", ",", "v", "^", "<", ">", "s", "*", "+", "x", "D", "d", "p", "h", "H", "8", "|", "_"]);
+var LIMIT_POINTS = 2e4;
+var LIMIT_SHOTS = 300;
+var Opaque = class extends PyObject {
+  constructor(typeName, text4) {
+    super();
+    this.typeName = typeName;
+    this.text = text4;
+  }
+  repr() {
+    return this.text;
+  }
+};
+var FigureState = class {
+  constructor(id, number3) {
+    this.id = id;
+    this.number = number3;
+  }
+  title;
+  xlabel;
+  ylabel;
+  grid = false;
+  legend = false;
+  labels;
+  xlim;
+  ylim;
+  series = [];
+  lines = 0;
+  patches = 0;
+  empty() {
+    return !this.series.length && !this.title && !this.xlabel && !this.ylabel;
+  }
+  snapshot() {
+    const series = this.series.map((s, i) => this.labels && this.labels[i] !== void 0 ? { ...s, label: this.labels[i] } : s);
+    return JSON.parse(JSON.stringify({ id: this.id, title: this.title, xlabel: this.xlabel, ylabel: this.ylabel, grid: this.grid, legend: this.legend, xlim: this.xlim, ylim: this.ylim, series }));
+  }
+  clear() {
+    Object.assign(this, { title: void 0, xlabel: void 0, ylabel: void 0, grid: false, legend: false, labels: void 0, xlim: void 0, ylim: void 0, series: [], lines: 0, patches: 0 });
+  }
+};
+function color(v, ctx, fallback) {
+  if (!v || v.value === null) return fallback;
+  if (typeof v.value === "string") {
+    const s = v.value.trim();
+    if (/^C\d$/.test(s)) return cycle[Number(s[1])];
+    const c = short[s] ?? cssColor(s) ?? (/^#[0-9a-f]{8}$/i.test(s) ? s.slice(0, 7) : void 0);
+    if (c) return c;
+    return ctx.fail(`\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u0439 \u0446\u0432\u0435\u0442 \xAB${s}\xBB. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, "red", "C1", "#ff8800" \u0438\u043B\u0438 \u0431\u0443\u043A\u0432\u0443 r, g, b, k.`);
+  }
+  const parts = ctx.items(v.value, "\u0446\u0432\u0435\u0442").map((p) => num2(p, ctx));
+  if (parts.length !== 3 && parts.length !== 4 || parts.some((p) => p < 0 || p > 1)) ctx.fail("\u0426\u0432\u0435\u0442 \u0438\u0437 \u0447\u0438\u0441\u0435\u043B \u2014 \u0442\u0440\u0438 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u043E\u0442 0 \u0434\u043E 1: (r, g, b).");
+  return "#" + parts.slice(0, 3).map((p) => Math.round(p * 255).toString(16).padStart(2, "0")).join("");
+}
+function numbers2(v, ctx, what) {
+  if (typeof v.value === "number" || typeof v.value === "boolean") return [Number(v.value)];
+  const a = toArray(v, ctx);
+  if (a.shape.length > 1) ctx.fail(`${what}: \u043D\u0443\u0436\u0435\u043D \u043E\u0434\u043D\u043E\u043C\u0435\u0440\u043D\u044B\u0439 \u0441\u043F\u0438\u0441\u043E\u043A \u0447\u0438\u0441\u0435\u043B.`);
+  return a.data;
+}
+function categories2(v, ctx) {
+  const items = v.value instanceof NdArray ? v.value.data : typeof v.value === "number" || typeof v.value === "string" ? [v.value] : ctx.items(v.value, "\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F").map((item) => typeof item.value === "string" ? item.value : num2(item, ctx));
+  return items;
+}
+function parseFormat(fmt, ctx) {
+  const result = {};
+  let rest = fmt;
+  for (const style of ["--", "-.", "-", ":"]) if (rest.includes(style)) {
+    result.linestyle = style;
+    rest = rest.replace(style, "");
+    break;
+  }
+  for (const ch of [...rest]) {
+    if (short[ch] && !result.color) result.color = short[ch];
+    else if (markers.has(ch) && !result.marker) result.marker = ch;
+    else ctx.fail(`\u041D\u0435\u043F\u043E\u043D\u044F\u0442\u043D\u0430\u044F \u0441\u0442\u0440\u043E\u043A\u0430 \u0444\u043E\u0440\u043C\u0430\u0442\u0430 \xAB${fmt}\xBB. \u041F\u0440\u0438\u043C\u0435\u0440: "r-", "bo", "g--".`);
+  }
+  return result;
+}
+function pyplotModule(ctx) {
+  const shots = ctx.scene.plots ?? (ctx.scene.plots = []);
+  let ids2 = 0, numbers_ = 0, points = 0;
+  const open = [];
+  let current;
+  const fig = () => {
+    if (!current) {
+      current = new FigureState(++ids2, ++numbers_);
+      open.push(current);
+    }
+    return current;
+  };
+  const shoot = (f, auto = false) => {
+    if (shots.length >= LIMIT_SHOTS) ctx.fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u043A\u0430\u0434\u0440\u043E\u0432 \u0433\u0440\u0430\u0444\u0438\u043A\u0430. \u0423\u043C\u0435\u043D\u044C\u0448\u0438 \u0447\u0438\u0441\u043B\u043E \u0432\u044B\u0437\u043E\u0432\u043E\u0432 plt.pause \u0438\u043B\u0438 plt.show.");
+    shots.push({ t: ctx.clock.now, figure: f.snapshot(), ...auto ? { auto: true } : {} });
+  };
+  const close = (f) => {
+    open.splice(open.indexOf(f), 1);
+    if (current === f) current = open.at(-1);
+  };
+  ctx.scene.onFinish(() => {
+    for (const f of [...open]) if (!f.empty()) shoot(f, true);
+  });
+  const add = (f, s) => {
+    const values = s.type === "hist" ? [...s.edges, ...s.counts] : s.type === "bar" ? [...s.x, ...s.height, s.width] : [...s.x, ...s.y, s.type === "line" ? s.linewidth : s.size];
+    if (values.some((v) => typeof v === "number" && !Number.isFinite(v))) ctx.fail("\u0413\u0440\u0430\u0444\u0438\u043A: \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0431\u0435\u0437 NaN \u0438 Infinity.");
+    const count = "x" in s ? s.x.length : s.type === "hist" ? s.counts.length : 0;
+    if ((points += count) > LIMIT_POINTS) ctx.fail(`\u041D\u0430 \u0433\u0440\u0430\u0444\u0438\u043A\u0430\u0445 \u0431\u043E\u043B\u044C\u0448\u0435 ${LIMIT_POINTS} \u0442\u043E\u0447\u0435\u043A.`);
+    if (f.series.length >= 100) ctx.fail("\u041D\u0430 \u043E\u0434\u043D\u043E\u043C \u0433\u0440\u0430\u0444\u0438\u043A\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 100 \u043D\u0430\u0431\u043E\u0440\u043E\u0432 \u0434\u0430\u043D\u043D\u044B\u0445.");
+    f.series.push(s);
+  };
+  const label = (v, c) => v && v.value !== null ? c.str(v).slice(0, 120) : void 0;
+  const plot = (f, args, kw, c) => {
+    for (const name of kw.keys()) if (!["color", "c", "label", "linestyle", "ls", "linewidth", "lw", "marker", "markersize", "ms", "alpha"].includes(name)) c.fail(`\u0423 plot() \u0432 Kodik \u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${name}\xBB.`);
+    if (!args.length) c.fail("plot(): \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F y \u0438\u043B\u0438 x \u0438 y.");
+    const groups = [];
+    let i = 0;
+    while (i < args.length) {
+      const a = args[i], b = args[i + 1], d = args[i + 2];
+      if (typeof a.value === "string") c.fail('plot(): \u0441\u0442\u0440\u043E\u043A\u0443 \u0444\u043E\u0440\u043C\u0430\u0442\u0430 \u043F\u0438\u0448\u0443\u0442 \u043F\u043E\u0441\u043B\u0435 \u0434\u0430\u043D\u043D\u044B\u0445, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 plot(x, y, "r-").');
+      if (b && typeof b.value !== "string") {
+        groups.push({ x: a, y: b, fmt: d && typeof d.value === "string" ? d.value : void 0 });
+        i += d && typeof d.value === "string" ? 3 : 2;
+      } else {
+        groups.push({ y: a, fmt: b ? b.value : void 0 });
+        i += b ? 2 : 1;
+      }
+    }
+    for (const g of groups) {
+      const y = numbers2(g.y, c, "plot"), x = g.x ? numbers2(g.x, c, "plot") : y.map((_, k) => k);
+      if (x.length !== y.length) c.fail(`plot(): \u0443 x ${x.length} \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439, \u0430 \u0443 y \u2014 ${y.length}. \u0414\u043B\u0438\u043D\u044B \u0434\u043E\u043B\u0436\u043D\u044B \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0442\u044C.`);
+      const fmt = g.fmt ? parseFormat(g.fmt, c) : {};
+      const marker = kw.get("marker")?.value ?? fmt.marker;
+      if (marker !== void 0 && marker !== null && (typeof marker !== "string" || marker && !markers.has(marker))) c.fail('plot(): \u043C\u0430\u0440\u043A\u0435\u0440 \u2014 \u043E\u0434\u0438\u043D \u0438\u0437 "o", ".", "s", "^", "v", "*", "+", "x", "D".');
+      const ls = (kw.get("linestyle") ?? kw.get("ls"))?.value ?? (fmt.linestyle ?? (fmt.marker ? "None" : "-"));
+      const linestyle = { solid: "-", dashed: "--", dotted: ":", dashdot: "-.", "": "None", none: "None" }[String(ls)] ?? String(ls);
+      if (!["-", "--", ":", "-.", "None"].includes(linestyle)) c.fail('plot(): \u0441\u0442\u0438\u043B\u044C \u043B\u0438\u043D\u0438\u0438 "-", "--", ":" \u0438\u043B\u0438 "-.".');
+      const colour = color(kw.get("color") ?? kw.get("c"), c, fmt.color ?? cycle[f.lines % 10]);
+      f.lines++;
+      const lw = kw.get("linewidth") ?? kw.get("lw");
+      add(f, { type: "line", x, y, color: colour, linestyle, linewidth: lw ? num2(lw, c) : 1.5, ...marker ? { marker } : {}, ...label(kw.get("label"), c) !== void 0 ? { label: label(kw.get("label"), c) } : {} });
+    }
+    return { value: c.list(groups.map(() => ({ value: new Opaque("Line2D", "<Line2D>") }))) };
+  };
+  const scatter = (f, args, kw, c) => {
+    const p = bind("scatter", args, kw, ["x", "y", "s", "c", "marker", "color", "label", "alpha", "edgecolors"], 2, c);
+    const x = numbers2(p.x, c, "scatter"), y = numbers2(p.y, c, "scatter");
+    if (x.length !== y.length) c.fail(`scatter(): \u0443 x ${x.length} \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439, \u0430 \u0443 y \u2014 ${y.length}.`);
+    const marker = p.marker ? text2(p.marker, c, "\u043C\u0430\u0440\u043A\u0435\u0440") : "o";
+    if (!markers.has(marker)) c.fail('scatter(): \u043C\u0430\u0440\u043A\u0435\u0440 \u2014 \u043E\u0434\u0438\u043D \u0438\u0437 "o", ".", "s", "^", "v", "*", "+", "x", "D".');
+    if (p.c && typeof p.c.value !== "string" && !(p.c.value instanceof PyTuple)) c.fail("scatter(): \u0432 Kodik c= \u0437\u0430\u0434\u0430\u0451\u0442 \u043E\u0434\u0438\u043D \u0446\u0432\u0435\u0442 \u0434\u043B\u044F \u0432\u0441\u0435\u0445 \u0442\u043E\u0447\u0435\u043A.");
+    add(f, { type: "scatter", x, y, color: color(p.color ?? p.c, c, cycle[f.patches++ % 10]), marker, size: p.s ? num2(p.s, c) : 36, ...label(p.label, c) !== void 0 ? { label: label(p.label, c) } : {} });
+    return { value: new Opaque("PathCollection", "<matplotlib.collections.PathCollection>") };
+  };
+  const bar = (f, args, kw, c, horizontal = false) => {
+    const names = horizontal ? ["y", "width", "height", "left", "color", "label", "edgecolor", "align", "alpha"] : ["x", "height", "width", "bottom", "color", "label", "edgecolor", "align", "alpha"];
+    const p = bind(horizontal ? "barh" : "bar", args, kw, names, 2, c);
+    const x = categories2(p[names[0]], c), sizes = numbers2(p[names[1]], c, "bar"), heights = sizes.length === 1 && x.length > 1 ? x.map(() => sizes[0]) : sizes;
+    if (x.length !== heights.length) c.fail(`${horizontal ? "barh" : "bar"}(): \u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0439 ${x.length} \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439, \u0430 \u0443 \u0432\u044B\u0441\u043E\u0442 \u2014 ${heights.length}.`);
+    if (p[names[3]] && p[names[3]].value !== null) c.fail("bar(): bottom/left (\u0441\u043E\u0441\u0442\u0430\u0432\u043D\u044B\u0435 \u0441\u0442\u043E\u043B\u0431\u0438\u043A\u0438) \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F.");
+    add(f, { type: "bar", x, height: heights, color: color(p.color, c, cycle[f.patches++ % 10]), width: p[names[2]] ? num2(p[names[2]], c) : 0.8, ...horizontal ? { horizontal: true } : {}, ...label(p.label, c) !== void 0 ? { label: label(p.label, c) } : {} });
+    return { value: new Opaque("BarContainer", `<BarContainer object of ${x.length} artists>`) };
+  };
+  const hist = (f, args, kw, c) => {
+    const p = bind("hist", args, kw, ["x", "bins", "range", "color", "edgecolor", "label", "alpha", "density"], 1, c);
+    const data = numbers2(p.x, c, "hist").filter((v) => !Number.isNaN(v));
+    if (p.density && c.truth(p.density.value)) c.fail("hist(density=True) \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F.");
+    let edges, edgeType = "float";
+    if (p.bins && (Array.isArray(p.bins.value) || p.bins.value instanceof NdArray || p.bins.value instanceof PyTuple)) {
+      const given = toArray(p.bins, c);
+      edgeType = given.dtype === "float" ? "float" : "int";
+      edges = numbers2(p.bins, c, "bins");
+      if (edges.length < 2 || edges.some((e, i) => i && e <= edges[i - 1])) c.fail("hist(): \u0433\u0440\u0430\u043D\u0438\u0446\u044B bins \u0434\u043E\u043B\u0436\u043D\u044B \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u0442\u044C.");
+    } else {
+      const count = p.bins ? int(p.bins, c, "\u0447\u0438\u0441\u043B\u043E \u0441\u0442\u043E\u043B\u0431\u0438\u043A\u043E\u0432") : 10;
+      if (count < 1 || count > 500) c.fail("hist(): \u0447\u0438\u0441\u043B\u043E \u0441\u0442\u043E\u043B\u0431\u0438\u043A\u043E\u0432 \u043E\u0442 1 \u0434\u043E 500.");
+      let lo, hi;
+      if (p.range && p.range.value !== null) [lo, hi] = c.items(p.range.value).map((v) => num2(v, c));
+      else {
+        lo = data.length ? Math.min(...data) : 0;
+        hi = data.length ? Math.max(...data) : 1;
+      }
+      if (lo === hi) {
+        lo -= 0.5;
+        hi += 0.5;
+      }
+      edges = Array.from({ length: count + 1 }, (_, i) => lo + i * (hi - lo) / count);
+      edges[count] = hi;
+    }
+    const n = edges.length - 1, counts = Array(n).fill(0), first = edges[0], last = edges[n];
+    for (const v of data) {
+      if (v < first || v > last) continue;
+      let lo = 0, hi = n;
+      while (lo < hi) {
+        const mid = lo + hi >> 1;
+        if (edges[mid + 1] <= v) lo = mid + 1;
+        else hi = mid;
+      }
+      counts[Math.min(lo, n - 1)]++;
+      c.tick();
+    }
+    add(f, { type: "hist", edges, counts, color: color(p.color, c, cycle[f.patches++ % 10]), ...p.edgecolor ? { edgecolor: color(p.edgecolor, c, "#000000") } : {}, ...label(p.label, c) !== void 0 ? { label: label(p.label, c) } : {} });
+    return { value: c.tuple([{ value: new NdArray(counts, [n], "float") }, { value: new NdArray(edges, [edges.length], edgeType) }, { value: new Opaque("BarContainer", `<BarContainer object of ${n} artists>`) }]) };
+  };
+  const limits = (f, axis, args, kw, c) => {
+    const names = axis === "xlim" ? ["left", "right"] : ["bottom", "top"];
+    const p = bind(axis, args.length === 1 && (args[0].value instanceof PyTuple || Array.isArray(args[0].value)) ? c.items(args[0].value) : args, kw, names, 0, c);
+    if (!p[names[0]] && !p[names[1]]) {
+      const v = f[axis] ?? [0, 1];
+      return { value: c.tuple(v.map((x) => ({ value: x, float: true }))) };
+    }
+    const old = f[axis] ?? [NaN, NaN], lo = p[names[0]] && p[names[0]].value !== null ? num2(p[names[0]], c) : old[0], hi = p[names[1]] && p[names[1]].value !== null ? num2(p[names[1]], c) : old[1];
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) c.fail(`${axis}(): \u0443\u043A\u0430\u0436\u0438 \u043E\u0431\u0435 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043E\u0441\u0438.`);
+    if (lo === hi) c.fail(`${axis}(): \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043E\u0441\u0438 \u043D\u0435 \u0434\u043E\u043B\u0436\u043D\u044B \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0442\u044C.`);
+    f[axis] = [lo, hi];
+  };
+  const textSetter = (key2) => (f, args, kw, c) => {
+    for (const name of kw.keys()) if (!["fontsize", "size", "loc", "color", "fontweight", "pad", "labelpad"].includes(name)) c.fail(`\u0423 ${key2}() \u0432 Kodik \u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${name}\xBB.`);
+    if (args.length !== 1) c.fail(`${key2}() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u0443 \u0441\u0442\u0440\u043E\u043A\u0443.`);
+    f[key2] = c.str(args[0]).slice(0, 200);
+  };
+  const grid = (f, args, kw, c) => {
+    const p = bind("grid", args, kw, ["visible", "which", "axis", "color", "linestyle", "linewidth", "alpha", "b"], 0, c);
+    const v = p.visible ?? p.b;
+    f.grid = v && v.value !== null ? c.truth(v.value) : kw.size ? true : !f.grid;
+  };
+  const legend = (f, args, kw, c) => {
+    for (const name of kw.keys()) if (!["loc", "fontsize", "title", "frameon"].includes(name)) c.fail(`\u0423 legend() \u0432 Kodik \u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${name}\xBB.`);
+    if (args.length) f.labels = c.items(args[0].value, "\u043F\u043E\u0434\u043F\u0438\u0441\u0438 \u043B\u0435\u0433\u0435\u043D\u0434\u044B").map((item) => c.str(item));
+    f.legend = true;
+  };
+  const drawing2 = {
+    plot,
+    scatter,
+    bar,
+    barh: (f, a, kw, c) => bar(f, a, kw, c, true),
+    hist,
+    grid,
+    legend,
+    title: textSetter("title"),
+    xlabel: textSetter("xlabel"),
+    ylabel: textSetter("ylabel"),
+    xlim: (f, a, kw, c) => limits(f, "xlim", a, kw, c),
+    ylim: (f, a, kw, c) => limits(f, "ylim", a, kw, c),
+    xticks: () => void 0,
+    yticks: () => void 0,
+    tight_layout: () => void 0,
+    axis: (f, a, kw, c) => {
+      const v = a[0]?.value;
+      if (typeof v === "string" && ["equal", "on", "auto", "tight", "scaled"].includes(v)) return;
+      if (v instanceof PyTuple || Array.isArray(v)) {
+        const values = c.items(v).map((x) => num2(x, c));
+        if (values.length !== 4) c.fail("axis(): \u043D\u0443\u0436\u043D\u044B \u0447\u0435\u0442\u044B\u0440\u0435 \u0433\u0440\u0430\u043D\u0438\u0446\u044B [xmin, xmax, ymin, ymax].");
+        const [x0, x1, y0, y1] = values;
+        if (x0 === x1 || y0 === y1) c.fail("axis(): \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u043A\u0430\u0436\u0434\u043E\u0439 \u043E\u0441\u0438 \u043D\u0435 \u0434\u043E\u043B\u0436\u043D\u044B \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0442\u044C.");
+        f.xlim = [x0, x1];
+        f.ylim = [y0, y1];
+        return;
+      }
+      c.fail('axis(): \u0432 Kodik \u2014 axis([xmin, xmax, ymin, ymax]) \u0438\u043B\u0438 axis("equal").');
+    }
+  };
+  class Axes extends PyObject {
+    constructor(figure) {
+      super();
+      this.figure = figure;
+    }
+    typeName = "Axes";
+    repr() {
+      return "<Axes>";
+    }
+    getattr(name) {
+      const map = { set_title: "title", set_xlabel: "xlabel", set_ylabel: "ylabel", set_xlim: "xlim", set_ylim: "ylim", set_xticks: "xticks", set_yticks: "yticks" };
+      const target = drawing2[map[name] ?? (["title", "xlabel", "ylabel", "xlim", "ylim"].includes(name) ? "" : name)];
+      if (name === "cla" || name === "clear") return { value: new PyNative(name, () => {
+        this.figure.clear();
+      }, true) };
+      return target ? { value: new PyNative(name, (a, kw, c) => target(this.figure, a, kw, c), true) } : void 0;
+    }
+  }
+  class FigureObject extends PyObject {
+    constructor(figure) {
+      super();
+      this.figure = figure;
+    }
+    typeName = "Figure";
+    repr() {
+      return `<Figure size 640x480 with ${this.figure.series.length ? 1 : 0} Axes>`;
+    }
+    getattr(name) {
+      if (name === "suptitle") return { value: new PyNative(name, (a, kw, c) => textSetter("title")(this.figure, a, /* @__PURE__ */ new Map(), c), true) };
+      if (name === "add_subplot" || name === "gca") return { value: new PyNative(name, () => ({ value: new Axes(this.figure) })) };
+      if (name === "show") return { value: new PyNative(name, () => {
+        shoot(this.figure);
+      }, true) };
+      if (name === "savefig") return { value: new PyNative(name, (a, kw, c) => c.fail("\u0412 Kodik \u0433\u0440\u0430\u0444\u0438\u043A\u0438 \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u044E\u0442\u0441\u044F \u0432 \u0444\u0430\u0439\u043B\u044B \u2014 \u043E\u043D\u0438 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u043F\u043E\u0434 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u043E\u0439.")) };
+      return void 0;
+    }
+  }
+  const attrs = /* @__PURE__ */ new Map();
+  for (const [name, fn] of Object.entries(drawing2)) attrs.set(name, { value: new PyNative(name, (a, kw, c) => fn(fig(), a, kw, c), true) });
+  const def = (name, fn, effect = true) => attrs.set(name, { value: new PyNative(name, fn, effect) });
+  def("figure", (a, kw, c) => {
+    for (const name of kw.keys()) if (!["figsize", "dpi", "num", "facecolor"].includes(name)) c.fail(`\u0423 figure() \u0432 Kodik \u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${name}\xBB.`);
+    if (open.length >= 20) c.fail("\u041E\u0442\u043A\u0440\u044B\u0442\u043E \u0431\u043E\u043B\u044C\u0448\u0435 20 \u0440\u0438\u0441\u0443\u043D\u043A\u043E\u0432. \u0417\u0430\u043A\u0440\u043E\u0439 \u043B\u0438\u0448\u043D\u0438\u0435 \u0447\u0435\u0440\u0435\u0437 plt.close().");
+    current = new FigureState(++ids2, ++numbers_);
+    open.push(current);
+    return { value: new FigureObject(current) };
+  });
+  def("subplots", (a, kw, c) => {
+    const p = bind("subplots", a, kw, ["nrows", "ncols", "figsize", "dpi"], 0, c);
+    if (p.nrows && int(p.nrows, c) !== 1 || p.ncols && int(p.ncols, c) !== 1) c.fail("subplots() \u0432 Kodik \u0441\u043E\u0437\u0434\u0430\u0451\u0442 \u043E\u0434\u043D\u0443 \u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0433\u0440\u0430\u0444\u0438\u043A\u0430: plt.subplots().");
+    current = new FigureState(++ids2, ++numbers_);
+    open.push(current);
+    return { value: c.tuple([{ value: new FigureObject(current) }, { value: new Axes(current) }]) };
+  });
+  def("gca", () => ({ value: new Axes(fig()) }), false);
+  def("gcf", () => ({ value: new FigureObject(fig()) }), false);
+  def("show", (a, kw, c) => {
+    for (const name of kw.keys()) if (name !== "block") c.fail(`\u0423 show() \u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${name}\xBB.`);
+    for (const f of [...open]) {
+      if (!f.empty()) shoot(f);
+      close(f);
+    }
+  });
+  def("pause", (a, kw, c) => {
+    const seconds = num2(bind("pause", a, kw, ["interval"], 1, c).interval, c, "\u0447\u0438\u0441\u043B\u043E \u0441\u0435\u043A\u0443\u043D\u0434");
+    if (seconds < 0) c.fail("pause: \u0432\u0440\u0435\u043C\u044F \u043F\u0430\u0443\u0437\u044B \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C.");
+    for (const f of open) if (!f.empty()) shoot(f);
+    pause(c, seconds * 1e3, "plt.pause");
+  });
+  def("clf", () => {
+    current?.clear();
+  });
+  def("cla", () => {
+    current?.clear();
+  });
+  def("close", (a, kw, c) => {
+    const what = a[0]?.value;
+    if (what === "all") {
+      open.splice(0);
+      current = void 0;
+      return;
+    }
+    if (what instanceof FigureObject) {
+      if (open.includes(what.figure)) close(what.figure);
+      return;
+    }
+    if (what === void 0 || what === null) {
+      if (current) close(current);
+      return;
+    }
+    c.fail('close(): plt.close(), plt.close("all") \u0438\u043B\u0438 plt.close(fig).');
+  });
+  def("savefig", (a, kw, c) => c.fail("\u0412 Kodik \u0433\u0440\u0430\u0444\u0438\u043A\u0438 \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u044E\u0442\u0441\u044F \u0432 \u0444\u0430\u0439\u043B\u044B \u2014 \u043E\u043D\u0438 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u043F\u043E\u0434 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u043E\u0439."));
+  for (const name of ["ion", "ioff", "draw"]) def(name, () => void 0);
+  const pyplot = new PyModule("matplotlib.pyplot", attrs);
+  void none;
+  return { pyplot, package: new PyModule("matplotlib", /* @__PURE__ */ new Map()) };
+}
+
+// src/python/robotWorld.ts
+var MAX_SIDE = 20;
+var key = (r, c) => `${r}:${c}`;
+var cellOf = (k) => k.split(":").map(Number);
+function emptyWorld(rows2 = 6, cols = 8) {
+  return { rows: rows2, cols, walls: /* @__PURE__ */ new Set(), targets: /* @__PURE__ */ new Set(), parking: /* @__PURE__ */ new Set(), filled: /* @__PURE__ */ new Set(), start: [0, 0] };
+}
+function parseWorld(source) {
+  const lines = source.replace(/\r/g, "").split("\n").map((line) => line.replace(/\s+$/, ""));
+  while (lines.length && !lines[0].trim()) lines.shift();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  if (!lines.length) throw new Error("\u041F\u043E\u043B\u0435 \u0420\u043E\u0431\u043E\u0442\u0430 \u043F\u0443\u0441\u0442\u043E\u0435.");
+  const grid = lines[0].trimStart().startsWith("+");
+  const cells = [], world = emptyWorld(0, 0);
+  if (grid) {
+    const indent = lines[0].length - lines[0].trimStart().length, rows2 = lines.map((line) => line.slice(indent));
+    if (rows2.length < 3 || rows2.length % 2 === 0) throw new Error("\u041F\u043E\u043B\u0435 \u0441 \u0440\u0430\u043C\u043A\u043E\u0439: \u0441\u0442\u0440\u043E\u043A\u0438 \u0441 \u043A\u043B\u0435\u0442\u043A\u0430\u043C\u0438 \u0447\u0435\u0440\u0435\u0434\u0443\u044E\u0442\u0441\u044F \u0441\u043E \u0441\u0442\u0440\u043E\u043A\u0430\u043C\u0438 \u0441\u0442\u0435\u043D \xAB+-+-+\xBB, \u043F\u0435\u0440\u0432\u0430\u044F \u0438 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u044F\u044F \u2014 \u0440\u0430\u043C\u043A\u0430.");
+    const width = Math.max(...rows2.map((line) => line.length));
+    if (width < 3 || width % 2 === 0) throw new Error("\u041F\u043E\u043B\u0435 \u0441 \u0440\u0430\u043C\u043A\u043E\u0439: \u043A\u0430\u0436\u0434\u0430\u044F \u043A\u043B\u0435\u0442\u043A\u0430 \u0437\u0430\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u0432\u0430 \u0441\u0438\u043C\u0432\u043E\u043B\u0430, \u0441\u0442\u0440\u043E\u043A\u0430 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0438 \u0437\u0430\u043A\u0430\u043D\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0437\u043D\u0430\u043A\u043E\u043C \xAB+\xBB \u0438\u043B\u0438 \xAB|\xBB.");
+    world.rows = (rows2.length - 1) / 2;
+    world.cols = (width - 1) / 2;
+    for (let r = 0; r <= world.rows; r++) {
+      const line = rows2[2 * r];
+      for (let c = 0; c < world.cols; c++) {
+        const ch = line[2 * c + 1] ?? " ";
+        if (ch === "-") {
+          if (r > 0 && r < world.rows) world.walls.add(`h:${r}:${c}`);
+        } else if (ch !== " " && !(r === 0 || r === world.rows)) throw new Error(`\u0421\u0442\u0440\u043E\u043A\u0430 \u0441\u0442\u0435\u043D ${2 * r + 1}: \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \xAB-\xBB \u0434\u043B\u044F \u0441\u0442\u0435\u043D\u044B \u0438\u043B\u0438 \u043F\u0440\u043E\u0431\u0435\u043B \u0434\u043B\u044F \u043F\u0440\u043E\u0445\u043E\u0434\u0430.`);
+      }
+      if (r === world.rows) break;
+      const row = rows2[2 * r + 1];
+      cells.push([]);
+      for (let c = 0; c <= world.cols; c++) {
+        const wall = row[2 * c] ?? " ";
+        if (wall === "|") {
+          if (c > 0 && c < world.cols) world.walls.add(`v:${r}:${c}`);
+        } else if (wall !== " ") throw new Error(`\u0421\u0442\u0440\u043E\u043A\u0430 ${2 * r + 2}: \u043C\u0435\u0436\u0434\u0443 \u043A\u043B\u0435\u0442\u043A\u0430\u043C\u0438 \u0441\u0442\u0430\u0432\u044C \xAB|\xBB \u0434\u043B\u044F \u0441\u0442\u0435\u043D\u044B \u0438\u043B\u0438 \u043F\u0440\u043E\u0431\u0435\u043B.`);
+        if (c < world.cols) cells[r].push(row[2 * c + 1] ?? ".");
+      }
+    }
+  } else {
+    for (const line of lines) cells.push(line.trim().split(/\s+/));
+    world.rows = cells.length;
+    world.cols = Math.max(...cells.map((row) => row.length));
+    if (cells.some((row) => row.length !== world.cols)) throw new Error("\u0412\u043E \u0432\u0441\u0435\u0445 \u0441\u0442\u0440\u043E\u043A\u0430\u0445 \u043F\u043E\u043B\u044F \u0434\u043E\u043B\u0436\u043D\u043E \u0431\u044B\u0442\u044C \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u043A\u043B\u0435\u0442\u043E\u043A.");
+    if (cells.some((row) => row.some((cell) => cell.length !== 1))) throw new Error("\u041A\u043B\u0435\u0442\u043A\u0438 \u043F\u043E\u043B\u044F \u043F\u0438\u0448\u0443\u0442\u0441\u044F \u043E\u0434\u043D\u0438\u043C \u0441\u0438\u043C\u0432\u043E\u043B\u043E\u043C \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B: R . * # P.");
+  }
+  if (world.rows < 1 || world.cols < 1 || world.rows > MAX_SIDE || world.cols > MAX_SIDE) throw new Error(`\u041F\u043E\u043B\u0435 \u0420\u043E\u0431\u043E\u0442\u0430 \u2014 \u043E\u0442 1\xD71 \u0434\u043E ${MAX_SIDE}\xD7${MAX_SIDE} \u043A\u043B\u0435\u0442\u043E\u043A.`);
+  let robots = 0;
+  cells.forEach((row, r) => row.forEach((ch, c) => {
+    const k = key(r, c);
+    if (ch === " " || ch === ".") return;
+    if ("RQX".includes(ch)) {
+      robots++;
+      world.start = [r, c];
+    }
+    if (ch === "*" || ch === "X") world.targets.add(k);
+    else if (ch === "#") world.filled.add(k);
+    else if (ch === "P" || ch === "Q") world.parking.add(k);
+    else if (ch !== "R") throw new Error(`\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u0439 \u0437\u043D\u0430\u043A \xAB${ch}\xBB \u0432 \u043A\u043B\u0435\u0442\u043A\u0435 ${r + 1}, ${c + 1}. \u0414\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u044B: R . * # P Q X.`);
+  }));
+  if (robots !== 1) throw new Error(robots ? "\u041D\u0430 \u043F\u043E\u043B\u0435 \u0434\u043E\u043B\u0436\u0435\u043D \u0431\u044B\u0442\u044C \u043E\u0434\u0438\u043D \u0420\u043E\u0431\u043E\u0442 (R, Q \u0438\u043B\u0438 X)." : "\u041E\u0442\u043C\u0435\u0442\u044C \u0420\u043E\u0431\u043E\u0442\u0430 \u043D\u0430 \u043F\u043E\u043B\u0435 \u0431\u0443\u043A\u0432\u043E\u0439 R.");
+  return world;
+}
+
+// src/python/libRobot.ts
+var STEP_LIMIT = 5e3;
+var delta = { left: [0, -1], right: [0, 1], up: [-1, 0], down: [1, 0] };
+var sideName = { left: "\u0441\u043B\u0435\u0432\u0430", right: "\u0441\u043F\u0440\u0430\u0432\u0430", up: "\u0441\u0432\u0435\u0440\u0445\u0443", down: "\u0441\u043D\u0438\u0437\u0443" };
+var Robot = class {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.world = emptyWorld();
+    if (ctx.world) {
+      try {
+        this.world = parseWorld(ctx.world);
+      } catch (e) {
+        ctx.fail(`\u041F\u043E\u043B\u0435 \u0420\u043E\u0431\u043E\u0442\u0430 \u0432 \u0437\u0430\u0434\u0430\u043D\u0438\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E \u0441 \u043E\u0448\u0438\u0431\u043A\u043E\u0439: ${e.message}`);
+      }
+    }
+    ;
+    [this.r, this.c] = this.world.start;
+  }
+  world;
+  r;
+  c;
+  started = false;
+  crashed = false;
+  delay = 300;
+  steps = [];
+  tasks = [];
+  blocked(dir, r = this.r, c = this.c) {
+    const w = this.world;
+    if (dir === "left") return c === 0 || w.walls.has(`v:${r}:${c}`);
+    if (dir === "right") return c === w.cols - 1 || w.walls.has(`v:${r}:${c + 1}`);
+    if (dir === "up") return r === 0 || w.walls.has(`h:${r}:${c}`);
+    return r === w.rows - 1 || w.walls.has(`h:${r + 1}:${c}`);
+  }
+  step(kind, dir) {
+    if (this.steps.length >= STEP_LIMIT) this.ctx.fail(`\u0420\u043E\u0431\u043E\u0442 \u0441\u0434\u0435\u043B\u0430\u043B \u0431\u043E\u043B\u044C\u0448\u0435 ${STEP_LIMIT} \u0448\u0430\u0433\u043E\u0432. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u043E\u043A\u043E\u043D\u0447\u0430\u043D\u0438\u044F \u0446\u0438\u043A\u043B\u0430.`);
+    this.ctx.tick();
+    this.started = true;
+    this.steps.push({ t: this.ctx.clock.now, kind, r: this.r, c: this.c, ...dir ? { dir } : {} });
+  }
+  move(dir, n) {
+    if (n < 0) this.ctx.fail("\u0427\u0438\u0441\u043B\u043E \u0448\u0430\u0433\u043E\u0432 \u0420\u043E\u0431\u043E\u0442\u0430 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C.");
+    for (let i = 0; i < n; i++) {
+      if (this.blocked(dir)) {
+        this.crashed = true;
+        this.step("crash", dir);
+        this.ctx.fail(`\u0420\u043E\u0431\u043E\u0442 \u0432\u0440\u0435\u0437\u0430\u043B\u0441\u044F \u0432 \u0441\u0442\u0435\u043D\u0443 ${sideName[dir]} (\u0441\u0442\u0440\u043E\u043A\u0430 ${this.r + 1}, \u0441\u0442\u043E\u043B\u0431\u0435\u0446 ${this.c + 1}). \u041F\u0435\u0440\u0435\u0434 \u0448\u0430\u0433\u043E\u043C \u043F\u0440\u043E\u0432\u0435\u0440\u044C \u0441\u0442\u0435\u043D\u0443: wall_is_${dir === "left" ? "on_the_left" : dir === "right" ? "on_the_right" : dir === "up" ? "above" : "beneath"}().`);
+      }
+      this.r += delta[dir][0];
+      this.c += delta[dir][1];
+      this.ctx.clock.sleep(this.delay);
+      this.step("move", dir);
+    }
+  }
+  setup(fn) {
+    if (this.ctx.world !== void 0) this.ctx.fail(`${fn}: \u043F\u043E\u043B\u0435 \u0437\u0430\u0434\u0430\u043D\u043E \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0435\u043C. \u041D\u0435\u043B\u044C\u0437\u044F \u043C\u0435\u043D\u044F\u0442\u044C \u0435\u0433\u043E \u0440\u0430\u0437\u043C\u0435\u0440, \u0441\u0442\u0435\u043D\u044B, \u043A\u043B\u0435\u0442\u043A\u0438 \u0438\u043B\u0438 \u043D\u0430\u0447\u0430\u043B\u044C\u043D\u043E\u0435 \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0420\u043E\u0431\u043E\u0442\u0430.`);
+    if (this.started) this.ctx.fail(`${fn}: \u043F\u043E\u043B\u0435 \u043D\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u044E\u0442 \u0434\u043E \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0448\u0430\u0433\u0430 \u0420\u043E\u0431\u043E\u0442\u0430.`);
+  }
+  inside(r, c, fn) {
+    if (r < 0 || c < 0 || r >= this.world.rows || c >= this.world.cols) this.ctx.fail(`${fn}: \u043A\u043B\u0435\u0442\u043A\u0438 (${r}, ${c}) \u043D\u0435\u0442 \u043D\u0430 \u043F\u043E\u043B\u0435 ${this.world.rows}\xD7${this.world.cols}. \u0421\u0442\u0440\u043E\u043A\u0438 \u0438 \u0441\u0442\u043E\u043B\u0431\u0446\u044B \u0441\u0447\u0438\u0442\u0430\u044E\u0442\u0441\u044F \u0441 \u043D\u0443\u043B\u044F.`);
+  }
+  scene() {
+    const w = this.world, cells = (s) => [...s].map(cellOf);
+    const filled = new Set(w.filled);
+    for (const s of this.steps) if (s.kind === "fill") filled.add(key(s.r, s.c));
+    const problems = [];
+    if (this.crashed) problems.push("\u0420\u043E\u0431\u043E\u0442 \u0432\u0440\u0435\u0437\u0430\u043B\u0441\u044F \u0432 \u0441\u0442\u0435\u043D\u0443.");
+    const missing = [...w.targets].filter((k) => !filled.has(k)).length, extra = [...filled].filter((k) => !w.targets.has(k) && !w.filled.has(k)).length;
+    if (missing) problems.push(`\u041D\u0435 \u0437\u0430\u043A\u0440\u0430\u0448\u0435\u043D\u043E \u043D\u0443\u0436\u043D\u044B\u0445 \u043A\u043B\u0435\u0442\u043E\u043A: ${missing}.`);
+    if (extra) problems.push(`\u0417\u0430\u043A\u0440\u0430\u0448\u0435\u043D\u044B \u043B\u0438\u0448\u043D\u0438\u0435 \u043A\u043B\u0435\u0442\u043A\u0438: ${extra}.`);
+    if (w.parking.size && !w.parking.has(key(this.r, this.c))) problems.push("\u0420\u043E\u0431\u043E\u0442 \u0434\u043E\u043B\u0436\u0435\u043D \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u044C \u043F\u0443\u0442\u044C \u043D\u0430 \u043F\u0430\u0440\u043A\u043E\u0432\u043A\u0435 (P).");
+    return { rows: w.rows, cols: w.cols, walls: [...w.walls], targets: cells(w.targets), parking: cells(w.parking), filled: cells(w.filled), start: [...w.start], steps: this.steps, final: { r: this.r, c: this.c, filled: cells(filled), crashed: this.crashed }, result: { solved: !problems.length, problems } };
+  }
+};
+function pyrobModules(ctx) {
+  const robot = new Robot(ctx);
+  ctx.scene.onFinish(() => {
+    ctx.scene.robot = robot.scene();
+  });
+  ctx.scene.robot = robot.scene();
+  const attrs = /* @__PURE__ */ new Map();
+  const def = (name, fn, effect = true) => attrs.set(name, { value: new PyNative(name, fn, effect) });
+  for (const dir of ["left", "right", "up", "down"]) def(`move_${dir}`, (a, kw, c) => {
+    const { n } = bind(`move_${dir}`, a, kw, ["n"], 0, c);
+    robot.move(dir, n ? int(n, c, "\u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0448\u0430\u0433\u043E\u0432") : 1);
+  });
+  const sensor = (name, dir) => def(name, (a, kw, c) => {
+    bind(name, a, kw, [], 0, c);
+    return arg(robot.blocked(dir));
+  }, false);
+  sensor("wall_is_above", "up");
+  sensor("wall_is_beneath", "down");
+  sensor("wall_is_on_the_left", "left");
+  sensor("wall_is_on_the_right", "right");
+  def("fill_cell", (a, kw, c) => {
+    bind("fill_cell", a, kw, [], 0, c);
+    c.clock.sleep(robot.delay / 2);
+    robot.step("fill");
+  });
+  def("cell_is_filled", (a, kw, c) => {
+    bind("cell_is_filled", a, kw, [], 0, c);
+    const k = key(robot.r, robot.c);
+    return arg(robot.world.filled.has(k) || robot.steps.some((s) => s.kind === "fill" && key(s.r, s.c) === k));
+  }, false);
+  def("cell_should_be_filled", (a, kw, c) => {
+    bind("cell_should_be_filled", a, kw, [], 0, c);
+    return arg(robot.world.targets.has(key(robot.r, robot.c)));
+  }, false);
+  def("is_parking_point", (a, kw, c) => {
+    bind("is_parking_point", a, kw, [], 0, c);
+    return arg(robot.world.parking.has(key(robot.r, robot.c)));
+  }, false);
+  def("get_pos", (a, kw, c) => {
+    bind("get_pos", a, kw, [], 0, c);
+    return { value: c.tuple([arg(robot.r), arg(robot.c)]) };
+  }, false);
+  def("get_field_size", (a, kw, c) => {
+    bind("get_field_size", a, kw, [], 0, c);
+    return { value: c.tuple([arg(robot.world.rows), arg(robot.world.cols)]) };
+  }, false);
+  def("set_field_size", (a, kw, c) => {
+    robot.setup("set_field_size");
+    const p = bind("set_field_size", a, kw, ["rows", "cols"], 2, c), rows2 = int(p.rows, c), cols = int(p.cols, c);
+    if (rows2 < 1 || cols < 1 || rows2 > MAX_SIDE || cols > MAX_SIDE) c.fail(`set_field_size: \u043F\u043E\u043B\u0435 \u043E\u0442 1\xD71 \u0434\u043E ${MAX_SIDE}\xD7${MAX_SIDE}.`);
+    robot.world = emptyWorld(rows2, cols);
+    robot.r = 0;
+    robot.c = 0;
+    ctx.scene.robot = robot.scene();
+  });
+  def("goto", (a, kw, c) => {
+    robot.setup("goto");
+    const p = bind("goto", a, kw, ["row", "col"], 2, c), r = int(p.row, c), col = int(p.col, c);
+    robot.inside(r, col, "goto");
+    robot.r = r;
+    robot.c = col;
+    robot.world.start = [r, col];
+    ctx.scene.robot = robot.scene();
+  });
+  def("put_wall", (a, kw, c) => {
+    robot.setup("put_wall");
+    const p = bind("put_wall", a, kw, ["left", "right", "top", "bottom"], 0, c), w = robot.world, r = robot.r, col = robot.c;
+    const on = (v) => !!v && c.truth(v.value);
+    if (on(p.left) && col > 0) w.walls.add(`v:${r}:${col}`);
+    if (on(p.right) && col < w.cols - 1) w.walls.add(`v:${r}:${col + 1}`);
+    if (on(p.top) && r > 0) w.walls.add(`h:${r}:${col}`);
+    if (on(p.bottom) && r < w.rows - 1) w.walls.add(`h:${r + 1}:${col}`);
+    ctx.scene.robot = robot.scene();
+  });
+  def("set_cell_type", (a, kw, c) => {
+    robot.setup("set_cell_type");
+    const p = bind("set_cell_type", a, kw, ["row", "col", "cell_type"], 3, c), r = int(p.row, c), col = int(p.col, c), type = text2(p.cell_type, c, "\u0442\u0438\u043F \u043A\u043B\u0435\u0442\u043A\u0438");
+    robot.inside(r, col, "set_cell_type");
+    const k = key(r, col), w = robot.world;
+    w.targets.delete(k);
+    w.filled.delete(k);
+    if (type === "to_be_filled") w.targets.add(k);
+    else if (type === "filled") w.filled.add(k);
+    else if (type !== "empty") c.fail("set_cell_type: \u0442\u0438\u043F CELL_EMPTY, CELL_TO_BE_FILLED \u0438\u043B\u0438 CELL_FILLED.");
+    ctx.scene.robot = robot.scene();
+  });
+  def("set_parking_cell", (a, kw, c) => {
+    robot.setup("set_parking_cell");
+    const p = bind("set_parking_cell", a, kw, ["row", "col"], 2, c), r = int(p.row, c), col = int(p.col, c);
+    robot.inside(r, col, "set_parking_cell");
+    robot.world.parking.add(key(r, col));
+    ctx.scene.robot = robot.scene();
+  });
+  attrs.set("CELL_EMPTY", arg("empty"));
+  attrs.set("CELL_TO_BE_FILLED", arg("to_be_filled"));
+  attrs.set("CELL_FILLED", arg("filled"));
+  const register = (delay) => (fn) => {
+    robot.tasks.push(fn);
+    if (delay !== void 0) robot.delay = delay;
+  };
+  const task = new PyNative("task", (a, kw, c) => {
+    const p = bind("task", a, kw, ["delay"], 0, c);
+    const delay = p.delay ? num(p.delay, c, "\u0447\u0438\u0441\u043B\u043E \u0441\u0435\u043A\u0443\u043D\u0434") : void 0;
+    if (delay !== void 0 && (delay < 0 || delay > 5)) c.fail("task(delay=...) \u2014 \u043F\u0430\u0443\u0437\u0430 \u043E\u0442 0 \u0434\u043E 5 \u0441\u0435\u043A\u0443\u043D\u0434.");
+    return { value: new PyNative("task", (_a, _kw, c2) => c2.fail("\u041F\u0438\u0448\u0438 @task(...) \u0441\u0442\u0440\u043E\u043A\u043E\u0439 \u043D\u0430\u0434 def."), false, register(delay === void 0 ? void 0 : delay * 1e3)) };
+  }, false, register());
+  attrs.set("task", { value: task });
+  def("run_tasks", (a, kw, c) => {
+    for (const name of kw.keys()) if (!["verbose", "headless", "tasks"].includes(name)) c.fail(`\u0423 run_tasks() \u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${name}\xBB.`);
+    if (!robot.tasks.length) c.fail("run_tasks(): \u043E\u0442\u043C\u0435\u0442\u044C \u0444\u0443\u043D\u043A\u0446\u0438\u044E \u0441 \u0440\u0435\u0448\u0435\u043D\u0438\u0435\u043C \u0441\u0442\u0440\u043E\u043A\u043E\u0439 @task \u043D\u0430\u0434 def.");
+    for (const name of robot.tasks) c.callUser(name);
+  });
+  void none;
+  const api = new PyModule("pyrob.api", attrs);
+  return { api, package: new PyModule("pyrob", /* @__PURE__ */ new Map()) };
+}
+
+// src/python/libTurtle.ts
+function num3(...args) {
+  const value = num(...args);
+  if (!Number.isFinite(value)) args[1].fail("\u0427\u0435\u0440\u0435\u043F\u0430\u0445\u0430: \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0431\u0435\u0437 NaN \u0438 Infinity.");
+  return value;
+}
+var LIMIT_ITEMS = 8e3;
+var LIMIT_FRAMES = 16e3;
+var pyMod2 = (x, y) => {
+  const r = x % y;
+  if (r === 0) return y < 0 ? -0 : 0;
+  return r < 0 !== y < 0 ? r + y : r;
+};
+var radians = (deg) => deg * (Math.PI / 180);
+var degrees = (rad) => rad * (180 / Math.PI);
+var speeds = { fastest: 0, fast: 10, normal: 6, slow: 3, slowest: 1 };
+var shapes = ["classic", "arrow", "turtle", "circle", "square", "triangle", "blank"];
+var Screen = class {
+  constructor(scene, ctx) {
+    this.scene = scene;
+    this.ctx = ctx;
+  }
+  bg = "white";
+  tracing = 1;
+  delay = 10;
+  colormode = 1;
+  turtles = [];
+  main;
+  held = [];
+  push(item) {
+    if (this.scene.items.length >= LIMIT_ITEMS) this.ctx.fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u043B\u0438\u043D\u0438\u0439 \u0438 \u0444\u0438\u0433\u0443\u0440 \u0447\u0435\u0440\u0435\u043F\u0430\u0445\u0438. \u0423\u043C\u0435\u043D\u044C\u0448\u0438 \u0447\u0438\u0441\u043B\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0439.");
+    this.scene.items.push(item);
+    if (!this.tracing) this.held.push({ item });
+    return item;
+  }
+  frame(id, from, to, duration) {
+    if (this.scene.frames.length >= LIMIT_FRAMES) this.ctx.fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0448\u0430\u0433\u043E\u0432 \u0447\u0435\u0440\u0435\u043F\u0430\u0445\u0438. \u0423\u043C\u0435\u043D\u044C\u0448\u0438 \u0447\u0438\u0441\u043B\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0439.");
+    const t0 = this.ctx.clock.now, frame = { id, t0, t1: t0 + duration, from, to };
+    this.scene.frames.push(frame);
+    if (!this.tracing) this.held.push({ frame });
+    return frame;
+  }
+  /** turtle.update(): everything drawn while tracer was off appears now. */
+  flush() {
+    const now = this.ctx.clock.now;
+    for (const { item, frame } of this.held) {
+      if (item) {
+        const span = item.kind === "line" ? item.t1 - item.t0 : 0;
+        item.t0 = now;
+        if (item.kind === "line") item.t1 = now + span;
+      }
+      if (frame) {
+        frame.t0 = now;
+        frame.t1 = now;
+      }
+    }
+    this.held = [];
+  }
+  color(args, ctx, fn) {
+    const value = args.length === 1 ? args[0].value : args.length === 3 ? ctx.tuple(args) : ctx.fail(`${fn}: \u0443\u043A\u0430\u0436\u0438 \u0446\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u043A\u043E\u0439, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 "red", \u0438\u043B\u0438 \u0442\u0440\u0435\u043C\u044F \u0447\u0438\u0441\u043B\u0430\u043C\u0438.`);
+    if (typeof value === "string") {
+      if (value === "" || cssColor(value)) return value;
+      return ctx.fail(`${fn}: \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u0439 \u0446\u0432\u0435\u0442 \xAB${value}\xBB. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 "red", \u0438\u043B\u0438 \u043A\u043E\u0434 "#ff8800".`);
+    }
+    const parts = value instanceof PyTuple || Array.isArray(value) ? ctx.items(value) : [];
+    if (parts.length !== 3) ctx.fail(`${fn}: \u0446\u0432\u0435\u0442 \u2014 \u0441\u0442\u0440\u043E\u043A\u0430 \u0438\u043B\u0438 \u0442\u0440\u0438 \u0447\u0438\u0441\u043B\u0430 (r, g, b).`);
+    let rgb = parts.map((p) => num3(p, ctx));
+    if (this.colormode === 1) rgb = rgb.map((v) => roundHalfEven(255 * v));
+    if (rgb.some((v) => v < 0 || v > 255 || !Number.isInteger(v))) ctx.fail(`${fn}: \u0447\u0438\u0441\u043B\u0430 \u0446\u0432\u0435\u0442\u0430 \u0434\u043E\u043B\u0436\u043D\u044B \u0431\u044B\u0442\u044C \u043E\u0442 0 \u0434\u043E ${this.colormode === 1 ? "1.0" : "255"} (\u0441\u0435\u0439\u0447\u0430\u0441 colormode ${this.colormode === 1 ? "1.0" : "255"}).`);
+    return "#" + rgb.map((v) => v.toString(16).padStart(2, "0")).join("");
+  }
+  /** What pencolor()/fillcolor() return: names as given, codes as numbers in the current colormode. */
+  colorValue(color2, ctx) {
+    if (!color2.startsWith("#")) return arg(color2);
+    const hex = cssColor(color2), parts = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) * this.colormode / 255);
+    return { value: ctx.tuple(parts.map((v) => floatArg(v))) };
+  }
+};
+var TurtleObject = class extends PyObject {
+  constructor(id, screen) {
+    super();
+    this.id = id;
+    this.screen = screen;
+  }
+  typeName = "Turtle";
+  x = 0;
+  y = 0;
+  xFloat = true;
+  yFloat = true;
+  ox = 1;
+  oy = 0;
+  down = true;
+  pen = "black";
+  fill = "black";
+  width = 1;
+  speed = 3;
+  visible = true;
+  shape = "classic";
+  stretch = 1;
+  fillPath = null;
+  fillSlot = -1;
+  stamps = 0;
+  repr() {
+    return "<turtle.Turtle object>";
+  }
+  pose() {
+    return { x: this.x, y: this.y, heading: this.headingValue(), visible: this.visible, shape: this.shape, pen: this.pen, fill: this.fill, stretch: this.stretch, width: this.width };
+  }
+  headingValue() {
+    return pyMod2(pyRound(degrees(Math.atan2(this.oy, this.ox)), 10), 360);
+  }
+  animated() {
+    return this.speed > 0 && this.screen.tracing === 1;
+  }
+  rotate(angle) {
+    const from = this.pose(), a = radians(angle), c = Math.cos(a), s = Math.sin(a);
+    const ox = this.ox * c + -this.oy * s, oy = this.oy * c + this.ox * s;
+    this.ox = ox;
+    this.oy = oy;
+    const duration = this.animated() ? (1 + Math.floor(Math.abs(angle) / (3 * this.speed))) * this.screen.delay : 0;
+    this.screen.frame(this.id, from, this.pose(), duration);
+    this.screen.ctx.clock.sleep(duration);
+  }
+  goto(x, y, xFloat, yFloat) {
+    const ctx = this.screen.ctx;
+    if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 1e6 || Math.abs(y) > 1e6) ctx.fail("\u0427\u0435\u0440\u0435\u043F\u0430\u0445\u0430 \u0443\u0448\u043B\u0430 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u0430\u043B\u0435\u043A\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0440\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u044F.");
+    ctx.tick();
+    const from = this.pose(), dx = x - this.x, dy = y - this.y, dist = Math.sqrt(dx * dx + dy * dy);
+    const duration = this.animated() ? (1 + Math.floor(dist / (3 * 1.1 ** this.speed * this.speed))) * this.screen.delay : 0;
+    const t0 = ctx.clock.now;
+    if (this.down && dist > 0) this.screen.push({ kind: "line", id: this.id, t0, t1: t0 + duration, x1: this.x, y1: this.y, x2: x, y2: y, color: this.pen, width: this.width });
+    this.x = x;
+    this.y = y;
+    this.xFloat = xFloat;
+    this.yFloat = yFloat;
+    if (this.fillPath) {
+      this.fillPath.push(x, y);
+      if (this.fillPath.length > 2e4) ctx.fail("\u0417\u0430\u043B\u0438\u0432\u043A\u0430 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0442\u043E\u0447\u0435\u043A.");
+    }
+    this.screen.frame(this.id, from, this.pose(), duration);
+    ctx.clock.sleep(duration);
+  }
+  go(distance) {
+    this.goto(this.x + this.ox * distance, this.y + this.oy * distance, true, true);
+  }
+  setheading(to) {
+    const angle = pyMod2(to - this.headingValue() + 180, 360) - 180;
+    this.rotate(angle);
+  }
+  reset() {
+    this.screen.push({ kind: "clear", id: this.id, t0: this.screen.ctx.clock.now });
+    const from = this.pose();
+    Object.assign(this, { x: 0, y: 0, xFloat: true, yFloat: true, ox: 1, oy: 0, down: true, pen: "black", fill: "black", width: 1, speed: 3, visible: true, shape: "classic", stretch: 1, fillPath: null });
+    this.screen.frame(this.id, from, this.pose(), 0);
+  }
+  /** Pose change that is not a move (colour, visibility, shape). */
+  touch() {
+    const p = this.pose();
+    this.screen.frame(this.id, p, p, 0);
+  }
+  getattr(name, ctx) {
+    const method = turtleMethods[name];
+    void ctx;
+    return method ? { value: new PyNative(name, (args, kw, c) => method(this, args, kw, c), drawing.has(name)) } : void 0;
+  }
+};
+var point = (t, args, ctx, fn) => {
+  if (args.length === 2) return [num3(args[0], ctx), num3(args[1], ctx), !!args[0].float, !!args[1].float];
+  const v = args[0]?.value;
+  if (v instanceof TurtleObject) return [v.x, v.y, v.xFloat, v.yFloat];
+  if (args.length === 1 && (v instanceof PyTuple || Array.isArray(v))) {
+    const p = ctx.items(v);
+    if (p.length === 2) return [num3(p[0], ctx), num3(p[1], ctx), !!p[0].float, !!p[1].float];
+  }
+  return ctx.fail(`${fn}: \u0443\u043A\u0430\u0436\u0438 \u043A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442\u044B x \u0438 y.`);
+};
+var angleOf = (degreesValue) => degreesValue;
+var oneNumber = (fn, args, kw, ctx, name = "distance") => num3(bind(fn, args, kw, [name], 1, ctx)[name], ctx);
+var turtleMethods = {
+  forward: (t, a, kw, ctx) => {
+    t.go(oneNumber("forward", a, kw, ctx));
+  },
+  backward: (t, a, kw, ctx) => {
+    t.go(-oneNumber("backward", a, kw, ctx));
+  },
+  left: (t, a, kw, ctx) => {
+    t.rotate(angleOf(oneNumber("left", a, kw, ctx, "angle")));
+  },
+  right: (t, a, kw, ctx) => {
+    t.rotate(-angleOf(oneNumber("right", a, kw, ctx, "angle")));
+  },
+  goto: (t, a, kw, ctx) => {
+    if (kw.size) ctx.fail("goto(x, y): \u043A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442\u044B \u0431\u0435\u0437 \u0438\u043C\u0451\u043D.");
+    const [x, y, xf, yf] = point(t, a, ctx, "goto");
+    t.goto(x, y, xf, yf);
+  },
+  setx: (t, a, kw, ctx) => {
+    const v = bind("setx", a, kw, ["x"], 1, ctx).x;
+    t.goto(num3(v, ctx), t.y, !!v.float, t.yFloat);
+  },
+  sety: (t, a, kw, ctx) => {
+    const v = bind("sety", a, kw, ["y"], 1, ctx).y;
+    t.goto(t.x, num3(v, ctx), t.xFloat, !!v.float);
+  },
+  setheading: (t, a, kw, ctx) => {
+    t.setheading(oneNumber("setheading", a, kw, ctx, "to_angle"));
+  },
+  home: (t) => {
+    t.goto(0, 0, false, false);
+    t.setheading(0);
+  },
+  circle: (t, a, kw, ctx) => {
+    const p = bind("circle", a, kw, ["radius", "extent", "steps"], 1, ctx), radius = num3(p.radius, ctx);
+    const extent = p.extent && p.extent.value !== null ? num3(p.extent, ctx) : 360;
+    let steps = p.steps && p.steps.value !== null ? int(p.steps, ctx, "\u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0448\u0430\u0433\u043E\u0432") : 1 + Math.trunc(Math.min(11 + Math.abs(radius) / 6, 59) * (Math.abs(extent) / 360));
+    if (steps < 1) steps = 1;
+    if (steps > 720) ctx.fail("circle: \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0448\u0430\u0433\u043E\u0432 (steps).");
+    let w = extent / steps, w2 = 0.5 * w, l = 2 * radius * Math.sin(radians(w2));
+    if (radius < 0) {
+      l = -l;
+      w = -w;
+      w2 = -w2;
+    }
+    const speed = t.speed;
+    t.speed = 0;
+    t.rotate(w2);
+    for (let i = 0; i < steps; i++) {
+      t.speed = speed;
+      t.go(l);
+      t.speed = 0;
+      t.rotate(w);
+    }
+    t.rotate(-w2);
+    t.speed = speed;
+  },
+  dot: (t, a, kw, ctx) => {
+    if (kw.size) ctx.fail("dot(\u0440\u0430\u0437\u043C\u0435\u0440, \u0446\u0432\u0435\u0442): \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u044B \u0431\u0435\u0437 \u0438\u043C\u0451\u043D.");
+    let size, color2;
+    const def = t.width + Math.max(t.width, 4);
+    if (a.length === 0) {
+      size = def;
+      color2 = t.pen;
+    } else if (typeof a[0].value === "string" || a[0].value instanceof PyTuple) {
+      color2 = t.screen.color(a, ctx, "dot");
+      size = def;
+    } else {
+      size = a[0].value === null ? def : num3(a[0], ctx);
+      color2 = a.length > 1 ? t.screen.color(a.slice(1), ctx, "dot") : t.pen;
+    }
+    t.screen.push({ kind: "dot", id: t.id, t0: ctx.clock.now, x: t.x, y: t.y, size, color: color2 });
+  },
+  write: (t, a, kw, ctx) => {
+    const p = bind("write", a, kw, ["arg", "move", "align", "font"], 1, ctx), align = p.align ? text2(p.align, ctx, '\u0441\u0442\u0440\u043E\u043A\u0430 "left", "center" \u0438\u043B\u0438 "right"') : "left";
+    if (!["left", "center", "right"].includes(align)) ctx.fail('write: align \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C "left", "center" \u0438\u043B\u0438 "right".');
+    let size = 8, weight = "normal";
+    if (p.font) {
+      const parts = ctx.items(p.font.value, "font");
+      if (parts[1]) size = num3(parts[1], ctx);
+      if (parts[2] && typeof parts[2].value === "string") weight = parts[2].value;
+    }
+    if (size <= 0 || size > 200) ctx.fail("write: \u0440\u0430\u0437\u043C\u0435\u0440 \u0448\u0440\u0438\u0444\u0442\u0430 \u043E\u0442 1 \u0434\u043E 200.");
+    t.screen.push({ kind: "text", id: t.id, t0: ctx.clock.now, x: t.x, y: t.y, text: ctx.str(p.arg).slice(0, 500), align, size, color: t.pen, weight });
+  },
+  stamp: (t, a, kw, ctx) => {
+    t.screen.push({ kind: "stamp", id: t.id, t0: ctx.clock.now, pose: t.pose() });
+    return arg(++t.stamps);
+  },
+  penup: (t) => {
+    t.down = false;
+  },
+  pendown: (t) => {
+    t.down = true;
+  },
+  isdown: (t) => arg(t.down),
+  pensize: (t, a, kw, ctx) => {
+    const { width } = bind("pensize", a, kw, ["width"], 0, ctx);
+    if (!width) return arg(t.width);
+    const w = num3(width, ctx);
+    if (w <= 0 || w > 500) ctx.fail("pensize: \u0442\u043E\u043B\u0449\u0438\u043D\u0430 \u043E\u0442 1 \u0434\u043E 500.");
+    t.width = w;
+    t.touch();
+  },
+  pencolor: (t, a, kw, ctx) => {
+    if (kw.size) ctx.fail("pencolor: \u0446\u0432\u0435\u0442 \u0431\u0435\u0437 \u0438\u043C\u0435\u043D\u0438 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430.");
+    if (!a.length) return t.screen.colorValue(t.pen, ctx);
+    t.pen = t.screen.color(a, ctx, "pencolor");
+    t.touch();
+  },
+  fillcolor: (t, a, kw, ctx) => {
+    if (kw.size) ctx.fail("fillcolor: \u0446\u0432\u0435\u0442 \u0431\u0435\u0437 \u0438\u043C\u0435\u043D\u0438 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430.");
+    if (!a.length) return t.screen.colorValue(t.fill, ctx);
+    t.fill = t.screen.color(a, ctx, "fillcolor");
+    t.touch();
+  },
+  color: (t, a, kw, ctx) => {
+    if (kw.size) ctx.fail("color: \u0446\u0432\u0435\u0442\u0430 \u0431\u0435\u0437 \u0438\u043C\u0451\u043D \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.");
+    if (!a.length) return { value: ctx.tuple([t.screen.colorValue(t.pen, ctx), t.screen.colorValue(t.fill, ctx)]) };
+    if (a.length === 2) {
+      t.pen = t.screen.color([a[0]], ctx, "color");
+      t.fill = t.screen.color([a[1]], ctx, "color");
+    } else {
+      t.pen = t.fill = t.screen.color(a, ctx, "color");
+    }
+    t.touch();
+  },
+  begin_fill: (t, a, kw, ctx) => {
+    t.fillPath = [t.x, t.y];
+    t.fillSlot = t.screen.scene.items.length;
+    t.screen.push({ kind: "fill", id: t.id, t0: Infinity, points: [], color: t.fill });
+    void ctx;
+  },
+  end_fill: (t, a, kw, ctx) => {
+    if (!t.fillPath) return;
+    const slot = t.screen.scene.items[t.fillSlot];
+    if (slot?.kind === "fill") {
+      if (t.fillPath.length > 4) {
+        slot.points = t.fillPath;
+        slot.color = t.fill;
+        slot.t0 = ctx.clock.now;
+        if (!t.screen.tracing) t.screen.held.push({ item: slot });
+      } else slot.t0 = Infinity;
+    }
+    t.fillPath = null;
+  },
+  filling: (t) => arg(!!t.fillPath),
+  position: (t) => ({ value: new Vec2D(t.x, t.y, t.xFloat, t.yFloat) }),
+  xcor: (t) => arg(t.x, t.xFloat),
+  ycor: (t) => arg(t.y, t.yFloat),
+  heading: (t) => floatArg(t.headingValue()),
+  distance: (t, a, kw, ctx) => {
+    if (kw.size) ctx.fail("distance(x, y): \u0431\u0435\u0437 \u0438\u043C\u0451\u043D.");
+    const [x, y] = point(t, a, ctx, "distance");
+    return floatArg(Math.hypot(x - t.x, y - t.y));
+  },
+  towards: (t, a, kw, ctx) => {
+    if (kw.size) ctx.fail("towards(x, y): \u0431\u0435\u0437 \u0438\u043C\u0451\u043D.");
+    const [x, y] = point(t, a, ctx, "towards");
+    return floatArg(pyMod2(pyRound(degrees(Math.atan2(y - t.y, x - t.x)), 10), 360));
+  },
+  speed: (t, a, kw, ctx) => {
+    const { speed } = bind("speed", a, kw, ["speed"], 0, ctx);
+    if (!speed || speed.value === null) return arg(t.speed);
+    if (typeof speed.value === "string") {
+      if (!(speed.value in speeds)) ctx.fail('speed: "fastest", "fast", "normal", "slow", "slowest" \u0438\u043B\u0438 \u0447\u0438\u0441\u043B\u043E 0\u201310.');
+      t.speed = speeds[speed.value];
+      return;
+    }
+    const s = num3(speed, ctx);
+    t.speed = s > 0.5 && s < 10.5 ? roundHalfEven(s) : 0;
+  },
+  hideturtle: (t) => {
+    t.visible = false;
+    t.touch();
+  },
+  showturtle: (t) => {
+    t.visible = true;
+    t.touch();
+  },
+  isvisible: (t) => arg(t.visible),
+  shape: (t, a, kw, ctx) => {
+    const { name } = bind("shape", a, kw, ["name"], 0, ctx);
+    if (!name) return arg(t.shape);
+    const s = text2(name, ctx, "\u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u0444\u043E\u0440\u043C\u044B");
+    if (!shapes.includes(s)) ctx.fail(`shape: \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B \u0444\u043E\u0440\u043C\u044B ${shapes.map((x) => `"${x}"`).join(", ")}.`);
+    t.shape = s;
+    t.touch();
+  },
+  shapesize: (t, a, kw, ctx) => {
+    const p = bind("shapesize", a, kw, ["stretch_wid", "stretch_len", "outline"], 0, ctx);
+    if (!p.stretch_wid) return { value: ctx.tuple([arg(t.stretch), arg(t.stretch), arg(1)]) };
+    const s = num3(p.stretch_wid, ctx);
+    if (s <= 0 || s > 50) ctx.fail("shapesize: \u0440\u0430\u0437\u043C\u0435\u0440 \u043E\u0442 0.1 \u0434\u043E 50.");
+    t.stretch = s;
+    t.touch();
+  },
+  clear: (t, a, kw, ctx) => {
+    t.screen.push({ kind: "clear", id: t.id, t0: ctx.clock.now });
+  },
+  reset: (t) => {
+    t.reset();
+  },
+  getscreen: (t) => ({ value: screenObject(t.screen) }),
+  onclick: (t, a, kw, ctx) => ctx.fail("\u0421\u043E\u0431\u044B\u0442\u0438\u044F \u043C\u044B\u0448\u0438 \u0438 \u043A\u043B\u0430\u0432\u0438\u0430\u0442\u0443\u0440\u044B \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F: \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0446\u0435\u043B\u0438\u043A\u043E\u043C, \u0437\u0430\u0442\u0435\u043C \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0430\u043D\u0438\u043C\u0430\u0446\u0438\u044F.")
+};
+var aliases = { fd: "forward", bk: "backward", back: "backward", lt: "left", rt: "right", setpos: "goto", setposition: "goto", seth: "setheading", pu: "penup", up: "penup", pd: "pendown", down: "pendown", width: "pensize", pos: "position", ht: "hideturtle", st: "showturtle", turtlesize: "shapesize", ondrag: "onclick", onrelease: "onclick" };
+for (const [alias, name] of Object.entries(aliases)) turtleMethods[alias] = turtleMethods[name];
+var drawing = new Set(Object.keys(turtleMethods).filter((name) => !["isdown", "position", "pos", "xcor", "ycor", "heading", "distance", "towards", "isvisible", "filling", "getscreen"].includes(name)));
+var noop = () => void 0;
+var unsupportedEvents = (s, a, kw, ctx) => ctx.fail("\u0421\u043E\u0431\u044B\u0442\u0438\u044F \u043C\u044B\u0448\u0438, \u043A\u043B\u0430\u0432\u0438\u0430\u0442\u0443\u0440\u044B \u0438 \u0442\u0430\u0439\u043C\u0435\u0440\u044B \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F: \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0446\u0435\u043B\u0438\u043A\u043E\u043C, \u0437\u0430\u0442\u0435\u043C \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0430\u043D\u0438\u043C\u0430\u0446\u0438\u044F. \u0414\u043B\u044F \u0430\u043D\u0438\u043C\u0430\u0446\u0438\u0438 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0446\u0438\u043A\u043B\u044B \u0438 time.sleep.");
+var screenMethods = {
+  bgcolor: (s, a, kw, ctx) => {
+    if (!a.length) return s.colorValue(s.bg, ctx);
+    s.bg = s.color(a, ctx, "bgcolor");
+    s.push({ kind: "bg", t0: ctx.clock.now, color: s.bg });
+  },
+  title: (s, a, kw, ctx) => {
+    s.scene.title = text2(bind("title", a, kw, ["titlestring"], 1, ctx).titlestring, ctx).slice(0, 120);
+  },
+  setup: (s, a, kw, ctx) => {
+    const p = bind("setup", a, kw, ["width", "height", "startx", "starty"], 0, ctx);
+    const size = (v, base2, fallback) => !v || v.value === null ? fallback : v.float && num3(v, ctx) <= 1 ? num3(v, ctx) * base2 : num3(v, ctx);
+    const w = size(p.width, 1600, 800), h = size(p.height, 900, 600);
+    if (w < 50 || h < 50 || w > 4e3 || h > 4e3) ctx.fail("setup: \u0448\u0438\u0440\u0438\u043D\u0430 \u0438 \u0432\u044B\u0441\u043E\u0442\u0430 \u043E\u043A\u043D\u0430 \u043E\u0442 50 \u0434\u043E 4000.");
+    s.scene.size = [Math.round(w), Math.round(h)];
+    if (!s.scene.view) s.scene.view = void 0;
+  },
+  screensize: (s, a, kw, ctx) => {
+    const p = bind("screensize", a, kw, ["canvwidth", "canvheight", "bg"], 0, ctx);
+    if (!p.canvwidth) return { value: ctx.tuple([arg(400), arg(300)]) };
+    s.scene.size = [num3(p.canvwidth, ctx), p.canvheight ? num3(p.canvheight, ctx) : 300];
+    if (p.bg) screenMethods.bgcolor(s, [p.bg], /* @__PURE__ */ new Map(), ctx);
+  },
+  setworldcoordinates: (s, a, kw, ctx) => {
+    if (a.length !== 4) ctx.fail("setworldcoordinates(llx, lly, urx, ury).");
+    const [x0, y0, x1, y1] = a.map((v) => num3(v, ctx));
+    if (x1 <= x0 || y1 <= y0) ctx.fail("setworldcoordinates: \u043F\u0440\u0430\u0432\u044B\u0439 \u0432\u0435\u0440\u0445\u043D\u0438\u0439 \u0443\u0433\u043E\u043B \u0434\u043E\u043B\u0436\u0435\u043D \u0431\u044B\u0442\u044C \u043F\u0440\u0430\u0432\u0435\u0435 \u0438 \u0432\u044B\u0448\u0435 \u043B\u0435\u0432\u043E\u0433\u043E \u043D\u0438\u0436\u043D\u0435\u0433\u043E.");
+    s.scene.view = [x0, y0, x1, y1];
+  },
+  tracer: (s, a, kw, ctx) => {
+    const p = bind("tracer", a, kw, ["n", "delay"], 0, ctx);
+    if (!p.n || p.n.value === null) return arg(s.tracing);
+    s.tracing = int(p.n, ctx) ? 1 : 0;
+    if (p.delay && p.delay.value !== null) s.delay = Math.max(0, num3(p.delay, ctx));
+    if (s.tracing) s.flush();
+  },
+  update: (s) => {
+    s.flush();
+  },
+  delay: (s, a, kw, ctx) => {
+    const { delay } = bind("delay", a, kw, ["delay"], 0, ctx);
+    if (!delay || delay.value === null) return arg(s.delay);
+    s.delay = Math.max(0, Math.min(1e3, num3(delay, ctx)));
+  },
+  colormode: (s, a, kw, ctx) => {
+    const { cmode } = bind("colormode", a, kw, ["cmode"], 0, ctx);
+    if (!cmode || cmode.value === null) return s.colormode === 1 ? floatArg(1) : arg(255);
+    const m = num3(cmode, ctx);
+    if (m !== 1 && m !== 255) ctx.fail("colormode: 1.0 \u0438\u043B\u0438 255.");
+    s.colormode = m === 255 ? 255 : 1;
+  },
+  clearscreen: (s, a, kw, ctx) => {
+    s.push({ kind: "clear", id: null, t0: ctx.clock.now });
+    s.bg = "white";
+    s.push({ kind: "bg", t0: ctx.clock.now, color: "white" });
+    for (const t of s.turtles) {
+      t.visible = false;
+      t.touch();
+    }
+    s.turtles = [];
+    s.main = void 0;
+    s.tracing = 1;
+  },
+  resetscreen: (s) => {
+    for (const t of s.turtles) t.reset();
+  },
+  turtles: (s, a, kw, ctx) => ({ value: ctx.list(s.turtles.map((t) => ({ value: t }))) }),
+  window_width: (s) => arg(s.scene.size?.[0] ?? 800),
+  window_height: (s) => arg(s.scene.size?.[1] ?? 600),
+  mainloop: noop,
+  done: noop,
+  exitonclick: noop,
+  bye: noop,
+  listen: noop,
+  onkey: unsupportedEvents,
+  onkeypress: unsupportedEvents,
+  onkeyrelease: unsupportedEvents,
+  onscreenclick: unsupportedEvents,
+  onclick: unsupportedEvents,
+  ontimer: unsupportedEvents,
+  textinput: (s, a, kw, ctx) => ctx.fail("textinput \u0438 numinput \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F: \u0434\u043B\u044F \u0432\u0432\u043E\u0434\u0430 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 input()."),
+  numinput: (s, a, kw, ctx) => ctx.fail("textinput \u0438 numinput \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F: \u0434\u043B\u044F \u0432\u0432\u043E\u0434\u0430 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 input()."),
+  mode: (s, a, kw, ctx) => {
+    const { mode } = bind("mode", a, kw, ["mode"], 0, ctx);
+    if (!mode || mode.value === null) return arg("standard");
+    if (mode.value !== "standard") ctx.fail('\u0412 Kodik \u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D \u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0435\u0436\u0438\u043C "standard": 0\xB0 \u2014 \u0432\u043F\u0440\u0430\u0432\u043E, \u0443\u0433\u043B\u044B \u043F\u0440\u043E\u0442\u0438\u0432 \u0447\u0430\u0441\u043E\u0432\u043E\u0439 \u0441\u0442\u0440\u0435\u043B\u043A\u0438.');
+  }
+};
+screenMethods.clear = screenMethods.clearscreen;
+screenMethods.reset = screenMethods.resetscreen;
+var ScreenObject = class extends PyObject {
+  constructor(screen) {
+    super();
+    this.screen = screen;
+  }
+  typeName = "_Screen";
+  repr() {
+    return "<turtle._Screen object>";
+  }
+  getattr(name) {
+    const m = screenMethods[name];
+    return m ? { value: new PyNative(name, (a, kw, ctx) => m(this.screen, a, kw, ctx), true) } : void 0;
+  }
+};
+var screenObjects = /* @__PURE__ */ new WeakMap();
+var screenObject = (s) => {
+  let o = screenObjects.get(s);
+  if (!o) {
+    o = new ScreenObject(s);
+    screenObjects.set(s, o);
+  }
+  return o;
+};
+function turtleModule(ctx) {
+  const scene = ctx.scene.turtle ?? (ctx.scene.turtle = { items: [], frames: [] });
+  const screen = new Screen(scene, ctx);
+  ctx.scene.onFinish(() => {
+    screen.flush();
+    scene.items = scene.items.filter((item) => item.kind !== "fill" || item.t0 !== Infinity && item.points.length > 4);
+  });
+  let next = 0;
+  const create = () => {
+    if (screen.turtles.length >= 50) ctx.fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0447\u0435\u0440\u0435\u043F\u0430\u0445 (\u0431\u043E\u043B\u044C\u0448\u0435 50).");
+    const t = new TurtleObject(++next, screen);
+    screen.turtles.push(t);
+    t.touch();
+    return t;
+  };
+  const main = () => screen.main ?? (screen.main = create());
+  const attrs = /* @__PURE__ */ new Map();
+  for (const name of Object.keys(turtleMethods)) attrs.set(name, { value: new PyNative(name, (a, kw, c) => turtleMethods[name](main(), a, kw, c), drawing.has(name)) });
+  for (const name of Object.keys(screenMethods)) if (!["clear", "reset", "onclick"].includes(name)) attrs.set(name, { value: new PyNative(name, (a, kw, c) => screenMethods[name](screen, a, kw, c), true) });
+  const turtleClass = new PyNative("Turtle", (a, kw, c) => {
+    if (a.length || kw.size) c.fail("Turtle() \u0441\u043E\u0437\u0434\u0430\u044E\u0442 \u0431\u0435\u0437 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.");
+    return { value: create() };
+  }, true);
+  attrs.set("Turtle", { value: turtleClass });
+  attrs.set("Pen", { value: turtleClass });
+  attrs.set("RawTurtle", { value: turtleClass });
+  attrs.set("Screen", { value: new PyNative("Screen", () => ({ value: screenObject(screen) })) });
+  attrs.set("getturtle", { value: new PyNative("getturtle", () => ({ value: main() })) });
+  attrs.set("getpen", attrs.get("getturtle"));
+  attrs.set("getscreen", attrs.get("Screen"));
+  attrs.set("Vec2D", { value: new PyNative("Vec2D", (a, kw, c) => {
+    if (a.length !== 2) c.fail("Vec2D(x, y) \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430.");
+    return { value: new Vec2D(num3(a[0], c), num3(a[1], c), !!a[0].float, !!a[1].float) };
+  }) });
+  return new PyModule("turtle", attrs, [...attrs.keys()]);
+}
+
+// src/python/modules.ts
+var SUPPORTED_MODULES = ["math", "random", "time", "turtle", "numpy", "matplotlib.pyplot", "pyrob.api"];
+function moduleLoader(ctx) {
+  const loaded = /* @__PURE__ */ new Map();
+  const create = (name) => {
+    switch (name) {
+      case "math":
+        return mathModule();
+      case "random":
+        return randomModule();
+      case "time":
+        return timeModule(ctx);
+      case "turtle":
+        return turtleModule(ctx);
+      case "numpy":
+        return numpyModule();
+      case "matplotlib":
+      case "pyrob":
+        return new PyModule(name, /* @__PURE__ */ new Map(), []);
+      case "matplotlib.pyplot":
+        return pyplotModule(ctx).pyplot;
+      case "pyrob.api":
+        return pyrobModules(ctx).api;
+    }
+    return void 0;
+  };
+  return function load(path) {
+    const parts = path.split(".");
+    let parent, root;
+    for (let i = 0; i < parts.length; i++) {
+      const name = parts.slice(0, i + 1).join(".");
+      let mod = loaded.get(name);
+      if (!mod) {
+        mod = create(name);
+        if (!mod) {
+          const known = SUPPORTED_MODULES.join(", ");
+          return ctx.fail(i === 0 ? `\u041C\u043E\u0434\u0443\u043B\u044C \xAB${name}\xBB \u0432 Kodik \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u041C\u043E\u0436\u043D\u043E \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C: ${known}.` : `\u0412 \u043F\u0430\u043A\u0435\u0442\u0435 \xAB${parts.slice(0, i).join(".")}\xBB \u043D\u0435\u0442 \u043C\u043E\u0434\u0443\u043B\u044F \xAB${parts[i]}\xBB. \u041C\u043E\u0436\u043D\u043E \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C: ${known}.`);
+        }
+        loaded.set(name, mod);
+      }
+      if (parent) parent.attrs.set(parts[i], { value: mod });
+      if (!root) root = mod;
+      parent = mod;
+    }
+    return { root, leaf: parent };
+  };
+}
+
 // src/pythonExecution.ts
 var fail = (message) => {
   throw new Error(message);
 };
-var number2 = (v) => typeof v === "number" && Number.isFinite(v) ? v : fail("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u043E \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u0430\u0432\u044B\u0447\u043A\u0438 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u0432\u0432\u043E\u0434\u0430 \u0447\u0435\u0440\u0435\u0437 int.");
+var number2 = (v) => typeof v === "boolean" ? Number(v) : typeof v === "number" && Number.isFinite(v) ? v : fail("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u043E \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u0430\u0432\u044B\u0447\u043A\u0438 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u0432\u0432\u043E\u0434\u0430 \u0447\u0435\u0440\u0435\u0437 int.");
+var equal = (a, b) => {
+  if (a === b) return true;
+  if ((typeof a === "number" || typeof a === "boolean") && (typeof b === "number" || typeof b === "boolean")) return Number(a) === Number(b);
+  if (a instanceof PyTuple && b instanceof PyTuple && !(a instanceof NdArray)) return a.items.length === b.items.length && a.items.every((v, i) => equal(v, b.items[i]));
+  return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => equal(v, b[i]));
+};
 var list = (v) => Array.isArray(v) ? v : fail("\u0417\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u0435\u043D \u0441\u043F\u0438\u0441\u043E\u043A.");
-var display2 = (v) => Array.isArray(v) ? `[${v.map((item) => typeof item === "string" ? JSON.stringify(item) : display2(item)).join(", ")}]` : typeof v === "boolean" ? v ? "True" : "False" : v === null ? "None" : String(v);
 var ReturnSignal = class {
   constructor(result) {
     this.result = result;
   }
 };
-function runPythonAst(program, inputs = []) {
+var PyType = class extends PyNative {
+  constructor(name, fn, pythonType = name) {
+    super(name, fn);
+    this.pythonType = pythonType;
+  }
+  repr() {
+    return `<class '${this.pythonType}'>`;
+  }
+};
+var legacyBuiltins = /* @__PURE__ */ new Set(["print", "input", "int", "str", "len", "range", "forward", "right", "left"]);
+var listMethods = /* @__PURE__ */ new Set(["append", "extend", "insert", "pop", "remove", "index", "count", "reverse", "sort", "copy", "clear"]);
+var mutating = /* @__PURE__ */ new Set(["append", "extend", "insert", "pop", "remove", "reverse", "sort", "clear"]);
+function runPythonAst(program, inputs = [], options = {}) {
   const output = [], segments = [], observed = /* @__PURE__ */ new Set(), reassigned = /* @__PURE__ */ new Set();
   let operations = 0, inputCursor = 0, x = 0, y = 0, heading = 0;
+  let operationLimit = 1e4;
+  let pendingOutput = "";
+  const clock = { now: 0, sleep(ms) {
+    this.now += ms;
+  } }, outputTimes = [];
+  const write = (text4) => {
+    pendingOutput += text4;
+    if (pendingOutput.length + output.reduce((n, line) => n + line.length, 0) > 1e5) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0432\u044B\u0432\u043E\u0434\u0430.");
+    let newline;
+    while ((newline = pendingOutput.indexOf("\n")) >= 0) {
+      if (output.length >= 500) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0441\u0442\u0440\u043E\u043A \u0432\u044B\u0432\u043E\u0434\u0430.");
+      output.push(pendingOutput.slice(0, newline));
+      outputTimes.push(clock.now);
+      pendingOutput = pendingOutput.slice(newline + 1);
+    }
+  };
+  const flushOutput = () => {
+    if (pendingOutput) {
+      output.push(pendingOutput);
+      outputTimes.push(clock.now);
+      pendingOutput = "";
+    }
+  };
   const drawingTrail = /* @__PURE__ */ new Set();
   const globals = /* @__PURE__ */ new Map(), functions = /* @__PURE__ */ new Map();
-  const tick = () => {
-    if (++operations > 1e4) fail("\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u043E\u043A\u043E\u043D\u0447\u0430\u043D\u0438\u044F \u0446\u0438\u043A\u043B\u0430.");
+  const floats = /* @__PURE__ */ new WeakMap();
+  const localNames = /* @__PURE__ */ new WeakMap();
+  globals.set("__name__", { value: "__main__", trail: /* @__PURE__ */ new Set() });
+  const display2 = (v, floating = false, seen = /* @__PURE__ */ new Set(), repr = false) => {
+    tick();
+    if (Array.isArray(v)) {
+      if (seen.has(v)) return "[...]";
+      const nested = /* @__PURE__ */ new Set([...seen, v]);
+      return `[${v.map((item, i) => display2(item, floats.get(v)?.has(i), nested, true)).join(", ")}]`;
+    }
+    if (v instanceof PyTuple && v.constructor === PyTuple) {
+      const parts = v.items.map((item, i) => display2(item, floats.get(v.items)?.has(i), seen, true));
+      return parts.length === 1 ? `(${parts[0]},)` : `(${parts.join(", ")})`;
+    }
+    if (v instanceof PyObject) return repr ? v.repr(ctx) : v.str(ctx);
+    if (typeof v === "string" && repr) {
+      const quote = v.includes("'") && !v.includes('"') ? '"' : "'";
+      return quote + Array.from(v).map((char) => {
+        if (char === "\\" || char === quote) return "\\" + char;
+        if (char === "\n") return "\\n";
+        if (char === "\r") return "\\r";
+        if (char === "	") return "\\t";
+        if (char !== " " && /[\p{C}\p{Z}]/u.test(char)) {
+          const point2 = char.codePointAt(0);
+          return point2 <= 255 ? "\\x" + point2.toString(16).padStart(2, "0") : point2 <= 65535 ? "\\u" + point2.toString(16).padStart(4, "0") : "\\U" + point2.toString(16).padStart(8, "0");
+        }
+        return char;
+      }).join("") + quote;
+    }
+    if (typeof v === "number" && floating) {
+      if (Number.isNaN(v)) return "nan";
+      if (!Number.isFinite(v)) return v > 0 ? "inf" : "-inf";
+      if (Object.is(v, -0)) return "-0.0";
+      if (v !== 0 && (Math.abs(v) < 1e-4 || Math.abs(v) >= 1e16)) return v.toExponential().replace(/e([+-])(\d)$/, "e$10$2");
+      return Number.isInteger(v) ? `${v}.0` : String(v);
+    }
+    return typeof v === "boolean" ? v ? "True" : "False" : v === null ? "None" : String(v);
+  };
+  const truth = (v) => Array.isArray(v) ? v.length > 0 : v instanceof PyObject ? v.truth(ctx) : Boolean(v);
+  const compare2 = (a, b, operator) => {
+    if (a instanceof NdArray || b instanceof NdArray) fail("\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u043C\u0430\u0441\u0441\u0438\u0432\u043E\u0432 numpy \u0432 \u0446\u0435\u043F\u043E\u0447\u043A\u0435 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F. \u0421\u0440\u0430\u0432\u043D\u0438 \u043F\u043E \u043E\u0434\u043D\u043E\u043C\u0443: a > 1.");
+    if (operator === "==") return equal(a, b);
+    if (operator === "!=") return !equal(a, b);
+    let order2;
+    if ((typeof a === "number" || typeof a === "boolean") && (typeof b === "number" || typeof b === "boolean")) order2 = Number(a) - Number(b);
+    else if (typeof a === "string" && typeof b === "string") {
+      const lhs = Array.from(a), rhs = Array.from(b), index = lhs.findIndex((char, i) => char !== rhs[i]);
+      order2 = index < 0 ? lhs.length - rhs.length : index >= rhs.length ? 1 : lhs[index].codePointAt(0) - rhs[index].codePointAt(0);
+    } else return fail("\u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0439 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0438\u043B\u0438 \u0434\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438.");
+    return operator === "<" ? order2 < 0 : operator === "<=" ? order2 <= 0 : operator === ">" ? order2 > 0 : order2 >= 0;
+  };
+  const tick = (count = 1) => {
+    operations += count;
+    if (operations > operationLimit) fail("\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u043E\u043A\u043E\u043D\u0447\u0430\u043D\u0438\u044F \u0446\u0438\u043A\u043B\u0430.");
   };
   const track = (value, node, values = [], control = /* @__PURE__ */ new Set()) => ({ value, trail: /* @__PURE__ */ new Set([node, ...control, ...values.flatMap((item) => [...item.trail])]) });
   const observe = (result) => {
     for (const node of result.trail) observed.add(node);
   };
-  const evaluate2 = (node, scope, depth, control) => {
-    tick();
-    const done = (value, children2 = []) => track(value, node, children2, control);
-    if (node.kind === "literal") return done(node.value);
-    if (node.kind === "name") {
-      const value = scope.get(node.name) || globals.get(node.name);
-      if (!value) return fail(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0437\u0430\u0434\u0430\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \xAB${node.name}\xBB.`);
-      return done(value.value, [value]);
+  const lookup = (name, scope) => scope.get(name) || (!localNames.get(scope)?.has(name) ? globals.get(name) : void 0);
+  const items = (v, what = "\u0417\u0434\u0435\u0441\u044C") => {
+    if (typeof v === "string") return Array.from(v).map((value) => ({ value }));
+    if (Array.isArray(v)) return v.map((value, i) => ({ value, float: floats.get(v)?.has(i) }));
+    if (v instanceof PyTuple && v.constructor === PyTuple) return v.items.map((value, i) => ({ value, float: floats.get(v.items)?.has(i) }));
+    const result = v instanceof PyObject ? v.iterate(ctx) : void 0;
+    return result ?? fail(`${what} \u043D\u0443\u0436\u0435\u043D \u0441\u043F\u0438\u0441\u043E\u043A, \u043A\u043E\u0440\u0442\u0435\u0436, \u0441\u0442\u0440\u043E\u043A\u0430 \u0438\u043B\u0438 \u043C\u0430\u0441\u0441\u0438\u0432.`);
+  };
+  const makeList = (args) => {
+    if (args.length > 1e4) fail("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
+    const values = args.map((a) => a.value);
+    floats.set(values, new Set(args.flatMap((a, i) => a.float ? [i] : [])));
+    return values;
+  };
+  const makeTuple = (args) => new PyTuple(makeList(args));
+  const scene = new SceneBuilder();
+  let current = { depth: 0, control: /* @__PURE__ */ new Set() };
+  const ctx = {
+    fail,
+    tick,
+    truth,
+    compare: compare2,
+    str: (a) => display2(a.value, a.float),
+    repr: (a) => display2(a.value, a.float, /* @__PURE__ */ new Set(), true),
+    items: (v, what) => items(v, what),
+    list: makeList,
+    tuple: makeTuple,
+    replace: (target, values) => {
+      target.splice(0, target.length, ...values.map((a) => a.value));
+      floats.set(target, new Set(values.flatMap((a, i) => a.float ? [i] : [])));
+    },
+    clock,
+    scene,
+    world: options.world,
+    state: /* @__PURE__ */ new Map(),
+    callUser: (name) => {
+      const fn = functions.get(name) ?? fail(`\u0424\u0443\u043D\u043A\u0446\u0438\u044F \xAB${name}\xBB \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430.`);
+      callFunction(fn, [], { kind: "call", name, args: [] }, current.depth, current.control);
     }
-    if (node.kind === "list") {
-      if (node.items.length > 1e3) fail("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
-      const items = node.items.map((item) => evaluate2(item, scope, depth, control));
-      return done(items.map((item) => item.value), items);
+  };
+  const loadModule = moduleLoader(ctx);
+  const natives = builtinNatives();
+  const typeValue = (name) => {
+    if (name === "float" || name === "bool") return new PyType(name, natives.get(name).fn);
+    if (name === "int" || name === "str") return new PyType(name, (args, kw) => {
+      if (kw.size) fail(`\u0423 ${name}() \u043D\u0435\u0442 \u0438\u043C\u0435\u043D\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.`);
+      return callLegacy(name, args.map((a) => ({ ...a, trail: /* @__PURE__ */ new Set() })), /* @__PURE__ */ new Map(), { kind: "call", name, args: [] }, /* @__PURE__ */ new Set());
+    });
+    if (["print", "input", "len", "range"].includes(name)) return new PyNative(name, (args, kw) => callLegacy(name, args.map((a) => ({ ...a, trail: /* @__PURE__ */ new Set() })), new Map([...kw].map(([k, v]) => [k, { ...v, trail: /* @__PURE__ */ new Set() }])), { kind: "call", name, args: [] }, /* @__PURE__ */ new Set()));
+    return natives.get(name);
+  };
+  natives.set("bool", new PyNative("bool", (args, kw) => {
+    if (kw.size || args.length > 1) fail("bool() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.");
+    return { value: args.length ? truth(args[0].value) : false };
+  }));
+  const loaded = (name) => {
+    operationLimit = 1e5;
+    return loadModule(name);
+  };
+  const sliceOf = (v, s) => {
+    if (typeof v === "string") {
+      const chars = Array.from(v);
+      return { value: s.indices(chars.length, ctx).map((i) => chars[i]).join("") };
     }
-    if (node.kind === "unary") {
-      const child = evaluate2(node.value, scope, depth, control);
-      return done(node.operator === "not" ? !child.value : -number2(child.value), [child]);
-    }
-    if (node.kind === "index") {
-      const target = evaluate2(node.target, scope, depth, control), position = evaluate2(node.index, scope, depth, control), values2 = list(target.value), index = number2(position.value);
-      if (!Number.isInteger(index) || index < -values2.length || index >= values2.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043D\u0434\u0435\u043A\u0441: \u043F\u0435\u0440\u0432\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0438\u043C\u0435\u0435\u0442 \u0438\u043D\u0434\u0435\u043A\u0441 0.");
-      return done(values2[index < 0 ? values2.length + index : index], [target, position]);
-    }
-    if (node.kind === "binary") {
-      const left = evaluate2(node.left, scope, depth, control);
-      if (node.operator === "and" && !left.value || node.operator === "or" && left.value) return done(left.value, [left]);
-      const right = evaluate2(node.right, scope, depth, control), a = left.value, b = right.value, children2 = [left, right];
-      if (node.operator === "and" || node.operator === "or") return done(b, children2);
-      if (node.operator === "==") return done(JSON.stringify(a) === JSON.stringify(b), children2);
-      if (node.operator === "!=") return done(JSON.stringify(a) !== JSON.stringify(b), children2);
-      if (["<", "<=", ">", ">="].includes(node.operator)) {
-        if (typeof a !== typeof b || typeof a !== "number" && typeof a !== "string") fail("\u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0439 \u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0438\u043B\u0438 \u0434\u0432\u0435 \u0441\u0442\u0440\u043E\u043A\u0438.");
-        const lhs2 = a, rhs2 = b;
-        return done(node.operator === "<" ? lhs2 < rhs2 : node.operator === "<=" ? lhs2 <= rhs2 : node.operator === ">" ? lhs2 > rhs2 : lhs2 >= rhs2, children2);
+    const source = v instanceof PyTuple ? items(v) : items(list(v));
+    const picked = s.indices(source.length, ctx).map((i) => source[i]);
+    tick(Math.ceil(picked.length / 20));
+    return { value: v instanceof PyTuple ? makeTuple(picked) : makeList(picked) };
+  };
+  const listMethod = (target, name) => new PyNative(name, (args, kw) => {
+    if (kw.size && !(name === "sort" && [...kw.keys()].every((k) => k === "reverse"))) fail(`\u0423 ${name}() \u043D\u0435\u0442 \u0442\u0430\u043A\u0438\u0445 \u0438\u043C\u0435\u043D\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.`);
+    const meta = floats.get(target) || /* @__PURE__ */ new Set(), current2 = items(target);
+    const arity = (min2, max2 = min2) => {
+      if (args.length < min2 || args.length > max2) fail(`${name}() \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 ${min2 === max2 ? min2 : `\u043E\u0442 ${min2} \u0434\u043E ${max2}`} \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439.`);
+    };
+    const set = (next) => {
+      if (next.length > 1e3) fail("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
+      ctx.replace(target, next);
+    };
+    switch (name) {
+      case "append":
+        arity(1);
+        set([...current2, args[0]]);
+        return;
+      case "extend":
+        arity(1);
+        set([...current2, ...items(args[0].value, "\u0412 extend")]);
+        return;
+      case "insert": {
+        arity(2);
+        const i = number2(args[0].value), at = i < 0 ? Math.max(0, current2.length + i) : Math.min(i, current2.length);
+        current2.splice(at, 0, args[1]);
+        set(current2);
+        return;
       }
-      if (node.operator === "+" && typeof a === "string" && typeof b === "string") return done(a + b, children2);
-      const lhs = number2(a), rhs = number2(b);
-      if (["/", "%"].includes(node.operator) && rhs === 0) fail("\u0414\u0435\u043B\u0438\u0442\u044C \u043D\u0430 \u043D\u043E\u043B\u044C \u043D\u0435\u043B\u044C\u0437\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C.");
-      const result = node.operator === "+" ? lhs + rhs : node.operator === "-" ? lhs - rhs : node.operator === "*" ? lhs * rhs : node.operator === "/" ? lhs / rhs : node.operator === "%" ? (lhs % rhs + rhs) % rhs : lhs ** rhs;
-      if (!Number.isFinite(result) || Math.abs(result) > 1e12) fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435.");
-      return done(result, children2);
+      case "pop": {
+        arity(0, 1);
+        if (!current2.length) fail("pop(): \u0441\u043F\u0438\u0441\u043E\u043A \u043F\u0443\u0441\u0442.");
+        const i = args.length ? number2(args[0].value) : -1;
+        if (i < -current2.length || i >= current2.length) fail("pop(): \u0442\u0430\u043A\u043E\u0433\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442.");
+        const [removed] = current2.splice(i < 0 ? current2.length + i : i, 1);
+        set(current2);
+        return removed;
+      }
+      case "remove": {
+        arity(1);
+        const i = current2.findIndex((a) => equal(a.value, args[0].value));
+        if (i < 0) fail("remove(): \u0442\u0430\u043A\u043E\u0433\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442.");
+        current2.splice(i, 1);
+        set(current2);
+        return;
+      }
+      case "index": {
+        arity(1);
+        const i = current2.findIndex((a) => equal(a.value, args[0].value));
+        if (i < 0) fail(`index(): \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F ${display2(args[0].value, args[0].float, /* @__PURE__ */ new Set(), true)} \u043D\u0435\u0442 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435.`);
+        return { value: i };
+      }
+      case "count":
+        arity(1);
+        return { value: current2.filter((a) => equal(a.value, args[0].value)).length };
+      case "reverse":
+        arity(0);
+        set(current2.reverse());
+        return;
+      case "sort": {
+        arity(0);
+        const reverse = kw.get("reverse");
+        current2.sort((a, b) => {
+          tick();
+          return compare2(a.value, b.value, "<") ? -1 : compare2(b.value, a.value, "<") ? 1 : 0;
+        });
+        if (reverse && truth(reverse.value)) current2.reverse();
+        set(current2);
+        return;
+      }
+      case "copy":
+        arity(0);
+        return { value: makeList(current2) };
+      case "clear":
+        arity(0);
+        set([]);
+        return;
     }
-    const args = node.args.map((arg) => evaluate2(arg, scope, depth, control)), values = args.map((arg) => arg.value);
-    if (node.name === "print") {
-      if (output.length >= 500) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0441\u0442\u0440\u043E\u043A \u0432\u044B\u0432\u043E\u0434\u0430.");
-      output.push(values.map(display2).join(" "));
-      observe(done(null, args));
-      return done(null, args);
+    void meta;
+  });
+  const attribute = (v, name) => {
+    const result = v instanceof PyObject ? v.getattr(name, ctx) : Array.isArray(v) && listMethods.has(name) ? { value: listMethod(v, name) } : void 0;
+    if (result) return result;
+    if (v instanceof PyModule) return fail(`\u0412 \u043C\u043E\u0434\u0443\u043B\u0435 \xAB${v.name}\xBB \u043D\u0435\u0442 \xAB${name}\xBB. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u0432 \u0441\u043F\u0440\u0430\u0432\u043A\u0435 \u043F\u043E \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0430\u043C.`);
+    if (typeof v === "string") return fail(`\u041C\u0435\u0442\u043E\u0434\u044B \u0441\u0442\u0440\u043E\u043A (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, .${name}()) \u0432 Kodik \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F.`);
+    if (Array.isArray(v)) return fail(`\u0423 \u0441\u043F\u0438\u0441\u043A\u0430 \u043D\u0435\u0442 \u043C\u0435\u0442\u043E\u0434\u0430 \xAB${name}\xBB. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u044B: ${[...listMethods].join(", ")}.`);
+    return fail(`\u0423 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F ${v === null ? "None" : v instanceof PyObject ? `\u0442\u0438\u043F\u0430 ${v.typeName}` : typeof v === "number" ? "\u0447\u0438\u0441\u043B\u0430" : "\u044D\u0442\u043E\u0433\u043E \u0442\u0438\u043F\u0430"} \u043D\u0435\u0442 \xAB${name}\xBB.`);
+  };
+  const invoke = (callee, args, kw, node, depth, control) => {
+    const target = callee.value;
+    if (!(target instanceof PyObject) || !target.callable()) return fail(`\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \xAB${node.name}\xBB \u043D\u0435\u043B\u044C\u0437\u044F \u0432\u044B\u0437\u0432\u0430\u0442\u044C \u043A\u0430\u043A \u0444\u0443\u043D\u043A\u0446\u0438\u044E.`);
+    const saved = current;
+    current = { depth, control };
+    let result;
+    try {
+      result = target.call(args, kw, ctx);
+    } finally {
+      current = saved;
     }
-    if (node.name === "input") {
+    const out = result ?? { value: null };
+    const tracked = { ...track(out.value, node, [callee, ...args, ...kw.values()], control), float: typeof out.value === "number" && !!out.float };
+    if (target instanceof PyNative && target.effect) {
+      for (const part of tracked.trail) drawingTrail.add(part);
+      observe({ value: null, trail: drawingTrail });
+    }
+    return tracked;
+  };
+  const callLegacy = (name, args, kw, node, control) => {
+    const done = (value, children2 = [], floating = false) => ({ ...track(value, node, children2, control), float: typeof value === "number" && floating });
+    const values = args.map((arg3) => arg3.value);
+    if (name === "print") {
+      for (const key2 of kw.keys()) if (!["sep", "end", "flush"].includes(key2)) fail(`\u0423 print() \u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430 \xAB${key2}\xBB${key2 === "file" ? ": \u0432\u044B\u0432\u043E\u0434 \u0432 \u0444\u0430\u0439\u043B\u044B \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F" : ""}.`);
+      const option = (key2, fallback) => {
+        const v = kw.get(key2)?.value;
+        if (v === void 0 || v === null) return fallback;
+        return typeof v === "string" ? v : fail(`${key2} \u0432 print() \u2014 \u0441\u0442\u0440\u043E\u043A\u0430 \u0432 \u043A\u0430\u0432\u044B\u0447\u043A\u0430\u0445.`);
+      };
+      write(args.map((arg3) => display2(arg3.value, arg3.float)).join(option("sep", " ")) + option("end", "\n"));
+      const all = [...args, ...kw.values()];
+      observe(done(null, all));
+      return done(null, all);
+    }
+    if (kw.size) fail(`\u0423 ${name}() \u043D\u0435\u0442 \u0438\u043C\u0435\u043D\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432.`);
+    if (name === "input") {
       if (args.length > 1) fail("\u0412 input \u0434\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E \u043E\u0434\u043D\u043E\u0439 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0438.");
+      if (args.length) {
+        write(display2(values[0], args[0].float));
+        observe(done(null, args));
+      }
       if (inputCursor >= inputs.length) fail("\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043A\u043E\u043C\u0430\u043D\u0434 input: \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u044F \u0432\u0432\u043E\u0434 \u0443\u0436\u0435 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.");
       return done(inputs[inputCursor++], args);
     }
-    if (["int", "str", "len"].includes(node.name)) {
-      if (args.length !== 1) fail(`${node.name} \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.`);
-      if (node.name === "str") return done(display2(values[0]), args);
-      if (node.name === "len") return done(list(values[0]).length, args);
-      const value = Number(values[0]);
-      if (!Number.isInteger(value)) fail("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044C \u0432\u0432\u043E\u0434 \u0432 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C int(input()).");
+    if (["int", "str", "len"].includes(name)) {
+      if (args.length === 0 && name !== "len") return done(name === "int" ? 0 : "", args);
+      if (args.length !== 1) fail(`${name} \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.`);
+      if (name === "str") return done(display2(values[0], args[0].float), args);
+      if (name === "len") {
+        const v = values[0];
+        if (v instanceof PyObject) {
+          const size = v.size();
+          if (size === void 0) fail(`\u0423 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u0442\u0438\u043F\u0430 ${v.typeName} \u043D\u0435\u0442 \u0434\u043B\u0438\u043D\u044B.`);
+          return done(size, args);
+        }
+        return done(typeof v === "string" ? Array.from(v).length : list(v).length, args);
+      }
+      const source = values[0];
+      if (typeof source === "string" && !/^[+-]?\d(?:_?\d)*$/.test(source.trim())) fail("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044C \u0432\u0432\u043E\u0434 \u0432 \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E. \u041F\u0440\u043E\u0432\u0435\u0440\u044C int(input()).");
+      if (typeof source !== "number" && typeof source !== "boolean" && typeof source !== "string") fail("\u0412 int \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0447\u0438\u0441\u043B\u043E \u0438\u043B\u0438 \u0441\u0442\u0440\u043E\u043A\u0443 \u0441 \u0446\u0435\u043B\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C.");
+      const value = Math.trunc(typeof source === "string" ? Number(source.trim().replace(/_/g, "")) : Number(source));
+      if (!Number.isFinite(value) || !Number.isSafeInteger(value)) fail("\u0427\u0438\u0441\u043B\u043E \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u044B \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430.");
       return done(value, args);
     }
-    if (node.name === "range") {
+    if (name === "range") {
       if (args.length < 1 || args.length > 3) fail("\u0423 range \u043D\u0443\u0436\u043D\u044B \u0433\u0440\u0430\u043D\u0438\u0446\u044B \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430 \u0438, \u0435\u0441\u043B\u0438 \u043D\u0443\u0436\u043D\u043E, \u0448\u0430\u0433.");
-      const numbers2 = values.map(number2), start = numbers2.length === 1 ? 0 : numbers2[0], end = numbers2.length === 1 ? numbers2[0] : numbers2[1], step = numbers2[2] ?? 1;
-      if (![start, end, step].every(Number.isInteger) || step === 0) fail("\u0412 range \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0446\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u0438 \u043D\u0435\u043D\u0443\u043B\u0435\u0432\u043E\u0439 \u0448\u0430\u0433.");
-      const result = [];
-      for (let current = start; step > 0 ? current < end : current > end; current += step) {
-        if (result.length >= 1e3) fail("\u0414\u0438\u0430\u043F\u0430\u0437\u043E\u043D \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0433\u0440\u0430\u043D\u0438\u0446\u044B range.");
-        result.push(current);
+      const numbers3 = values.map(number2), start = numbers3.length === 1 ? 0 : numbers3[0], end = numbers3.length === 1 ? numbers3[0] : numbers3[1], step = numbers3[2] ?? 1;
+      if (args.some((arg3) => arg3.float) || ![start, end, step].every(Number.isInteger) || step === 0) fail("\u0412 range \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0446\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u0438 \u043D\u0435\u043D\u0443\u043B\u0435\u0432\u043E\u0439 \u0448\u0430\u0433.");
+      const result2 = [];
+      for (let current2 = start; step > 0 ? current2 < end : current2 > end; current2 += step) {
+        if (result2.length >= 1e3) fail("\u0414\u0438\u0430\u043F\u0430\u0437\u043E\u043D \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0433\u0440\u0430\u043D\u0438\u0446\u044B range.");
+        result2.push(current2);
       }
-      return done(result, args);
+      return done(result2, args);
     }
-    if (["forward", "right", "left"].includes(node.name)) {
-      if (args.length !== 1) fail("\u0414\u043B\u044F \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u0438\u043B\u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u0430 \u0443\u043A\u0430\u0436\u0438 \u043E\u0434\u043D\u043E \u0447\u0438\u0441\u043B\u043E.");
-      const amount = number2(values[0]);
-      if (Math.abs(amount) > 1e4) fail("\u0428\u0430\u0433 \u0438\u043B\u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0432\u0435\u043B\u0438\u043A. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0447\u0438\u0441\u043B\u043E.");
-      if (node.name === "forward") {
-        if (segments.length >= 500) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u043B\u0438\u043D\u0438\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0447\u0438\u0441\u043B\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0439.");
-        const nextX = x + Math.cos(heading * Math.PI / 180) * amount, nextY = y + Math.sin(heading * Math.PI / 180) * amount;
-        segments.push({ x1: x, y1: y, x2: nextX, y2: nextY });
-        x = nextX;
-        y = nextY;
-      } else heading += node.name === "left" ? amount : -amount;
-      const result = done(null, args);
-      for (const part of result.trail) drawingTrail.add(part);
-      if (node.name === "forward") observe({ value: null, trail: drawingTrail });
-      return result;
-    }
-    const fn = functions.get(node.name);
-    if (!fn) return fail(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u043E\u043F\u0438\u0448\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u044E \xAB${node.name}\xBB \u0447\u0435\u0440\u0435\u0437 def, \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0437\u043E\u0432\u0438 \u0435\u0451.`);
+    if (args.length !== 1) fail("\u0414\u043B\u044F \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u0438\u043B\u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u0430 \u0443\u043A\u0430\u0436\u0438 \u043E\u0434\u043D\u043E \u0447\u0438\u0441\u043B\u043E.");
+    const amount = number2(values[0]);
+    if (Math.abs(amount) > 1e4) fail("\u0428\u0430\u0433 \u0438\u043B\u0438 \u043F\u043E\u0432\u043E\u0440\u043E\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0432\u0435\u043B\u0438\u043A. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0447\u0438\u0441\u043B\u043E.");
+    if (name === "forward") {
+      if (segments.length >= 500) fail("\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u043B\u0438\u043D\u0438\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0447\u0438\u0441\u043B\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0439.");
+      const nextX = x + Math.cos(heading * Math.PI / 180) * amount, nextY = y + Math.sin(heading * Math.PI / 180) * amount;
+      segments.push({ x1: x, y1: y, x2: nextX, y2: nextY });
+      x = nextX;
+      y = nextY;
+    } else heading += name === "left" ? amount : -amount;
+    const result = done(null, args);
+    for (const part of result.trail) drawingTrail.add(part);
+    if (name === "forward") observe({ value: null, trail: drawingTrail });
+    return result;
+  };
+  const collectLocals = (fn) => {
+    const names = new Set(fn.params);
+    const collect = (body) => {
+      for (const item of body) {
+        if (item.kind === "assign" && !item.index || item.kind === "for") names.add(item.name);
+        if (item.kind === "unpack") item.names.forEach((name) => names.add(name));
+        if (item.kind === "import") item.modules.forEach((m) => names.add(m.alias ?? m.name.split(".")[0]));
+        if (item.kind === "from" && !item.star) item.names.forEach((n) => names.add(n.alias ?? n.name));
+        if (item.kind === "for" || item.kind === "while") collect(item.body);
+        if (item.kind === "if") {
+          item.branches.forEach((branch) => collect(branch.body));
+          collect(item.otherwise);
+        }
+      }
+    };
+    collect(fn.body);
+    return names;
+  };
+  const callFunction = (fn, args, node, depth, control) => {
     if (fn.params.length !== args.length) fail(`\u042D\u0442\u0430 \u0444\u0443\u043D\u043A\u0446\u0438\u044F \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 ${fn.params.length} \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0437\u043E\u0432 \u0438 \u0441\u0442\u0440\u043E\u043A\u0443 def.`);
     if (depth >= 40) fail("\u0424\u0443\u043D\u043A\u0446\u0438\u044F \u0432\u044B\u0437\u044B\u0432\u0430\u0435\u0442 \u0441\u0435\u0431\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0440\u0430\u0437. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0438.");
     const local = new Map(fn.params.map((name, index) => [name, args[index]])), inside = /* @__PURE__ */ new Set([...control, node, fn]);
+    localNames.set(local, collectLocals(fn));
     try {
       execute(fn.body, local, depth + 1, inside);
     } catch (signal) {
-      if (signal instanceof ReturnSignal) return done(signal.result.value, [signal.result, ...args]);
+      if (signal instanceof ReturnSignal) return { ...track(signal.result.value, node, [signal.result, ...args], control), float: typeof signal.result.value === "number" && !!signal.result.float };
       throw signal;
     }
     return track(null, fn, args, inside);
   };
-  const execute = (items, scope, depth, control) => {
-    for (const item of items) {
+  const evaluate2 = (node, scope, depth, control) => {
+    tick();
+    const done = (value, children2 = [], floating = false) => ({ ...track(value, node, children2, control), float: typeof value === "number" && floating });
+    if (node.kind === "literal") return done(node.value, [], node.float);
+    if (node.kind === "name") {
+      const value = lookup(node.name, scope);
+      if (value) return done(value.value, [value], value.float);
+      const builtin = typeValue(node.name);
+      if (builtin) return done(builtin);
+      return fail(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0437\u0430\u0434\u0430\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \xAB${node.name}\xBB.`);
+    }
+    if (node.kind === "list") {
+      if (node.items.length > 1e3) fail("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
+      const items2 = node.items.map((item) => evaluate2(item, scope, depth, control)), values = items2.map((item) => item.value);
+      floats.set(values, new Set(items2.flatMap((item, i) => item.float ? [i] : [])));
+      return done(values, items2);
+    }
+    if (node.kind === "tuple") {
+      const parts = node.items.map((item) => evaluate2(item, scope, depth, control));
+      return done(makeTuple(parts), parts);
+    }
+    if (node.kind === "slice") {
+      const parts = [node.start, node.stop, node.step].map((part) => part ? evaluate2(part, scope, depth, control) : void 0);
+      const bound2 = (part) => {
+        if (!part || part.value === null) return null;
+        const v = number2(part.value);
+        if (part.float || !Number.isInteger(v)) fail("\u0413\u0440\u0430\u043D\u0438\u0446\u044B \u0441\u0440\u0435\u0437\u0430 \u2014 \u0446\u0435\u043B\u044B\u0435 \u0447\u0438\u0441\u043B\u0430.");
+        return v;
+      };
+      return done(new PySlice(bound2(parts[0]), bound2(parts[1]), bound2(parts[2])), parts.filter((p) => !!p));
+    }
+    if (node.kind === "attribute") {
+      const target = evaluate2(node.target, scope, depth, control), result = attribute(target.value, node.name);
+      return done(result.value, [target], result.float);
+    }
+    if (node.kind === "unary") {
+      const child = evaluate2(node.value, scope, depth, control);
+      if (child.value instanceof NdArray && node.operator !== "not") {
+        const r = node.operator === "-" ? arrayNegate(child.value, ctx) : { value: child.value };
+        return done(r.value, [child]);
+      }
+      return done(node.operator === "not" ? !truth(child.value) : node.operator === "+" ? number2(child.value) : -number2(child.value), [child], child.float);
+    }
+    if (node.kind === "compare") {
+      const children2 = [evaluate2(node.operands[0], scope, depth, control)];
+      for (let i = 0; i < node.operators.length; i++) {
+        const right = evaluate2(node.operands[i + 1], scope, depth, control);
+        children2.push(right);
+        if (!compare2(children2[i].value, right.value, node.operators[i])) return done(false, children2);
+      }
+      return done(true, children2);
+    }
+    if (node.kind === "index") {
+      const target = evaluate2(node.target, scope, depth, control), position = evaluate2(node.index, scope, depth, control);
+      if (target.value instanceof NdArray) {
+        const r = arrayGet(target.value, position, ctx);
+        return done(r.value, [target, position], r.float);
+      }
+      if (position.value instanceof PySlice) {
+        const r = sliceOf(target.value, position.value);
+        return done(r.value, [target, position]);
+      }
+      if (position.value instanceof PyTuple) fail("\u041D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 \u0437\u0430\u043F\u044F\u0442\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0443 \u043C\u0430\u0441\u0441\u0438\u0432\u043E\u0432 numpy.");
+      if (target.value instanceof PyTuple) {
+        const parts = items(target.value), index2 = number2(position.value);
+        if (position.float || !Number.isInteger(index2) || index2 < -parts.length || index2 >= parts.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u043D\u0435\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043D\u0434\u0435\u043A\u0441: \u043F\u0435\u0440\u0432\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0438\u043C\u0435\u0435\u0442 \u0438\u043D\u0434\u0435\u043A\u0441 0.");
+        const item = parts[index2 < 0 ? parts.length + index2 : index2];
+        return done(item.value, [target, position], item.float);
+      }
+      if (target.value instanceof PyObject) fail(`\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0442\u0438\u043F\u0430 ${target.value.typeName} \u043D\u0435\u043B\u044C\u0437\u044F \u0438\u043D\u0434\u0435\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u0442\u044C.`);
+      const values = typeof target.value === "string" ? Array.from(target.value) : list(target.value), index = number2(position.value);
+      if (position.float || !Number.isInteger(index) || index < -values.length || index >= values.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043D\u0434\u0435\u043A\u0441: \u043F\u0435\u0440\u0432\u044B\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0438\u043C\u0435\u0435\u0442 \u0438\u043D\u0434\u0435\u043A\u0441 0.");
+      const offset = index < 0 ? values.length + index : index;
+      return done(values[offset], [target, position], floats.get(values)?.has(offset));
+    }
+    if (node.kind === "binary") {
+      const left = evaluate2(node.left, scope, depth, control);
+      if (node.operator === "and" && !truth(left.value) || node.operator === "or" && truth(left.value)) return done(left.value, [left], left.float);
+      const right = evaluate2(node.right, scope, depth, control), a = left.value, b = right.value, children2 = [left, right];
+      if (node.operator === "and" || node.operator === "or") return done(b, children2, right.float);
+      if (a instanceof NdArray || b instanceof NdArray) {
+        const r = arrayBinary(node.operator, left, right, ctx);
+        return done(r.value, children2, r.float);
+      }
+      if (node.operator === "==") return done(equal(a, b), children2);
+      if (node.operator === "!=") return done(!equal(a, b), children2);
+      if (["<", "<=", ">", ">="].includes(node.operator)) {
+        return done(compare2(a, b, node.operator), children2);
+      }
+      if (node.operator === "+" && typeof a === "string" && typeof b === "string") {
+        if (a.length + b.length > 12e3) fail("\u0421\u0442\u0440\u043E\u043A\u0430 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u0430\u044F.");
+        return done(a + b, children2);
+      }
+      if (node.operator === "+" && Array.isArray(a) && Array.isArray(b)) {
+        if (a.length + b.length > 1e3) fail("\u0421\u043F\u0438\u0441\u043E\u043A \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
+        const result2 = [...a, ...b];
+        floats.set(result2, /* @__PURE__ */ new Set([...floats.get(a) || [], ...[...floats.get(b) || []].map((i) => i + a.length)]));
+        return done(result2, children2);
+      }
+      if (node.operator === "+" && a instanceof PyTuple && b instanceof PyTuple) return done(makeTuple([...items(a), ...items(b)]), children2);
+      if (node.operator === "*" && (typeof a === "string" || Array.isArray(a) || typeof b === "string" || Array.isArray(b))) {
+        const sequence = typeof a === "string" || Array.isArray(a) ? left : right, count = sequence === left ? right : left, n = number2(count.value);
+        if (count.float || !Number.isInteger(n)) fail("\u0414\u043B\u044F \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u044F \u0441\u0442\u0440\u043E\u043A\u0438 \u0438\u043B\u0438 \u0441\u043F\u0438\u0441\u043A\u0430 \u043D\u0443\u0436\u043D\u043E \u0446\u0435\u043B\u043E\u0435 \u0447\u0438\u0441\u043B\u043E.");
+        const value = sequence.value, times = Math.max(0, n);
+        if (times * value.length > (typeof value === "string" ? 12e3 : 1e3)) fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u044B\u0439.");
+        if (typeof value === "string") return done(value.repeat(times), children2);
+        if (!value.length) return done([], children2);
+        const result2 = [], metadata2 = /* @__PURE__ */ new Set();
+        for (let i = 0; i < times; i++) for (let j = 0; j < value.length; j++) {
+          if (floats.get(value)?.has(j)) metadata2.add(result2.length);
+          result2.push(value[j]);
+        }
+        floats.set(result2, metadata2);
+        return done(result2, children2);
+      }
+      const lhs = number2(a), rhs = number2(b);
+      if (["/", "//", "%"].includes(node.operator) && rhs === 0) fail("\u0414\u0435\u043B\u0438\u0442\u044C \u043D\u0430 \u043D\u043E\u043B\u044C \u043D\u0435\u043B\u044C\u0437\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C.");
+      let remainder = 0, quotient = 0;
+      if (node.operator === "//" || node.operator === "%") {
+        remainder = lhs % rhs;
+        quotient = (lhs - remainder) / rhs;
+        if (remainder !== 0) {
+          if (remainder < 0 !== rhs < 0) {
+            remainder += rhs;
+            quotient--;
+          }
+        } else remainder = rhs < 0 ? -0 : 0;
+        if (quotient !== 0) {
+          const floor = Math.floor(quotient);
+          quotient = floor + (quotient - floor > 0.5 ? 1 : 0);
+        } else quotient = lhs / rhs < 0 || Object.is(lhs / rhs, -0) ? -0 : 0;
+      }
+      const result = node.operator === "+" ? lhs + rhs : node.operator === "-" ? lhs - rhs : node.operator === "*" ? lhs * rhs : node.operator === "/" ? lhs / rhs : node.operator === "//" ? quotient : node.operator === "%" ? remainder : lhs ** rhs;
+      if (!Number.isFinite(result) || Math.abs(result) > 1e12) fail("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u043E\u0439. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u0435.");
+      return done(result, children2, node.operator === "/" || left.float || right.float || node.operator === "**" && rhs < 0);
+    }
+    const callee = node.callee ? evaluate2(node.callee, scope, depth, control) : void 0;
+    const args = node.args.map((arg3) => evaluate2(arg3, scope, depth, control));
+    const kw = new Map((node.keywords || []).map((item) => [item.name, evaluate2(item.value, scope, depth, control)]));
+    if (callee) {
+      const result = invoke(callee, args, kw, node, depth, control);
+      if (node.callee.kind === "attribute" && node.callee.target.kind === "name" && mutating.has(node.name)) {
+        const owner = lookup(node.callee.target.name, scope);
+        if (owner && Array.isArray(owner.value)) for (const part of result.trail) owner.trail.add(part);
+      }
+      return result;
+    }
+    const bound = lookup(node.name, scope);
+    if (bound && bound.value instanceof PyObject && bound.value.callable()) return invoke(bound, args, kw, node, depth, control);
+    if (legacyBuiltins.has(node.name) && !bound) return callLegacy(node.name, args, kw, node, control);
+    const fn = functions.get(node.name);
+    if (localNames.get(scope)?.has(node.name) || scope.has(node.name) || globals.has(node.name)) fail(`\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \xAB${node.name}\xBB \u043D\u0435\u043B\u044C\u0437\u044F \u0432\u044B\u0437\u0432\u0430\u0442\u044C \u043A\u0430\u043A \u0444\u0443\u043D\u043A\u0446\u0438\u044E.`);
+    if (!fn) {
+      const builtin = typeValue(node.name);
+      if (builtin) return invoke(done(builtin), args, kw, node, depth, control);
+    }
+    if (!fn) return fail(`\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u043E\u043F\u0438\u0448\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u044E \xAB${node.name}\xBB \u0447\u0435\u0440\u0435\u0437 def, \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0437\u043E\u0432\u0438 \u0435\u0451.`);
+    if (kw.size) {
+      const named = fn.params.map((name, i) => args[i]);
+      if (args.length > fn.params.length) fail(`\u042D\u0442\u0430 \u0444\u0443\u043D\u043A\u0446\u0438\u044F \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 ${fn.params.length} \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u043E\u0432. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0432\u044B\u0437\u043E\u0432 \u0438 \u0441\u0442\u0440\u043E\u043A\u0443 def.`);
+      for (const [name, value] of kw) {
+        const at = fn.params.indexOf(name);
+        if (at < 0) fail(`\u0423 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \xAB${node.name}\xBB \u043D\u0435\u0442 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0430 \xAB${name}\xBB.`);
+        if (named[at]) fail(`\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \xAB${name}\xBB \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u0434\u0432\u0430\u0436\u0434\u044B.`);
+        named[at] = value;
+      }
+      const missing = fn.params.find((_, i) => !named[i]);
+      if (missing) fail(`\u0412 \u0432\u044B\u0437\u043E\u0432\u0435 \xAB${node.name}\xBB \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u0434\u043B\u044F \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0430 \xAB${missing}\xBB.`);
+      return callFunction(fn, named, node, depth, control);
+    }
+    return callFunction(fn, args, node, depth, control);
+  };
+  const bindName = (scope, name, value, item, control) => {
+    if (scope.has(name) && item.kind === "unpack") reassigned.add(item);
+    scope.set(name, { ...track(value.value, item, [], control), float: typeof value.value === "number" && !!value.float });
+  };
+  const execute = (items_, scope, depth, control) => {
+    for (const item of items_) {
       tick();
       if (item.kind === "pass") continue;
+      if (item.kind === "import") {
+        for (const m of item.modules) {
+          const { root, leaf } = loaded(m.name);
+          bindName(scope, m.alias ?? m.name.split(".")[0], { value: m.alias ? leaf : root }, item, control);
+        }
+        continue;
+      }
+      if (item.kind === "from") {
+        const { leaf } = loaded(item.module);
+        if (item.star) {
+          for (const name of leaf.exports) bindName(scope, name, leaf.attrs.get(name), item, control);
+          continue;
+        }
+        for (const n of item.names) {
+          let value = leaf.getattr(n.name);
+          if (!value) {
+            try {
+              value = { value: loaded(`${item.module}.${n.name}`).leaf };
+            } catch {
+            }
+          }
+          if (!value) fail(`\u0412 \u043C\u043E\u0434\u0443\u043B\u0435 \xAB${item.module}\xBB \u043D\u0435\u0442 \xAB${n.name}\xBB. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u0432 \u0441\u043F\u0440\u0430\u0432\u043A\u0435 \u043F\u043E \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0430\u043C.`);
+          bindName(scope, n.alias ?? n.name, value, item, control);
+        }
+        continue;
+      }
       if (item.kind === "function") {
+        scope.delete(item.name);
         functions.set(item.name, item);
+        for (const decorator of item.decorators || []) {
+          const head = decorator.kind === "call" ? decorator.callee ?? { kind: "name", name: decorator.name } : decorator;
+          if (head.kind === "name" && !lookup(head.name, scope)) fail("\u0414\u0435\u043A\u043E\u0440\u0430\u0442\u043E\u0440 @ \u0432 Kodik \u2014 \u0442\u043E\u043B\u044C\u043A\u043E @task \u0438\u0437 pyrob.api.");
+          const value = evaluate2(decorator, scope, depth, control).value;
+          if (!(value instanceof PyNative) || !value.decorate) fail("\u0414\u0435\u043A\u043E\u0440\u0430\u0442\u043E\u0440 @ \u0432 Kodik \u2014 \u0442\u043E\u043B\u044C\u043A\u043E @task \u0438\u0437 pyrob.api.");
+          value.decorate(item.name, ctx);
+        }
         continue;
       }
       if (item.kind === "return") {
         if (!depth) fail("\u041F\u043E\u043C\u0435\u0441\u0442\u0438 return \u0432\u043D\u0443\u0442\u0440\u044C \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0441 \u043E\u0442\u0441\u0442\u0443\u043F\u043E\u043C.");
         const result = evaluate2(item.value, scope, depth, control);
-        throw new ReturnSignal(track(result.value, item, [result], control));
+        throw new ReturnSignal({ ...track(result.value, item, [result], control), float: result.float });
       }
       if (item.kind === "expression") {
         evaluate2(item.value, scope, depth, /* @__PURE__ */ new Set([...control, item]));
         continue;
       }
+      if (item.kind === "unpack") {
+        const result = evaluate2(item.value, scope, depth, control), parts = items(result.value, "\u0421\u043F\u0440\u0430\u0432\u0430 \u043E\u0442 =");
+        if (parts.length !== item.names.length) fail(`\u0421\u043B\u0435\u0432\u0430 ${item.names.length} \u0438\u043C\u0451\u043D, \u0430 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439 ${parts.length}. \u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0434\u043E\u043B\u0436\u043D\u043E \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0442\u044C.`);
+        item.names.forEach((name, i) => {
+          if (scope.has(name)) reassigned.add(item);
+          scope.set(name, { ...track(parts[i].value, item, [result], control), float: typeof parts[i].value === "number" && !!parts[i].float });
+        });
+        continue;
+      }
       if (item.kind === "assign") {
-        const result = evaluate2(item.value, scope, depth, control), assigned = track(result.value, item, [result], control);
+        const result = evaluate2(item.value, scope, depth, control), assigned = { ...track(result.value, item, [result], control), float: result.float };
         if (item.index) {
-          const owner = scope.get(item.name) || globals.get(item.name);
+          const owner = scope.get(item.name) || (!localNames.get(scope)?.has(item.name) ? globals.get(item.name) : void 0);
           if (!owner) fail("\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u043E\u0437\u0434\u0430\u0439 \u0441\u043F\u0438\u0441\u043E\u043A, \u0437\u0430\u0442\u0435\u043C \u043C\u0435\u043D\u044F\u0439 \u0435\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442.");
-          const values = list(owner.value), position = evaluate2(item.index, scope, depth, control), index = number2(position.value);
-          if (!Number.isInteger(index) || index < -values.length || index >= values.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442.");
-          values[index < 0 ? values.length + index : index] = result.value;
+          const position = evaluate2(item.index, scope, depth, control);
+          if (owner.value instanceof NdArray) {
+            arraySet(owner.value, position, result, ctx);
+            for (const node of [...assigned.trail, ...position.trail]) owner.trail.add(node);
+            continue;
+          }
+          if (owner.value instanceof PyTuple) fail("\u041A\u043E\u0440\u0442\u0435\u0436 \u043D\u0435\u043B\u044C\u0437\u044F \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u044C. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0441\u043F\u0438\u0441\u043E\u043A [ ].");
+          if (position.value instanceof PySlice) fail("\u0417\u0430\u043C\u0435\u043D\u0430 \u0447\u0430\u0441\u0442\u0438 \u0441\u043F\u0438\u0441\u043A\u0430 \u0447\u0435\u0440\u0435\u0437 \u0441\u0440\u0435\u0437 \u0432 Kodik \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F. \u041C\u0435\u043D\u044F\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u044B \u043F\u043E \u043E\u0434\u043D\u043E\u043C\u0443.");
+          const values = list(owner.value), index = number2(position.value);
+          if (position.float || !Number.isInteger(index) || index < -values.length || index >= values.length) fail("\u0422\u0430\u043A\u043E\u0433\u043E \u0438\u043D\u0434\u0435\u043A\u0441\u0430 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u043D\u0435\u0442.");
+          const offset = index < 0 ? values.length + index : index, metadata2 = floats.get(values) || /* @__PURE__ */ new Set();
+          values[offset] = result.value;
+          if (result.float) metadata2.add(offset);
+          else metadata2.delete(offset);
+          floats.set(values, metadata2);
           for (const node of [...assigned.trail, ...position.trail]) owner.trail.add(node);
         } else {
           if (scope.has(item.name)) reassigned.add(item);
@@ -561,7 +3668,7 @@ function runPythonAst(program, inputs = []) {
         for (const branch of item.branches) {
           const condition = evaluate2(branch.condition, scope, depth, control);
           tests.push(condition);
-          if (condition.value) {
+          if (truth(condition.value)) {
             body = branch.body;
             break;
           }
@@ -571,31 +3678,45 @@ function runPythonAst(program, inputs = []) {
       }
       if (item.kind === "for") {
         const source = evaluate2(item.iterable, scope, depth, control), inside = track(null, item, [source], control).trail;
-        for (const value of list(source.value)) {
+        if (Array.isArray(source.value) || typeof source.value === "string") {
+          const values = typeof source.value === "string" ? Array.from(source.value) : list(source.value);
+          for (const [index, value] of values.entries()) {
+            tick();
+            scope.set(item.name, { ...track(value, item, [source], control), float: floats.get(values)?.has(index) });
+            execute(item.body, scope, depth, inside);
+          }
+          continue;
+        }
+        for (const part of items(source.value, "\u0412 \u0446\u0438\u043A\u043B\u0435 for")) {
           tick();
-          scope.set(item.name, track(value, item, [source], control));
+          scope.set(item.name, { ...track(part.value, item, [source], control), float: typeof part.value === "number" && !!part.float });
           execute(item.body, scope, depth, inside);
         }
         continue;
       }
       while (true) {
         const condition = evaluate2(item.condition, scope, depth, control);
-        if (!condition.value) break;
+        if (!truth(condition.value)) break;
         tick();
         execute(item.body, scope, depth, track(null, item, [condition], control).trail);
       }
     }
   };
+  const finish = (error) => {
+    flushOutput();
+    const shown = scene.finish(clock.now);
+    return { output, segments, operations, observed, reassigned, ...error !== void 0 ? { error } : {}, ...shown ? { scene: shown } : {}, ...clock.now > 0 ? { outputTimes } : {} };
+  };
   try {
     execute(program, globals, 0, /* @__PURE__ */ new Set());
-    return { output, segments, operations, observed, reassigned };
+    return finish();
   } catch (error) {
-    return { output, segments, operations, observed, reassigned, error: error instanceof Error ? error.message : "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u044B \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B." };
+    return finish(error instanceof Error ? error.message : "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u044B \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B.");
   }
 }
-function runCourseProgram(source, inputs = []) {
+function runCourseProgram(source, inputs = [], options = {}) {
   try {
-    return runPythonAst(parseCourseProgram(source), inputs);
+    return runPythonAst(parseCourseProgram(source), inputs, options);
   } catch (error) {
     return { output: [], segments: [], operations: 0, observed: /* @__PURE__ */ new Set(), reassigned: /* @__PURE__ */ new Set(), error: error instanceof Error ? error.message : "\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0437\u0430\u043F\u0438\u0441\u044C Python." };
   }
@@ -603,9 +3724,13 @@ function runCourseProgram(source, inputs = []) {
 
 // src/pythonRuntime.ts
 var namePattern = /^[\p{L}_][\p{L}\p{N}_]*$/u;
-var forbidden = new Set("import from as class async await lambda global nonlocal exec eval open del yield try except finally with raise break continue".split(" "));
+var forbidden = new Set("False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield exec eval open".split(" "));
+var builtins = new Set("print input int str len range forward right left".split(" "));
 function validName2(name) {
   return namePattern.test(name) && !forbidden.has(name) && !name.startsWith("__");
+}
+function variableName(name) {
+  return validName2(name) && !builtins.has(name);
 }
 function syntax(message) {
   throw new Error(message);
@@ -626,7 +3751,7 @@ function tokenize(source) {
       position += string[0].length;
       continue;
     }
-    const number3 = /^\d+(?:\.\d+)?/.exec(rest);
+    const number3 = /^(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?/.exec(rest);
     if (number3) {
       tokens.push(number3[0]);
       position += number3[0].length;
@@ -638,7 +3763,7 @@ function tokenize(source) {
       position += name[0].length;
       continue;
     }
-    const operator = /^(==|!=|>=|<=|\*\*|[+\-*/%><(),\[\]])/.exec(rest);
+    const operator = /^(==|!=|>=|<=|\*\*|\/\/|[+\-*/%><(),\[\].:=])/.exec(rest);
     if (operator) {
       tokens.push(operator[0]);
       position += operator[0].length;
@@ -649,7 +3774,35 @@ function tokenize(source) {
   return tokens;
 }
 function decodeString(token) {
-  return token.slice(1, -1).replace(/\\(n|t|\\|"|')/g, (_match, code) => ({ n: "\n", t: "	", "\\": "\\", '"': '"', "'": "'" })[code]);
+  const source = token.slice(1, -1), escapes = { a: "\x07", b: "\b", f: "\f", n: "\n", r: "\r", t: "	", v: "\v", "\\": "\\", '"': '"', "'": "'" };
+  let result = "";
+  for (let i = 0; i < source.length; i++) {
+    if (source[i] !== "\\") {
+      result += source[i];
+      continue;
+    }
+    const code = source[++i];
+    if (code in escapes) {
+      result += escapes[code];
+      continue;
+    }
+    if (/[0-7]/.test(code)) {
+      const digits = /^[0-7]{1,3}/.exec(source.slice(i))[0];
+      result += String.fromCodePoint(parseInt(digits, 8));
+      i += digits.length - 1;
+      continue;
+    }
+    if (["x", "u", "U"].includes(code)) {
+      const length = code === "x" ? 2 : code === "u" ? 4 : 8, digits = source.slice(i + 1, i + 1 + length), point2 = parseInt(digits, 16);
+      if (digits.length !== length || !/^[0-9a-f]+$/i.test(digits) || point2 > 1114111) syntax("\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043A\u043E\u0434 \u0441\u0438\u043C\u0432\u043E\u043B\u0430 \u043F\u043E\u0441\u043B\u0435 \u043E\u0431\u0440\u0430\u0442\u043D\u043E\u0439 \u043A\u043E\u0441\u043E\u0439 \u0447\u0435\u0440\u0442\u044B.");
+      result += String.fromCodePoint(point2);
+      i += length;
+      continue;
+    }
+    if (code === "N") syntax("\u0418\u043C\u0435\u043D\u0430 \u0441\u0438\u043C\u0432\u043E\u043B\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 \\N \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F. \u0412\u0441\u0442\u0430\u0432\u044C \u0441\u0430\u043C \u0441\u0438\u043C\u0432\u043E\u043B.");
+    result += "\\" + code;
+  }
+  return result;
 }
 var ExpressionParser = class {
   constructor(tokens) {
@@ -663,20 +3816,48 @@ var ExpressionParser = class {
     return this.tokens[this.index++];
   }
   expect(value) {
-    if (this.take() !== value) syntax(`\u041E\u0436\u0438\u0434\u0430\u0435\u0442\u0441\u044F \xAB${value}\xBB. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0441\u043A\u043E\u0431\u043A\u0438 \u0438 \u0437\u0430\u043F\u044F\u0442\u044B\u0435.`);
+    const got = this.take();
+    if (got === value) return;
+    if (got === void 0) syntax(value === ")" || value === "]" ? `\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB${value}\xBB \u0432 \u043A\u043E\u043D\u0446\u0435.` : `\u0412 \u043A\u043E\u043D\u0446\u0435 \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \xAB${value}\xBB.`);
+    syntax(value === "," ? `\u041C\u0435\u0436\u0434\u0443 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F\u043C\u0438 \u043D\u0443\u0436\u043D\u0430 \u0437\u0430\u043F\u044F\u0442\u0430\u044F \u2014 \u043F\u0435\u0440\u0435\u0434 \xAB${got}\xBB.` : `\u041E\u0436\u0438\u0434\u0430\u0435\u0442\u0441\u044F \xAB${value}\xBB, \u0430 \u043D\u0430\u043F\u0438\u0441\u0430\u043D\u043E \xAB${got}\xBB. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0441\u043A\u043E\u0431\u043A\u0438.`);
   }
   parse() {
     const value = this.expression(0);
     if (this.peek()) syntax(`\u041B\u0438\u0448\u043D\u0438\u0439 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \xAB${this.peek()}\xBB \u0432 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0438.`);
     return value;
   }
+  /** A statement-level value: `a, b` without brackets is a tuple, as in Python. */
+  parseTuple() {
+    const first = this.expression(0);
+    if (this.peek() !== ",") {
+      if (this.peek()) syntax(`\u041B\u0438\u0448\u043D\u0438\u0439 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \xAB${this.peek()}\xBB \u0432 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0438.`);
+      return first;
+    }
+    const items = [first];
+    while (this.peek() === ",") {
+      this.take();
+      if (!this.peek()) break;
+      items.push(this.expression(0));
+    }
+    if (this.peek()) syntax(`\u041B\u0438\u0448\u043D\u0438\u0439 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \xAB${this.peek()}\xBB \u0432 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0438.`);
+    return { kind: "tuple", items };
+  }
   expression(minPrecedence) {
     let left = this.primary();
-    const precedence = { or: 1, and: 2, "==": 3, "!=": 3, ">": 3, ">=": 3, "<": 3, "<=": 3, "+": 4, "-": 4, "*": 5, "/": 5, "%": 5, "**": 6 };
+    const precedence = { or: 1, and: 2, "==": 3, "!=": 3, ">": 3, ">=": 3, "<": 3, "<=": 3, "+": 4, "-": 4, "*": 5, "/": 5, "//": 5, "%": 5, "**": 6 };
     while (precedence[this.peek()] && precedence[this.peek()] >= minPrecedence) {
       const operator = this.take();
       const priority = precedence[operator];
       const right = this.expression(priority + (operator === "**" ? 0 : 1));
+      if (priority === 3 && precedence[this.peek()] === 3) {
+        const operands = [left, right], operators = [operator];
+        while (precedence[this.peek()] === 3) {
+          operators.push(this.take());
+          operands.push(this.expression(4));
+        }
+        left = { kind: "compare", operands, operators };
+        continue;
+      }
       left = { kind: "binary", operator, left, right };
     }
     return left;
@@ -685,75 +3866,208 @@ var ExpressionParser = class {
     const token = this.take();
     if (!token) syntax("\u041F\u043E\u0441\u043B\u0435 \u0437\u043D\u0430\u043A\u0430 \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F.");
     let value;
-    if (token === "-" || token === "not") value = { kind: "unary", operator: token, value: this.expression(6) };
+    if (token === "-" || token === "+" || token === "not") value = { kind: "unary", operator: token, value: this.expression(token === "not" ? 3 : 6) };
     else if (token === "(") {
-      value = this.expression(0);
-      this.expect(")");
+      if (this.peek() === ")") {
+        this.take();
+        value = { kind: "tuple", items: [] };
+      } else {
+        value = this.expression(0);
+        if (this.peek() === ",") {
+          const items = [value];
+          while (this.peek() === ",") {
+            this.take();
+            if (this.peek() === ")") break;
+            if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB)\xBB \u0432 \u043A\u043E\u043D\u0446\u0435.");
+            items.push(this.expression(0));
+          }
+          value = { kind: "tuple", items };
+        }
+        this.expect(")");
+      }
     } else if (token === "[") {
       const items = [];
       while (this.peek() !== "]") {
-        if (!this.peek()) syntax("\u041D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442 \u0441\u043F\u0438\u0441\u043E\u043A.");
+        if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB]\xBB \u0443 \u0441\u043F\u0438\u0441\u043A\u0430.");
         items.push(this.expression(0));
+        if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB]\xBB \u0443 \u0441\u043F\u0438\u0441\u043A\u0430.");
         if (this.peek() !== "]") this.expect(",");
       }
       this.expect("]");
       value = { kind: "list", items };
     } else if (/^['"]/.test(token)) value = { kind: "literal", value: decodeString(token) };
-    else if (/^\d/.test(token)) value = { kind: "literal", value: Number(token) };
-    else if (token === "True" || token === "False") value = { kind: "literal", value: token === "True" };
-    else if (validName2(token)) value = { kind: "name", name: token };
+    else if (/^[\d.]/.test(token)) {
+      const floating = /[.eE]/.test(token), number3 = Number(token.replace(/_/g, ""));
+      if (!floating && !/^(?:0(?:_?0)*|[1-9](?:_?\d)*)$/.test(token)) syntax("\u0412 \u0446\u0435\u043B\u043E\u043C \u0447\u0438\u0441\u043B\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043B\u0438\u0448\u043D\u0438\u0439 \u043D\u043E\u043B\u044C \u0432 \u043D\u0430\u0447\u0430\u043B\u0435.");
+      if (!Number.isFinite(number3) || !floating && !Number.isSafeInteger(number3)) syntax("\u0427\u0438\u0441\u043B\u043E \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u044B \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430.");
+      value = { kind: "literal", value: number3, ...floating ? { float: true } : {} };
+    } else if (token === "True" || token === "False") value = { kind: "literal", value: token === "True" };
+    else if (token === "None") value = { kind: "literal", value: null };
+    else if (validName2(token) || token === "__name__") value = { kind: "name", name: token };
     else syntax(`\u041D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u044B\u0439 \u0437\u043D\u0430\u043A \xAB${token}\xBB.`);
-    while (this.peek() === "(" || this.peek() === "[") {
-      if (this.peek() === "(") {
+    while (this.peek() === "(" || this.peek() === "[" || this.peek() === ".") {
+      if (this.peek() === ".") {
         this.take();
-        if (value.kind !== "name") syntax("\u041F\u0435\u0440\u0435\u0434 \u0441\u043A\u043E\u0431\u043A\u0430\u043C\u0438 \u0432\u044B\u0437\u043E\u0432\u0430 \u0437\u0430\u043F\u0438\u0448\u0438 \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
-        const args = [];
+        const name = this.take();
+        if (!name || !validName2(name)) syntax("\u041F\u043E\u0441\u043B\u0435 \u0442\u043E\u0447\u043A\u0438 \u0437\u0430\u043F\u0438\u0448\u0438 \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0438\u043B\u0438 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u0438\u0437 \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0438.");
+        value = { kind: "attribute", target: value, name };
+      } else if (this.peek() === "(") {
+        this.take();
+        if (value.kind !== "name" && value.kind !== "attribute") syntax("\u041F\u0435\u0440\u0435\u0434 \u0441\u043A\u043E\u0431\u043A\u0430\u043C\u0438 \u0432\u044B\u0437\u043E\u0432\u0430 \u0437\u0430\u043F\u0438\u0448\u0438 \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
+        const args = [], keywords = [];
         while (this.peek() !== ")") {
-          if (!this.peek()) syntax("\u041D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442 \u0432\u044B\u0437\u043E\u0432 \u0444\u0443\u043D\u043A\u0446\u0438\u0438.");
-          args.push(this.expression(0));
+          if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB)\xBB \u0432 \u043A\u043E\u043D\u0446\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u044B.");
+          if (validName2(this.peek()) && this.tokens[this.index + 1] === "=") {
+            const name = this.take();
+            this.take();
+            if (keywords.some((item) => item.name === name)) syntax(`\u0410\u0440\u0433\u0443\u043C\u0435\u043D\u0442 \xAB${name}\xBB \u0443\u043A\u0430\u0437\u0430\u043D \u0434\u0432\u0430\u0436\u0434\u044B.`);
+            keywords.push({ name, value: this.expression(0) });
+          } else {
+            if (keywords.length) syntax("\u041E\u0431\u044B\u0447\u043D\u044B\u0435 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u044B \u043F\u0438\u0448\u0443\u0442\u0441\u044F \u0434\u043E \u0438\u043C\u0435\u043D\u043E\u0432\u0430\u043D\u043D\u044B\u0445 (\u0438\u043C\u044F=\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435).");
+            args.push(this.expression(0));
+          }
+          if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB)\xBB \u0432 \u043A\u043E\u043D\u0446\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u044B.");
           if (this.peek() !== ")") this.expect(",");
         }
         this.expect(")");
-        value = { kind: "call", name: value.name, args };
+        value = value.kind === "name" ? { kind: "call", name: value.name, args } : { kind: "call", name: value.name, args, callee: value };
+        if (keywords.length) value.keywords = keywords;
       } else {
         this.take();
-        const index = this.expression(0);
+        const items = [this.subscript()];
+        let trailing = false;
+        while (this.peek() === ",") {
+          this.take();
+          if (this.peek() === "]") {
+            trailing = true;
+            break;
+          }
+          items.push(this.subscript());
+        }
         this.expect("]");
-        value = { kind: "index", target: value, index };
+        value = { kind: "index", target: value, index: items.length === 1 && !trailing ? items[0] : { kind: "tuple", items } };
       }
     }
     return value;
+  }
+  /** One position inside [ ]: an index or a slice start:stop:step. */
+  subscript() {
+    let start;
+    if (!this.peek()) syntax("\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u0441\u043A\u043E\u0431\u043A\u0438 \xAB]\xBB.");
+    if (this.peek() !== ":") {
+      start = this.expression(0);
+      if (this.peek() !== ":") return start;
+    }
+    this.take();
+    let stop, step;
+    if (this.peek() && ![":", "]", ","].includes(this.peek())) stop = this.expression(0);
+    if (this.peek() === ":") {
+      this.take();
+      if (this.peek() && !["]", ","].includes(this.peek())) step = this.expression(0);
+    }
+    return { kind: "slice", ...start ? { start } : {}, ...stop ? { stop } : {}, ...step ? { step } : {} };
   }
 };
 function expression(source) {
   return new ExpressionParser(tokenize(source)).parse();
 }
+function tupleExpression(source, line) {
+  try {
+    return new ExpressionParser(tokenize(source)).parseTuple();
+  } catch (e) {
+    const message = e.message;
+    throw new Error(message.startsWith("\u0421\u0442\u0440\u043E\u043A\u0430") ? message : `\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: ${message[0].toLowerCase()}${message.slice(1)}`);
+  }
+}
+function lineExpression(source, line) {
+  try {
+    return expression(source);
+  } catch (e) {
+    const message = e.message;
+    throw new Error(message.startsWith("\u0421\u0442\u0440\u043E\u043A\u0430") ? message : `\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: ${message[0].toLowerCase()}${message.slice(1)}`);
+  }
+}
+function withoutComment(raw) {
+  let quote = "", escaped = false;
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quote && char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = "";
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "#") return raw.slice(0, i);
+  }
+  return raw;
+}
 function parseCourseProgram(source) {
   if (source.length > 12e3) syntax("\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043B\u0438\u043D\u043D\u0430\u044F \u0434\u043B\u044F \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u0437\u0430\u043F\u0443\u0441\u043A\u0430.");
-  const lines = source.replace(/\t/g, "    ").split(/\r?\n/).map((raw, index) => ({ number: index + 1, indent: /^ */.exec(raw)[0].length, text: raw.trim() })).filter((line) => line.text && !line.text.startsWith("#"));
+  const lines = source.split(/\r?\n/).map((raw) => raw.replace(/^[ \t]+/, (lead) => lead.replace(/\t/g, "    "))).map((raw, index) => ({ number: index + 1, indent: /^ */.exec(raw)[0].length, text: withoutComment(raw).trim() })).filter((line) => line.text);
   if (!lines.length) syntax("\u041D\u0430\u043F\u0438\u0448\u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 \u0434\u043E\u0431\u0430\u0432\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u044B, \u0437\u0430\u0442\u0435\u043C \u043D\u0430\u0436\u043C\u0438 \xAB\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C\xBB.");
   if (lines.length > 250) syntax("\u041E\u0441\u0442\u0430\u0432\u044C \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 250 \u0441\u0442\u0440\u043E\u043A.");
   if (lines.some((line) => line.indent % 4 !== 0)) syntax("\u0414\u043B\u044F \u0432\u043B\u043E\u0436\u0435\u043D\u043D\u043E\u0439 \u043A\u043E\u043C\u0430\u043D\u0434\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u043E\u0442\u0441\u0442\u0443\u043F \u0432 4 \u043F\u0440\u043E\u0431\u0435\u043B\u0430.");
   let cursor = 0;
-  const block = (indent) => {
+  const block = (indent, functionDepth = 0) => {
     const result = [];
+    let decorators = [];
     while (cursor < lines.length) {
       const line = lines[cursor];
       if (line.indent < indent) break;
       if (line.indent > indent) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u044B\u0439 \u043E\u0442\u0441\u0442\u0443\u043F.`);
       if (line.text === "else:" || line.text.startsWith("elif ")) break;
       cursor++;
-      const nested = () => {
-        const body = block(indent + 4);
+      if (decorators.length && !line.text.startsWith("def ") && !line.text.startsWith("@")) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u043E\u0441\u043B\u0435 \u0434\u0435\u043A\u043E\u0440\u0430\u0442\u043E\u0440\u0430 @ \u043D\u0443\u0436\u043D\u0430 \u0441\u0442\u0440\u043E\u043A\u0430 def.`);
+      const nested = (functionBody = false) => {
+        const body = block(indent + 4, functionDepth + (functionBody ? 1 : 0));
         if (!body.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u043E\u0441\u043B\u0435 \u0434\u0432\u043E\u0435\u0442\u043E\u0447\u0438\u044F \u043D\u0443\u0436\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u0441 \u043E\u0442\u0441\u0442\u0443\u043F\u043E\u043C.`);
         return body;
       };
       let match;
+      if (match = /^@(.+)$/.exec(line.text)) {
+        decorators.push(lineExpression(match[1], line));
+        continue;
+      }
+      if (match = /^import\s+(.+)$/.exec(line.text)) {
+        const modules = match[1].split(",").map((part) => {
+          const item = /^\s*([\p{L}_][\p{L}\p{N}_]*(?:\s*\.\s*[\p{L}_][\p{L}\p{N}_]*)*)(?:\s+as\s+([\p{L}_][\p{L}\p{N}_]*))?\s*$/u.exec(part);
+          if (!item || item[2] && !validName2(item[2])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u0437\u0430\u043F\u0438\u0448\u0438 \u0438\u043C\u043F\u043E\u0440\u0442 \u043A\u0430\u043A import \u0438\u043C\u044F \u0438\u043B\u0438 import \u0438\u043C\u044F as \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0435_\u0438\u043C\u044F.`);
+          return { name: item[1].replace(/\s+/g, ""), ...item[2] ? { alias: item[2] } : {} };
+        });
+        result.push({ kind: "import", modules });
+        continue;
+      }
+      if (match = /^from\s+([\p{L}_][\p{L}\p{N}_]*(?:\s*\.\s*[\p{L}_][\p{L}\p{N}_]*)*)\s+import\s+(.+)$/u.exec(line.text)) {
+        const module = match[1].replace(/\s+/g, ""), list2 = match[2].trim().replace(/^\((.*)\)$/, "$1").trim();
+        if (list2 === "*") {
+          result.push({ kind: "from", module, names: [], star: true });
+          continue;
+        }
+        const names = list2.split(",").filter((part, i, all) => part.trim() || i < all.length - 1).map((part) => {
+          const item = /^\s*([\p{L}_][\p{L}\p{N}_]*)(?:\s+as\s+([\p{L}_][\p{L}\p{N}_]*))?\s*$/u.exec(part);
+          if (!item || !validName2(item[1]) || item[2] && !validName2(item[2])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u0437\u0430\u043F\u0438\u0448\u0438 \u0438\u043C\u043F\u043E\u0440\u0442 \u043A\u0430\u043A from \u043C\u043E\u0434\u0443\u043B\u044C import \u0438\u043C\u044F, \u0438\u043C\u044F2 \u0438\u043B\u0438 from \u043C\u043E\u0434\u0443\u043B\u044C import *.`);
+          return { name: item[1], ...item[2] ? { alias: item[2] } : {} };
+        });
+        result.push({ kind: "from", module, names });
+        continue;
+      }
+      if (/^(import|from)/.test(line.text)) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u0437\u0430\u043F\u0438\u0448\u0438 \u0438\u043C\u043F\u043E\u0440\u0442 \u043A\u0430\u043A import \u043C\u043E\u0434\u0443\u043B\u044C \u0438\u043B\u0438 from \u043C\u043E\u0434\u0443\u043B\u044C import \u0438\u043C\u044F.`);
       if (match = /^if\s+(.+):$/.exec(line.text)) {
-        const branches = [{ condition: expression(match[1]), body: nested() }];
+        const branches = [{ condition: lineExpression(match[1], line), body: nested() }];
         while (lines[cursor]?.indent === indent && (match = /^elif\s+(.+):$/.exec(lines[cursor].text))) {
+          const elifLine = lines[cursor];
           cursor++;
-          branches.push({ condition: expression(match[1]), body: nested() });
+          branches.push({ condition: lineExpression(match[1], elifLine), body: nested() });
         }
         let otherwise = [];
         if (lines[cursor]?.indent === indent && lines[cursor].text === "else:") {
@@ -764,41 +4078,71 @@ function parseCourseProgram(source) {
         continue;
       }
       if (match = /^for\s+([\p{L}_][\p{L}\p{N}_]*)\s+in\s+(.+):$/u.exec(line.text)) {
-        if (!validName2(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u0441\u0447\u0451\u0442\u0447\u0438\u043A\u0430.`);
-        result.push({ kind: "for", name: match[1], iterable: expression(match[2]), body: nested() });
+        if (!variableName(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u0441\u0447\u0451\u0442\u0447\u0438\u043A\u0430.`);
+        result.push({ kind: "for", name: match[1], iterable: lineExpression(match[2], line), body: nested() });
         continue;
       }
       if (match = /^while\s+(.+):$/.exec(line.text)) {
-        result.push({ kind: "while", condition: expression(match[1]), body: nested() });
+        result.push({ kind: "while", condition: lineExpression(match[1], line), body: nested() });
         continue;
       }
       if (match = /^def\s+([\p{L}_][\p{L}\p{N}_]*)\s*\(([^()]*)\):$/u.exec(line.text)) {
+        if (functionDepth) syntax("\u0412\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F. \u041E\u043F\u0438\u0448\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E.");
         const params = match[2].trim() ? match[2].split(",").map((item) => item.trim()) : [];
-        if (!validName2(match[1]) || params.some((name) => !validName2(name)) || new Set(params).size !== params.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0438 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B.`);
-        result.push({ kind: "function", name: match[1], params, body: nested() });
+        if (!variableName(match[1]) || params.some((name) => !variableName(name)) || new Set(params).size !== params.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u0440\u043E\u0432\u0435\u0440\u044C \u0438\u043C\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0438 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B; \u0438\u043C\u0435\u043D\u0430 \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u0430\u043D\u0434 \u043D\u0435 \u043F\u0435\u0440\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0439.`);
+        const fn = { kind: "function", name: match[1], params, body: nested(true) };
+        if (decorators.length) {
+          fn.decorators = decorators;
+          decorators = [];
+        }
+        result.push(fn);
         continue;
       }
       if (match = /^return\s+(.+)$/.exec(line.text)) {
-        result.push({ kind: "return", value: expression(match[1]) });
+        result.push({ kind: "return", value: tupleExpression(match[1], line) });
+        continue;
+      }
+      if (line.text === "return") {
+        result.push({ kind: "return", value: { kind: "literal", value: null } });
         continue;
       }
       if (line.text === "pass") {
         result.push({ kind: "pass" });
         continue;
       }
-      if (match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*=\s*(.+)$/u.exec(line.text)) {
-        if (!validName2(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439.`);
-        result.push({ kind: "assign", name: match[1], index: match[2] ? expression(match[2]) : void 0, value: expression(match[3]) });
+      const indexOf = (name, inside) => {
+        const target = lineExpression(`${name}[${inside}]`, line);
+        if (target.kind !== "index" || target.target.kind !== "name") syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043C\u0435\u043D\u044F\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0442\u0430\u043A: \u0438\u043C\u044F[\u0438\u043D\u0434\u0435\u043A\u0441] = \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.`);
+        return target.index;
+      };
+      if (match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*(\*\*|\/\/|[+\-*/%])=\s*(.+)$/u.exec(line.text)) {
+        if (!variableName(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439; \u0438\u043C\u0435\u043D\u0430 \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u0430\u043D\u0434 \u043D\u0435 \u043F\u0435\u0440\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0439.`);
+        const index = match[2] ? indexOf(match[1], match[2]) : void 0, current = index ? { kind: "index", target: { kind: "name", name: match[1] }, index } : { kind: "name", name: match[1] };
+        result.push({ kind: "assign", name: match[1], index, value: { kind: "binary", operator: match[3], left: current, right: lineExpression(match[4], line) } });
         continue;
       }
+      if (match = /^([\p{L}_][\p{L}\p{N}_]*(?:\s*,\s*[\p{L}_][\p{L}\p{N}_]*)+)\s*,?\s*=(?!=)\s*(.+)$/u.exec(line.text)) {
+        const names = match[1].split(",").map((name) => name.trim());
+        if (names.some((name) => !variableName(name)) || new Set(names).size !== names.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439; \u0438\u043C\u0435\u043D\u0430 \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u0430\u043D\u0434 \u043D\u0435 \u043F\u0435\u0440\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0439.`);
+        result.push({ kind: "unpack", names, value: tupleExpression(match[2], line) });
+        continue;
+      }
+      if (match = /^([\p{L}_][\p{L}\p{N}_]*)(?:\[(.+)\])?\s*=\s*(.+)$/u.exec(line.text)) {
+        if (!variableName(match[1])) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u0438\u043C\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439; \u0438\u043C\u0435\u043D\u0430 \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u0430\u043D\u0434 \u043D\u0435 \u043F\u0435\u0440\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0439.`);
+        result.push({ kind: "assign", name: match[1], index: match[2] ? indexOf(match[1], match[2]) : void 0, value: tupleExpression(match[3], line) });
+        continue;
+      }
+      if (/^[\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*)+\s*=(?!=)/u.test(line.text)) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043C\u0435\u043D\u044F\u0442\u044C \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0447\u0435\u0440\u0435\u0437 \u0442\u043E\u0447\u043A\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u2014 \u0432\u044B\u0437\u043E\u0432\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u044E, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 t.color("red").`);
       if (/^(if|elif|else|while|for|def)\b/.test(line.text)) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u043F\u043E\u0441\u043B\u0435 \u0443\u0441\u043B\u043E\u0432\u0438\u044F, \u0446\u0438\u043A\u043B\u0430 \u0438\u043B\u0438 def \u043D\u0443\u0436\u043D\u044B \u0434\u0432\u043E\u0435\u0442\u043E\u0447\u0438\u0435 \u0438 \u0441\u0442\u0440\u043E\u043A\u0430 \u0441 \u043E\u0442\u0441\u0442\u0443\u043F\u043E\u043C.`);
-      const value = expression(line.text);
+      const value = lineExpression(line.text, line);
       if (value.kind !== "call") syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${line.number}: \u0437\u0434\u0435\u0441\u044C \u043D\u0443\u0436\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u0438\u043B\u0438 \u043F\u0440\u0438\u0441\u0432\u0430\u0438\u0432\u0430\u043D\u0438\u0435.`);
       result.push({ kind: "expression", value });
     }
+    if (decorators.length) syntax("\u041F\u043E\u0441\u043B\u0435 \u0434\u0435\u043A\u043E\u0440\u0430\u0442\u043E\u0440\u0430 @ \u043D\u0443\u0436\u043D\u0430 \u0441\u0442\u0440\u043E\u043A\u0430 def.");
     return result;
   };
   const program = block(0);
+  if (cursor < lines.length && lines[cursor].text.startsWith("@")) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${lines[cursor].number}: \u043F\u043E\u0441\u043B\u0435 \u0434\u0435\u043A\u043E\u0440\u0430\u0442\u043E\u0440\u0430 @ \u043D\u0443\u0436\u043D\u0430 \u0441\u0442\u0440\u043E\u043A\u0430 def.`);
   if (cursor < lines.length) syntax(`\u0421\u0442\u0440\u043E\u043A\u0430 ${lines[cursor].number}: else \u0438\u043B\u0438 elif \u0434\u043E\u043B\u0436\u043D\u044B \u0438\u0434\u0442\u0438 \u0441\u0440\u0430\u0437\u0443 \u043F\u043E\u0441\u043B\u0435 if.`);
   return program;
 }
@@ -884,7 +4228,7 @@ var rows = [
   [99, "drawing", "function,loop", "function,loop", "call:forward kind:function nested_loop"],
   [100, "drawing", "function,loop", "function,loop", "call:forward params:1 kind:for"]
 ];
-var ids = (text3) => text3 ? text3.split(",") : [];
+var ids = (text4) => text4 ? text4.split(",") : [];
 var lessonObjectives = Object.fromEntries(rows.map(([id, primarySkill, practice, prerequisites, rules]) => [id, { skills: { primarySkill, teaches: [primarySkill], practices: ids(practice), requires: ids(prerequisites) }, rules: rules.split(" ") }]));
 
 // src/courseMaterials.ts
@@ -1010,7 +4354,7 @@ var scaffolds = {
   90: { prefix: "", suffix: "(60)", answer: "forward", choices: ["forward", "right", "left"] }
 };
 function buildExtendedLessons(seeds) {
-  const result = seeds.flatMap(({ id: chapter, tasks }) => tasks.map(([id, key, title, goal, code, hint, scenarios]) => {
+  const result = seeds.flatMap(({ id: chapter, tasks }) => tasks.map(([id, key2, title, goal, code, hint, scenarios]) => {
     if (!lessonObjectives[id]) throw new Error(`Missing objectives for stable lesson ${id}`);
     const inputs = scenarios || [[]];
     const reference = runCourseProgram(code, inputs[0]);
@@ -1019,7 +4363,7 @@ function buildExtendedLessons(seeds) {
     const material = courseMaterials[chapter];
     return {
       id,
-      key,
+      key: key2,
       chapter,
       title,
       goal,
@@ -1055,8 +4399,8 @@ var extendedLessons = buildExtendedLessons(extendedSeeds);
 // src/course.ts
 var original = (id) => lessons2.find((l) => l.id === id);
 var emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } };
-var text2 = (value) => ({ type: "text", fields: { TEXT: value } });
-var print2 = (value) => ({ type: "text_print", inputs: { TEXT: { block: text2(value) } } });
+var text3 = (value) => ({ type: "text", fields: { TEXT: value } });
+var print2 = (value) => ({ type: "text_print", inputs: { TEXT: { block: text3(value) } } });
 var state2 = (block) => ({ blocks: { languageVersion: 0, blocks: [{ ...block, x: 24, y: 28 }] } });
 var greeting = (id, title, phrase) => ({ ...original(1), id, title, goal: `\u0421\u0434\u0435\u043B\u0430\u0439 \u0442\u0430\u043A, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0430: ${phrase}`, instruction: "\u041A\u043E\u043C\u0430\u043D\u0434\u0430 \xAB\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0442\u044C\xBB \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442 \u0442\u043E, \u0447\u0442\u043E \u043D\u0430\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u0432\u043D\u0443\u0442\u0440\u0438 \u043D\u0435\u0451.", starter: emptyWorkspace, solution: state2(print2(phrase)), expectedOutput: [phrase], hint: "\u0414\u043E\u0431\u0430\u0432\u044C \xAB\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0442\u044C\xBB, \u0430 \u0432\u043D\u0443\u0442\u0440\u044C \u2014 \xAB\u0422\u0435\u043A\u0441\u0442\xBB. \u0412\u043F\u0438\u0448\u0438 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0431\u0435\u0437 \u043A\u0430\u0432\u044B\u0447\u0435\u043A: \u0431\u043B\u043E\u043A \u0434\u043E\u0431\u0430\u0432\u0438\u0442 \u0438\u0445 \u0432 Python \u0441\u0430\u043C.", starterHint: "\u0421\u043E\u0431\u0435\u0440\u0438 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 \u0438 \u0441\u043A\u0430\u0436\u0438 \u0435\u0439, \u0447\u0442\u043E \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C.", success: "\u041A\u043E\u043C\u0430\u043D\u0434\u0430 print \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442 \u0442\u0435\u043A\u0441\u0442 \u0432 \u0441\u043A\u043E\u0431\u043A\u0430\u0445. \u041A\u0430\u0432\u044B\u0447\u043A\u0438 \u043E\u0442\u043C\u0435\u0447\u0430\u044E\u0442 \u043D\u0430\u0447\u0430\u043B\u043E \u0438 \u043A\u043E\u043D\u0435\u0446 \u0442\u0435\u043A\u0441\u0442\u0430.", allowed: ["text_print", "text"], codeNote: "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0442\u044C \u2192 print. \u0422\u0435\u043A\u0441\u0442 \u2192 \u0441\u043B\u043E\u0432\u0430 \u0432 \u043A\u0430\u0432\u044B\u0447\u043A\u0430\u0445. \u0421\u043A\u043E\u0431\u043A\u0438 \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u044E\u0442 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 \u0438 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435." });
 var chapters = [
@@ -1178,15 +4522,25 @@ var children = (node) => {
     case "while":
       return [node.condition, ...node.body];
     case "function":
-      return node.body;
+      return [...node.decorators || [], ...node.body];
     case "list":
       return node.items;
     case "binary":
       return [node.left, node.right];
+    case "compare":
+      return node.operands;
     case "call":
-      return node.args;
+      return [...node.callee ? [node.callee] : [], ...node.args, ...(node.keywords || []).map((item) => item.value)];
     case "index":
       return [node.target, node.index];
+    case "attribute":
+      return [node.target];
+    case "tuple":
+      return node.items;
+    case "slice":
+      return [node.start, node.stop, node.step].filter((part) => !!part);
+    case "unpack":
+      return [node.value];
     default:
       return [];
   }
@@ -1200,7 +4554,7 @@ function structureError(program, run, rules) {
     const [type, value] = rule.split(":");
     let valid = false;
     if (type === "kind") valid = relevant.some((node) => node.kind === value);
-    if (type === "op") valid = relevant.some((node) => node.kind === "binary" && node.operator === value);
+    if (type === "op") valid = relevant.some((node) => node.kind === "binary" && node.operator === value || node.kind === "compare" && node.operators.includes(value));
     if (type === "call") valid = relevant.some((node) => node.kind === "call" && node.name === value);
     if (type === "assign") valid = relevant.filter((node) => node.kind === "assign").length >= Number(value);
     if (type === "print" || type === "input") valid = relevant.filter((node) => node.kind === "call" && node.name === type).length >= Number(value);
@@ -1240,7 +4594,7 @@ function summarizePython(program) {
 }
 
 // src/extendedChecker.ts
-var equal = (actual, reference, drawing) => !actual.error && !reference.error && actual.output.length === reference.output.length && actual.output.every((value, i) => value === reference.output[i]) && (!drawing || actual.segments.length === reference.segments.length && actual.segments.every((part, i) => ["x1", "y1", "x2", "y2"].every((key) => Math.abs(part[key] - reference.segments[i][key]) < 0.02)));
+var equal2 = (actual, reference, drawing2) => !actual.error && !reference.error && actual.output.length === reference.output.length && actual.output.every((value, i) => value === reference.output[i]) && (!drawing2 || actual.segments.length === reference.segments.length && actual.segments.every((part, i) => ["x1", "y1", "x2", "y2"].every((key2) => Math.abs(part[key2] - reference.segments[i][key2]) < 0.02)));
 var clone = (value) => JSON.parse(JSON.stringify(value));
 var dataValue = (node) => {
   if (node.kind !== "assign" || node.index) return void 0;
@@ -1249,7 +4603,7 @@ var dataValue = (node) => {
   if (node.value.kind === "list" && node.value.items.every((item) => item.kind === "literal")) return node.value.items.map((item) => item.kind === "literal" ? item.value : null);
 };
 var changed = (value) => Array.isArray(value) ? value.map((part, i) => typeof part === "number" ? part + i + 2 : typeof part === "string" ? `${part}!` : part) : typeof value === "number" ? value > 10 ? value - 7 : value + 2 : typeof value === "string" ? `${value}!` : value;
-function generalizes(actual, reference, inputs, drawing) {
+function generalizes(actual, reference, inputs, drawing2) {
   const seen = /* @__PURE__ */ new Set();
   for (let i = 0; i < reference.length; i++) {
     const value = dataValue(reference[i]);
@@ -1261,7 +4615,7 @@ function generalizes(actual, reference, inputs, drawing) {
     const expected = clone(reference), candidate = clone(actual), replacement = changed(value);
     expected[i].value = { kind: "literal", value: replacement };
     candidate[candidateIndex].value = { kind: "literal", value: replacement };
-    if (!equal(runPythonAst(candidate, inputs), runPythonAst(expected, inputs), drawing)) return false;
+    if (!equal2(runPythonAst(candidate, inputs), runPythonAst(expected, inputs), drawing2)) return false;
     if (seen.size >= 3) break;
   }
   const refRun = runPythonAst(reference, inputs), actualRun = runPythonAst(actual, inputs);
@@ -1273,11 +4627,11 @@ function generalizes(actual, reference, inputs, drawing) {
     for (const n of [1, 3, 7]) {
       const args = fn.params.map((_, index) => ({ kind: "literal", value: n + index }));
       const calls = [...refRun.observed].filter((node) => node.kind === "call" && node.name === fn.name);
-      const stringArgs = calls.some((node) => node.kind === "call" && node.args.some((arg) => arg.kind === "literal" && typeof arg.value === "string"));
+      const stringArgs = calls.some((node) => node.kind === "call" && node.args.some((arg3) => arg3.kind === "literal" && typeof arg3.value === "string"));
       const probeArgs = stringArgs ? args.map((_, index) => ({ kind: "literal", value: `\u0413\u043E\u0441\u0442\u044C${n + index}` })) : args;
       const returns = [...refRun.observed].some((node) => node.kind === "return");
       const call2 = (name) => ({ kind: "expression", value: returns ? { kind: "call", name: "print", args: [{ kind: "call", name, args: probeArgs }] } : { kind: "call", name, args: probeArgs } });
-      if (!equal(runPythonAst([...actual, call2(candidate.name)], inputs), runPythonAst([...reference, call2(fn.name)], inputs), drawing)) return false;
+      if (!equal2(runPythonAst([...actual, call2(candidate.name)], inputs), runPythonAst([...reference, call2(fn.name)], inputs), drawing2)) return false;
     }
   }
   return true;
@@ -1299,7 +4653,7 @@ function checkExtendedLesson(lesson, answer) {
   const structural = structureError(ast, primary, lesson.extended.rules);
   if (structural) return failed(structural);
   for (const inputs of lesson.extended.inputs) {
-    if (!equal(runCourseProgram(source, inputs), runCourseProgram(lesson.codeAnswer, inputs), !!lesson.extended.drawing)) return failed(lesson.extended.drawing ? "\u0420\u0438\u0441\u0443\u043D\u043E\u043A \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u043B\u0438\u043D\u044B, \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u044B \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043B\u0438\u043D\u0438\u0439." : "\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0434\u0430\u0451\u0442 \u0434\u0440\u0443\u0433\u043E\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439.");
+    if (!equal2(runCourseProgram(source, inputs), runCourseProgram(lesson.codeAnswer, inputs), !!lesson.extended.drawing)) return failed(lesson.extended.drawing ? "\u0420\u0438\u0441\u0443\u043D\u043E\u043A \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u043B\u0438\u043D\u044B, \u043F\u043E\u0432\u043E\u0440\u043E\u0442\u044B \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043B\u0438\u043D\u0438\u0439." : "\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0434\u0430\u0451\u0442 \u0434\u0440\u0443\u0433\u043E\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0438 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439.");
   }
   if (!generalizes(ast, parseCourseProgram(lesson.codeAnswer), lesson.extended.inputs[0], !!lesson.extended.drawing)) return failed("\u0421 \u0434\u0440\u0443\u0433\u0438\u043C\u0438 \u0434\u0430\u043D\u043D\u044B\u043C\u0438 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u0451\u0442 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0445 \u0438 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u044B \u0444\u0443\u043D\u043A\u0446\u0438\u0438, \u0447\u0442\u043E\u0431\u044B \u0432\u044B\u0447\u0438\u0441\u043B\u044F\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.");
   return { passed: true, message: lesson.success || "\u041F\u043E\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C!", result: { output: primary.output, segments: primary.segments, systemError: false }, program };
@@ -1726,19 +5080,19 @@ function identity(req, res) {
   return { learner: digest(id), address: digest(address) };
 }
 async function database(path, body, prefer) {
-  const url = process.env.SUPABASE_URL, key = secret();
-  if (!url || !key) throw Error("storage_unavailable");
-  const response = await fetch(`${url}/rest/v1/${path}`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...prefer ? { Prefer: prefer } : {} }, body: JSON.stringify(body), signal: AbortSignal.timeout(2500) });
+  const url = process.env.SUPABASE_URL, key2 = secret();
+  if (!url || !key2) throw Error("storage_unavailable");
+  const response = await fetch(`${url}/rest/v1/${path}`, { method: "POST", headers: { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json", ...prefer ? { Prefer: prefer } : {} }, body: JSON.stringify(body), signal: AbortSignal.timeout(2500) });
   if (!response.ok) {
     console.warn("learning_storage_failed", { status: response.status });
     throw Error("storage_unavailable");
   }
-  const text3 = await response.text();
-  return text3 ? JSON.parse(text3) : null;
+  const text4 = await response.text();
+  return text4 ? JSON.parse(text4) : null;
 }
-function bucket(key, limit, windowMs) {
+function bucket(key2, limit, windowMs) {
   const window = Math.floor(Date.now() / windowMs);
-  return { key: `${key}:${window}`, limit, expires: new Date((window + 1) * windowMs).toISOString() };
+  return { key: `${key2}:${window}`, limit, expires: new Date((window + 1) * windowMs).toISOString() };
 }
 async function claim(buckets) {
   return await database("rpc/claim_learning_budget", { p_buckets: buckets }) === true;
@@ -1800,8 +5154,8 @@ async function handler(req, res) {
     if (!event || !uuid.test(event.id || "") || !uuid.test(event.sessionId || "") || !eventNames.includes(event.name) || !Number.isInteger(event.lesson) || event.lesson < -1e3 || event.lesson > 100 || typeof event.at !== "number" || event.at < now - 90 * 864e5 || event.at > now + 6e4) return res.status(400).json({ error: "invalid_event" });
     const release = eventRelease(event);
     if (!release) return res.status(400).json({ error: "invalid_release" });
-    const key = [...lessons3, ...practiceLessons].find((item) => item.id === event.lesson)?.key;
-    rows2.push({ id: event.id, learner_id: digest(body.learnerId), session_id: event.sessionId, name: event.name, lesson: event.lesson, curriculum_version: release.curriculumVersion, app_version: release.appVersion, lesson_key: release.curriculumVersion === "legacy" ? `legacy:${event.lesson}` : key || "navigation", occurred_at: new Date(event.at).toISOString(), data: cleanEventData(event.data) });
+    const key2 = [...lessons3, ...practiceLessons].find((item) => item.id === event.lesson)?.key;
+    rows2.push({ id: event.id, learner_id: digest(body.learnerId), session_id: event.sessionId, name: event.name, lesson: event.lesson, curriculum_version: release.curriculumVersion, app_version: release.appVersion, lesson_key: release.curriculumVersion === "legacy" ? `legacy:${event.lesson}` : key2 || "navigation", occurred_at: new Date(event.at).toISOString(), data: cleanEventData(event.data) });
   }
   try {
     const user = identity(req, res);

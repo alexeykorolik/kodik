@@ -51,14 +51,15 @@ export function useLessonViewport() {
         root.toggleAttribute('data-compact-lesson', mobile && height < 600)
         const host = document.querySelector<HTMLElement>('.screen-lesson .blockly-host')
         if (mobile && host) {
-          const hostTop = host.getBoundingClientRect().top + window.scrollY
-          const mirror = document.querySelector('.live-mirror')?.getBoundingClientRect().height || 44
           const add = document.querySelector('.workspace-actions')?.getBoundingClientRect().height || 64
           const actionHeight = actionRef.current?.getBoundingClientRect().height || 80
-          const available = height - hostTop - actionHeight - mirror - add - 42
+          const section = host.closest<HTMLElement>('.workspace-section')
+          // The flex layout already reserves space for instructions, feedback and the
+          // Python mirror. Measure that space instead of keeping the pre-feedback size.
+          const available = section ? section.getBoundingClientRect().height - add - 2 : height - host.getBoundingClientRect().top - actionHeight - add - 42
           // Blockly's SVG needs a definite pixel height. Percentage height in
           // an auto-sized flex item collapses the SVG and breaks hit testing.
-          root.style.setProperty('--lesson-workspace-height', `${Math.max(140, Math.min(560, available))}px`)
+          root.style.setProperty('--lesson-workspace-height', `${Math.max(80, Math.min(560, Math.floor(available)))}px`)
         }
         const input = document.activeElement
         if (!mobile || !(input instanceof HTMLElement) || !input.matches('textarea, input:not([type="radio"]):not([type="checkbox"])')) return
@@ -81,7 +82,7 @@ export function useLessonViewport() {
     }
     const observer = new ResizeObserver(update)
     if (actionRef.current) observer.observe(actionRef.current)
-    document.querySelectorAll('.task-intro, .coach, .live-mirror').forEach(element => observer.observe(element))
+    document.querySelectorAll('.task-intro, .coach, .live-mirror, .workspace-section').forEach(element => observer.observe(element))
     viewport?.addEventListener('resize', update)
     viewport?.addEventListener('scroll', update)
     window.addEventListener('resize', update)

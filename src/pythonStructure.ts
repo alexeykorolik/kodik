@@ -8,11 +8,16 @@ const children = (node: Statement | Expr): (Statement | Expr)[] => {
     case 'if': return [...node.branches.flatMap(branch => [branch.condition, ...branch.body]), ...node.otherwise]
     case 'for': return [node.iterable, ...node.body]
     case 'while': return [node.condition, ...node.body]
-    case 'function': return node.body
+    case 'function': return [...(node.decorators || []), ...node.body]
     case 'list': return node.items
     case 'binary': return [node.left, node.right]
-    case 'call': return node.args
+    case 'compare': return node.operands
+    case 'call': return [...(node.callee ? [node.callee] : []), ...node.args, ...(node.keywords || []).map(item => item.value)]
     case 'index': return [node.target, node.index]
+    case 'attribute': return [node.target]
+    case 'tuple': return node.items
+    case 'slice': return [node.start, node.stop, node.step].filter((part): part is Expr => !!part)
+    case 'unpack': return [node.value]
     default: return []
   }
 }
@@ -22,7 +27,7 @@ export function structureError(program: Statement[], run: PythonRun, rules: stri
   for (const rule of rules) {
     const [type, value] = rule.split(':'); let valid = false
     if (type === 'kind') valid = relevant.some(node => node.kind === value)
-    if (type === 'op') valid = relevant.some(node => node.kind === 'binary' && node.operator === value)
+    if (type === 'op') valid = relevant.some(node => node.kind === 'binary' && node.operator === value || node.kind==='compare'&&node.operators.includes(value))
     if (type === 'call') valid = relevant.some(node => node.kind === 'call' && node.name === value)
     if (type === 'assign') valid = relevant.filter(node => node.kind === 'assign').length >= Number(value)
     if (type === 'print' || type === 'input') valid = relevant.filter(node => node.kind === 'call' && node.name === type).length >= Number(value)

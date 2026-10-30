@@ -1,0 +1,4272 @@
+{
+ "template": "legacy/v1",
+ "chapters": [
+  {
+   "id": 1,
+   "title": "Команды и сообщения",
+   "description": "Попроси программу что-нибудь сказать.",
+   "question": "Какая строка Python печатает «Привет!»?",
+   "choices": [
+    "say(\"Привет!\")",
+    "print(\"Привет!\")",
+    "print(Привет!)"
+   ],
+   "correct": 1,
+   "explanation": "Команда вывода — print, а текст записывается в кавычках.",
+   "tasks": [
+    {
+     "key": "intro.first-print",
+     "title": "Научим программу говорить",
+     "goal": "Первый вывод",
+     "aim": "Сделай так, чтобы программа написала: Привет!",
+     "instruction": "Сделай так, чтобы программа написала: Привет!\n\nКоманда «Напечатать» показывает то, что находится внутри неё.",
+     "theory": "Напечатать → print. Текст → слова в кавычках. Скобки соединяют команду и значение.",
+     "hints": [
+      "Подумай, какая команда показывает значение на экране.",
+      "Собери команду и скажи ей, что показать.",
+      "Добавь «Напечатать», а внутрь — «Текст». Впиши сообщение без кавычек: блок добавит их в Python сам."
+     ],
+     "starter": "",
+     "code": "print(\"Привет!\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет!",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "text",
+             "fields": {
+              "TEXT": "Привет!"
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 28
+         }
+        ]
+       }
+      },
+      "starter": null,
+      "palette": [
+       "text_print",
+       "text"
+      ]
+     }
+    },
+    {
+     "key": "intro.your-message",
+     "title": "Теперь — твоё сообщение",
+     "goal": "Первый вывод",
+     "aim": "Сделай так, чтобы программа написала: Мне нравится Python",
+     "instruction": "Сделай так, чтобы программа написала: Мне нравится Python\n\nПоздоровались! Теперь расскажем, что нам нравится. Собери сообщение самостоятельно.",
+     "theory": "Напечатать → print. Текст → слова в кавычках. Скобки соединяют команду и значение.",
+     "hints": [
+      "Подумай, какая команда показывает значение на экране.",
+      "Собери команду и скажи ей, что показать.",
+      "Добавь «Напечатать», а внутрь — «Текст». Впиши сообщение без кавычек: блок добавит их в Python сам."
+     ],
+     "starter": "",
+     "code": "print(\"Мне нравится Python\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Мне нравится Python",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "text",
+             "fields": {
+              "TEXT": "Мне нравится Python"
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 28
+         }
+        ]
+       }
+      },
+      "starter": null,
+      "palette": [
+       "text_print",
+       "text"
+      ]
+     }
+    },
+    {
+     "key": "intro.python-print",
+     "title": "Узнай свою строку",
+     "goal": "Первый вывод",
+     "aim": "Как записать эту команду на Python?",
+     "instruction": "Блок «Напечатать» с текстом «Привет!» превращается в одну строку. Выбери её.\n\nКак записать эту команду на Python? Напиши эту строку сам.",
+     "theory": "Напечатать → print. Текст → слова в кавычках. Скобки соединяют команду и значение.",
+     "hints": [
+      "Собери команду и скажи ей, что показать.",
+      "Команда вывода называется print. Текст внутри круглых скобок окружён кавычками."
+     ],
+     "starter": "",
+     "code": "print(\"Привет!\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет!",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "intro.sequence",
+     "title": "Сначала — начало",
+     "goal": "Порядок действий",
+     "aim": "Напечатай «Старт», затем «Финиш».",
+     "instruction": "Напечатай «Старт», затем «Финиш».\n\nPython выполняет команды по порядку, сверху вниз. Каждая печать добавляет новую строку.",
+     "theory": "Соединённые команды выполняются сверху вниз. Каждая print занимает свою строку.",
+     "hints": [
+      "Начни с блока «Напечатать». Добавляй команды по очереди.",
+      "Добавь две печати. Текст первой — «Старт», второй — «Финиш»."
+     ],
+     "starter": "",
+     "code": "print(\"Старт\")\nprint(\"Финиш\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Старт\nФиниш",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "text",
+             "fields": {
+              "TEXT": "Старт"
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "text_print",
+            "inputs": {
+             "TEXT": {
+              "block": {
+               "type": "text",
+               "fields": {
+                "TEXT": "Финиш"
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "starter": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "text",
+             "fields": {
+              "TEXT": "Старт"
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 28
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number"
+      ]
+     }
+    },
+    {
+     "key": "intro.sequence-review",
+     "title": "Два сообщения по порядку",
+     "goal": "Порядок действий",
+     "aim": "Напечатай «Старт», затем «Финиш».",
+     "instruction": "Напечатай «Старт», затем «Финиш».\n\nОбъявим начало и конец короткой гонки. Собери две команды: сначала «Старт», затем «Финиш».",
+     "theory": "Порядок блоков = порядок строк Python.",
+     "hints": [
+      "Начни с блока «Напечатать». Добавляй команды по очереди.",
+      "Добавь две печати. Текст первой — «Старт», второй — «Финиш»."
+     ],
+     "starter": "",
+     "code": "print(\"Старт\")\nprint(\"Финиш\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Старт\nФиниш",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "text",
+             "fields": {
+              "TEXT": "Старт"
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "text_print",
+            "inputs": {
+             "TEXT": {
+              "block": {
+               "type": "text",
+               "fields": {
+                "TEXT": "Финиш"
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "starter": null,
+      "palette": [
+       "text_print",
+       "text",
+       "math_number"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "title": "Запоминать и считать",
+   "description": "Дай данным имя и научи программу считать.",
+   "question": "Что напечатает программа?\nx = 2 + 3\nprint(x)",
+   "choices": [
+    "x",
+    "5",
+    "2 + 3"
+   ],
+   "correct": 1,
+   "explanation": "В переменной хранится результат вычисления — 5.",
+   "tasks": [
+    {
+     "key": "data.first-number",
+     "title": "Число или текст?",
+     "goal": "Значения и строки",
+     "aim": "На табло нужно показать число 7. Добавь число в пустую команду.",
+     "instruction": "На табло нужно показать число 7. Добавь число в пустую команду.\n\nЧисло можно использовать в вычислениях. Текст записывается в кавычках. Python печатает оба значения, но хранит их по-разному.",
+     "theory": "Числа записываются без кавычек: print(7). Текст — с кавычками.",
+     "hints": [
+      "Добавь текст в пустое место второго блока печати.",
+      "Нажми «Добавить блок» → «Текст». Впиши «семь». Порядок блоков задаёт порядок строк."
+     ],
+     "starter": "",
+     "code": "print(7)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "7",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "math_number",
+             "fields": {
+              "NUM": 7
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 28
+         }
+        ]
+       }
+      },
+      "starter": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "x": 24,
+          "y": 28
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number"
+      ]
+     }
+    },
+    {
+     "key": "data.first-variable",
+     "title": "Запомни имя",
+     "goal": "Переменные",
+     "aim": "Сохрани «Мира» в переменную «имя» и выведи её.",
+     "instruction": "Сохрани «Мира» в переменную «имя» и выведи её.\n\nПрограмме нужно запомнить имя участницы — Мира. Создадим подписанную «коробку», положим туда имя и прочитаем его.",
+     "theory": "имя = \"Мира\" сохраняет текст. print(имя) читает сохранённое значение. Такая коробка называется переменной.",
+     "hints": [
+      "Сначала реши, где программе нужно сохранить значение, а где прочитать его.",
+      "Сначала создай коробку с названием «имя».",
+      "Нажми «Добавить блок» → «Получить переменную». Блок «имя» вставится в пустую печать."
+     ],
+     "starter": "",
+     "code": "имя = \"Мира\"\nprint(имя)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Мира",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "variables": [
+        {
+         "name": "имя",
+         "id": "lesson-variable-имя"
+        }
+       ],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "variables_set",
+          "x": 72,
+          "y": 48,
+          "fields": {
+           "VAR": {
+            "id": "lesson-variable-имя"
+           }
+          },
+          "inputs": {
+           "VALUE": {
+            "block": {
+             "type": "text",
+             "fields": {
+              "TEXT": "Мира"
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "text_print",
+            "inputs": {
+             "TEXT": {
+              "block": {
+               "type": "variables_get",
+               "fields": {
+                "VAR": {
+                 "id": "lesson-variable-имя"
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "starter": null,
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get"
+      ]
+     }
+    },
+    {
+     "key": "data.first-sum",
+     "title": "Сложи баллы",
+     "goal": "Вычисления",
+     "aim": "Напечатай результат 2 + 3.",
+     "instruction": "Напечатай результат 2 + 3.\n\nЗа первый раунд дали 2 балла, за второй — 3. Посчитаем, сколько получилось вместе.",
+     "theory": "Знак + внутри print сначала складывает числа, затем print показывает сумму.",
+     "hints": [
+      "Выражение уже готово: заполни недостающее число.",
+      "Второе белое число в выражении можно отредактировать прямо внутри блока."
+     ],
+     "starter": "",
+     "code": "print(2 + 3)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "5",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "variables": [],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "x": 72,
+          "y": 64,
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "math_arithmetic",
+             "fields": {
+              "OP": "ADD"
+             },
+             "inputs": {
+              "A": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 2
+                }
+               }
+              },
+              "B": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 3
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "starter": {
+       "variables": [],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "x": 72,
+          "y": 64,
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "math_arithmetic",
+             "fields": {
+              "OP": "ADD"
+             },
+             "inputs": {
+              "A": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 2
+                }
+               }
+              },
+              "B": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 0
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic"
+      ]
+     }
+    },
+    {
+     "key": "data.expression-order",
+     "title": "Скобки имеют значение",
+     "goal": "Вычисления",
+     "aim": "Сложи 2 и 3, затем умножь сумму на 4. Получи 20.",
+     "instruction": "Сложи 2 и 3, затем умножь сумму на 4. Получи 20.\n\nВ каждой из четырёх коробок лежат 2 красных и 3 зелёных карандаша. Сначала посчитай карандаши в одной коробке, затем во всех.",
+     "theory": "Внутренний блок превращается в скобки: (2 + 3) * 4.",
+     "hints": [
+      "Измени знак внешнего вычисления: нужно умножение.",
+      "Открой список знаков в большом блоке и выбери ×. Внутренний блок 2 + 3 оставь как есть."
+     ],
+     "starter": "",
+     "code": "print((2 + 3) * 4)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "20",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "math_arithmetic",
+             "fields": {
+              "OP": "MULTIPLY"
+             },
+             "inputs": {
+              "A": {
+               "block": {
+                "type": "math_arithmetic",
+                "fields": {
+                 "OP": "ADD"
+                },
+                "inputs": {
+                 "A": {
+                  "block": {
+                   "type": "math_number",
+                   "fields": {
+                    "NUM": 2
+                   }
+                  }
+                 },
+                 "B": {
+                  "block": {
+                   "type": "math_number",
+                   "fields": {
+                    "NUM": 3
+                   }
+                  }
+                 }
+                }
+               }
+              },
+              "B": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 4
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "starter": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "math_arithmetic",
+             "fields": {
+              "OP": "ADD"
+             },
+             "inputs": {
+              "A": {
+               "block": {
+                "type": "math_arithmetic",
+                "fields": {
+                 "OP": "ADD"
+                },
+                "inputs": {
+                 "A": {
+                  "block": {
+                   "type": "math_number",
+                   "fields": {
+                    "NUM": 2
+                   }
+                  }
+                 },
+                 "B": {
+                  "block": {
+                   "type": "math_number",
+                   "fields": {
+                    "NUM": 3
+                   }
+                  }
+                 }
+                }
+               }
+              },
+              "B": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 4
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic"
+      ]
+     }
+    },
+    {
+     "key": "data.read-variable",
+     "title": "Прочитай из коробки",
+     "goal": "Переменные",
+     "aim": "Покажи сохранённое имя, а не слово «имя».",
+     "instruction": "Имя «Мира» уже сохранено в переменной имя. Выбери строку, которая прочитает её содержимое.\n\nПокажи сохранённое имя, а не слово «имя». Напиши эту строку сам.",
+     "theory": "print(имя) читает переменную. print(\"имя\") печатает само слово.",
+     "hints": [
+      "Сначала реши, где программе нужно сохранить значение, а где прочитать его.",
+      "Один шаг: добавь в печать блок, который получает значение «имя».",
+      "Кавычки обозначают обычный текст. Чтобы прочитать переменную, напиши её имя без кавычек."
+     ],
+     "starter": "",
+     "code": "имя = \"Мира\"\nprint(имя)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Мира",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "title": "Принимать решения",
+   "description": "Разные действия для разных ситуаций.",
+   "question": "Что напечатает print(12 >= 10)?",
+   "choices": [
+    "True",
+    "False",
+    "12"
+   ],
+   "correct": 0,
+   "explanation": "12 больше 10, значит сравнение истинно.",
+   "tasks": [
+    {
+     "key": "conditions.first-comparison",
+     "title": "Правда или нет?",
+     "goal": "Сравнения",
+     "aim": "Проверь, что 12 не меньше 10, и напечатай результат сравнения.",
+     "instruction": "Проверь, что 12 не меньше 10, и напечатай результат сравнения.\n\nДля прохода нужно хотя бы 10 баллов, а у игрока их 12. Узнаем, достаточно ли этого.",
+     "theory": "Слева — баллы игрока, справа — порог. >= означает «не меньше». True означает «да».",
+     "hints": [
+      "Сформулируй проверку словами: какое отношение между левым и правым значением?",
+      "Измени знак = в блоке сравнения на ≥.",
+      "Равенство спрашивает, одинаковы ли числа. Здесь нужно «больше или равно»."
+     ],
+     "starter": "",
+     "code": "print(12 >= 10)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "True",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "logic_compare",
+             "fields": {
+              "OP": "GTE"
+             },
+             "inputs": {
+              "A": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 12
+                }
+               }
+              },
+              "B": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 10
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "starter": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "text_print",
+          "inputs": {
+           "TEXT": {
+            "block": {
+             "type": "logic_compare",
+             "fields": {
+              "OP": "EQ"
+             },
+             "inputs": {
+              "A": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 12
+                }
+               }
+              },
+              "B": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 10
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic",
+       "logic_compare"
+      ]
+     }
+    },
+    {
+     "key": "conditions.first-if",
+     "title": "Открой уровень",
+     "goal": "Условия",
+     "aim": "Сохрани 12 в «баллы». Если баллы ≥ 10, напечатай «Уровень пройден!».",
+     "instruction": "Сохрани 12 в «баллы». Если баллы ≥ 10, напечатай «Уровень пройден!».\n\nУ игрока 12 баллов. Уровень открывается, если баллов хотя бы 10. Команда «Если» решит, показывать ли поздравление.",
+     "theory": "if — «если». После проверки ставится двоеточие. Отступ перед print показывает, что действие находится внутри условия.",
+     "hints": [
+      "Найди действие, которое должно выполняться только при верной проверке.",
+      "Собери программу с переменной и условием. Начни с «Присвоить».",
+      "Создай переменную «баллы», добавь присваивание 12, затем «Если». В условие вставь сравнение, а внутрь — печать."
+     ],
+     "starter": "",
+     "code": "баллы = 12\nif баллы >= 10:\n    print(\"Уровень пройден!\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Уровень пройден!",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "variables": [
+        {
+         "name": "баллы",
+         "id": "lesson-variable-баллы"
+        }
+       ],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "variables_set",
+          "x": 72,
+          "y": 48,
+          "fields": {
+           "VAR": {
+            "id": "lesson-variable-баллы"
+           }
+          },
+          "inputs": {
+           "VALUE": {
+            "block": {
+             "type": "math_number",
+             "fields": {
+              "NUM": 12
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "controls_if",
+            "inputs": {
+             "IF0": {
+              "block": {
+               "type": "logic_compare",
+               "fields": {
+                "OP": "GTE"
+               },
+               "inputs": {
+                "A": {
+                 "block": {
+                  "type": "variables_get",
+                  "fields": {
+                   "VAR": {
+                    "id": "lesson-variable-баллы"
+                   }
+                  }
+                 }
+                },
+                "B": {
+                 "block": {
+                  "type": "math_number",
+                  "fields": {
+                   "NUM": 10
+                  }
+                 }
+                }
+               }
+              }
+             },
+             "DO0": {
+              "block": {
+               "type": "text_print",
+               "inputs": {
+                "TEXT": {
+                 "block": {
+                  "type": "text",
+                  "fields": {
+                   "TEXT": "Уровень пройден!"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "starter": {
+       "variables": [
+        {
+         "name": "баллы",
+         "id": "score"
+        }
+       ],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "variables_set",
+          "x": 24,
+          "y": 28,
+          "fields": {
+           "VAR": {
+            "id": "score"
+           }
+          },
+          "inputs": {
+           "VALUE": {
+            "block": {
+             "type": "math_number",
+             "fields": {
+              "NUM": 12
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic",
+       "logic_compare",
+       "controls_if"
+      ]
+     }
+    },
+    {
+     "key": "conditions.first-else",
+     "title": "А если нет?",
+     "goal": "Условия",
+     "aim": "Проверь 3 ≥ 10. Если верно, напечатай «Можно», иначе — «Пока рано».",
+     "instruction": "Проверь 3 ≥ 10. Если верно, напечатай «Можно», иначе — «Пока рано».\n\nВетка «иначе» выполняется, когда условие ложно. Программа выбирает только одну из двух веток.",
+     "theory": "else: — «иначе». Её действие тоже записывается с отступом.",
+     "hints": [
+      "Найди действие, которое должно выполняться только при верной проверке.",
+      "Ветка «иначе» пока пустая. Добавь в неё печать текста.",
+      "Выбери блок «если», затем добавь печать. Она заполнит пустую ветку. Впиши «Пока рано»."
+     ],
+     "starter": "",
+     "code": "if 3 >= 10:\n    print(\"Можно\")\nelse:\n    print(\"Пока рано\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Пока рано",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "controls_if",
+          "extraState": {
+           "hasElse": true
+          },
+          "inputs": {
+           "IF0": {
+            "block": {
+             "type": "logic_compare",
+             "fields": {
+              "OP": "GTE"
+             },
+             "inputs": {
+              "A": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 3
+                }
+               }
+              },
+              "B": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 10
+                }
+               }
+              }
+             }
+            }
+           },
+           "DO0": {
+            "block": {
+             "type": "text_print",
+             "inputs": {
+              "TEXT": {
+               "block": {
+                "type": "text",
+                "fields": {
+                 "TEXT": "Можно"
+                }
+               }
+              }
+             }
+            }
+           },
+           "ELSE": {
+            "block": {
+             "type": "text_print",
+             "inputs": {
+              "TEXT": {
+               "block": {
+                "type": "text",
+                "fields": {
+                 "TEXT": "Пока рано"
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "starter": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "controls_if",
+          "extraState": {
+           "hasElse": true
+          },
+          "inputs": {
+           "IF0": {
+            "block": {
+             "type": "logic_compare",
+             "fields": {
+              "OP": "GTE"
+             },
+             "inputs": {
+              "A": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 3
+                }
+               }
+              },
+              "B": {
+               "block": {
+                "type": "math_number",
+                "fields": {
+                 "NUM": 10
+                }
+               }
+              }
+             }
+            }
+           },
+           "DO0": {
+            "block": {
+             "type": "text_print",
+             "inputs": {
+              "TEXT": {
+               "block": {
+                "type": "text",
+                "fields": {
+                 "TEXT": "Можно"
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic",
+       "logic_compare",
+       "controls_if"
+      ]
+     }
+    },
+    {
+     "key": "conditions.operator-choice",
+     "title": "Допиши знак сравнения",
+     "goal": "Сравнения",
+     "aim": "Выбери знак, который означает «не меньше».",
+     "instruction": "Выбери знак, который означает «не меньше».\n\nВ переменной баллы сохранено 12. Пропускаем игрока с 10 баллами и больше. Вставь пропущенный знак.",
+     "theory": "Сравнение >= пропускает и 10, и 11, и 12.",
+     "hints": [
+      "Сформулируй проверку словами: какое отношение между левым и правым значением?",
+      "Измени знак = в блоке сравнения на ≥.",
+      "Равенство подходит только для 10. Здесь нужно «больше или равно»."
+     ],
+     "starter": "баллы = 12\nif баллы  10:\n    print(\"Можно пройти\")",
+     "code": "баллы = 12\nif баллы >= 10:\n    print(\"Можно пройти\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Можно пройти",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "conditions.check-pass",
+     "title": "Проверь пропуск",
+     "goal": "Условия",
+     "aim": "Сохрани 12 в «баллы». Если баллы ≥ 10, напечатай «Уровень пройден!».",
+     "instruction": "Сохрани 12 в «баллы». Если баллы ≥ 10, напечатай «Уровень пройден!».\n\nПроверь всё вместе: запомнить 12 баллов, сравнить с порогом 10, показать поздравление только при выполнении условия.",
+     "theory": "Сохранение → сравнение → действие внутри if.",
+     "hints": [
+      "Сначала реши, где программе нужно сохранить значение, а где прочитать его.",
+      "Собери программу с переменной и условием. Начни с «Присвоить».",
+      "Создай переменную «баллы», добавь присваивание 12, затем «Если». В условие вставь сравнение, а внутрь — печать."
+     ],
+     "starter": "",
+     "code": "баллы = 12\nif баллы >= 10:\n    print(\"Уровень пройден!\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Уровень пройден!",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "variables": [
+        {
+         "name": "баллы",
+         "id": "lesson-variable-баллы"
+        }
+       ],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "variables_set",
+          "x": 72,
+          "y": 48,
+          "fields": {
+           "VAR": {
+            "id": "lesson-variable-баллы"
+           }
+          },
+          "inputs": {
+           "VALUE": {
+            "block": {
+             "type": "math_number",
+             "fields": {
+              "NUM": 12
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "controls_if",
+            "inputs": {
+             "IF0": {
+              "block": {
+               "type": "logic_compare",
+               "fields": {
+                "OP": "GTE"
+               },
+               "inputs": {
+                "A": {
+                 "block": {
+                  "type": "variables_get",
+                  "fields": {
+                   "VAR": {
+                    "id": "lesson-variable-баллы"
+                   }
+                  }
+                 }
+                },
+                "B": {
+                 "block": {
+                  "type": "math_number",
+                  "fields": {
+                   "NUM": 10
+                  }
+                 }
+                }
+               }
+              }
+             },
+             "DO0": {
+              "block": {
+               "type": "text_print",
+               "inputs": {
+                "TEXT": {
+                 "block": {
+                  "type": "text",
+                  "fields": {
+                   "TEXT": "Уровень пройден!"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "starter": null,
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic",
+       "logic_compare",
+       "controls_if"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "title": "Повторять действия",
+   "description": "Одна команда вместо нескольких одинаковых.",
+   "question": "Сколько раз выполнится тело цикла for i in range(3)?",
+   "choices": [
+    "Два",
+    "Три",
+    "Четыре"
+   ],
+   "correct": 1,
+   "explanation": "range(3) даёт 0, 1 и 2 — три повторения.",
+   "tasks": [
+    {
+     "key": "loops.first-repeat",
+     "title": "Повтори трижды",
+     "goal": "Циклы",
+     "aim": "Три раза напечатай: Учусь!",
+     "instruction": "Три раза напечатай: Учусь!\n\nКогда действие нужно сделать несколько раз, помогает цикл. Он повторяет блоки внутри себя.",
+     "theory": "for … in range(3): повторяет действие три раза. Отступ показывает, что именно повторяется.",
+     "hints": [
+      "Найди действие, которое повторяется, и количество повторений.",
+      "Следующий уровень: цикл уже есть, а его тело тебе нужно собрать самому.",
+      "Добавь блок «напечатать» из категории «Вывод» внутрь цикла, затем впиши текст."
+     ],
+     "starter": "",
+     "code": "for i in range(3):\n    print(\"Учусь!\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Учусь!\nУчусь!\nУчусь!",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "variables": [],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "controls_repeat_ext",
+          "x": 72,
+          "y": 52,
+          "inputs": {
+           "TIMES": {
+            "block": {
+             "type": "math_number",
+             "fields": {
+              "NUM": 3
+             }
+            }
+           },
+           "DO": {
+            "block": {
+             "type": "text_print",
+             "inputs": {
+              "TEXT": {
+               "block": {
+                "type": "text",
+                "fields": {
+                 "TEXT": "Учусь!"
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "starter": {
+       "variables": [],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "controls_repeat_ext",
+          "x": 72,
+          "y": 52,
+          "inputs": {
+           "TIMES": {
+            "block": {
+             "type": "math_number",
+             "fields": {
+              "NUM": 3
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic",
+       "logic_compare",
+       "controls_if",
+       "controls_repeat_ext"
+      ]
+     }
+    },
+    {
+     "key": "loops.independent-repeat",
+     "title": "Повтори самостоятельно",
+     "goal": "Циклы",
+     "aim": "Три раза напечатай: Учусь!",
+     "instruction": "Три раза напечатай: Учусь!\n\nНа тренировке нужно три раза сказать «Учусь!». Собери повторение самостоятельно.",
+     "theory": "Один print внутри цикла заменяет три одинаковые строки.",
+     "hints": [
+      "Найди действие, которое повторяется, и количество повторений.",
+      "Следующий уровень: цикл уже есть, а его тело тебе нужно собрать самому.",
+      "Добавь блок «напечатать» из категории «Вывод» внутрь цикла, затем впиши текст."
+     ],
+     "starter": "",
+     "code": "for i in range(3):\n    print(\"Учусь!\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Учусь!\nУчусь!\nУчусь!",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "variables": [],
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "controls_repeat_ext",
+          "x": 72,
+          "y": 52,
+          "inputs": {
+           "TIMES": {
+            "block": {
+             "type": "math_number",
+             "fields": {
+              "NUM": 3
+             }
+            }
+           },
+           "DO": {
+            "block": {
+             "type": "text_print",
+             "inputs": {
+              "TEXT": {
+               "block": {
+                "type": "text",
+                "fields": {
+                 "TEXT": "Учусь!"
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      "starter": null,
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic",
+       "logic_compare",
+       "controls_if",
+       "controls_repeat_ext"
+      ]
+     }
+    },
+    {
+     "key": "loops.python-header",
+     "title": "Собери цикл на Python",
+     "goal": "Циклы",
+     "aim": "Составь строку, которая начинает цикл из трёх повторений.",
+     "instruction": "Составь строку, которая начинает цикл из трёх повторений.\n\nБлок повторения превращается в заголовок for. Собери его из настоящих частей Python.",
+     "theory": "for i in range(3): — заголовок цикла. Отступ показывает повторяемое действие.",
+     "hints": [
+      "Следующий уровень: цикл уже есть, а его тело тебе нужно собрать самому.",
+      "Порядок такой: for, имя счётчика, in, range с числом повторений, двоеточие."
+     ],
+     "starter": "\n    print(\"Учусь!\")",
+     "code": "for i in range(3):\n    print(\"Учусь!\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Учусь!\nУчусь!\nУчусь!",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "title": "От блоков к Python",
+   "description": "Назови действия и напиши свои строки кода.",
+   "question": "Что делает строка def hello():?",
+   "choices": [
+    "Сразу печатает hello",
+    "Создаёт функцию с именем hello",
+    "Удаляет переменную hello"
+   ],
+   "correct": 1,
+   "explanation": "def создаёт функцию; её команды выполнятся при вызове hello().",
+   "tasks": [
+    {
+     "key": "functions.first-definition",
+     "title": "Дай действию имя",
+     "goal": "Функции",
+     "aim": "Создай функцию «приветствие», печатающую «Привет!», и вызови её один раз.",
+     "instruction": "Создай функцию «приветствие», печатающую «Привет!», и вызови её один раз.\n\nФункция объединяет команды под одним именем. Определение запоминает команды, а вызов выполняет их.",
+     "theory": "def даёт группе команд имя. приветствие() запускает их. Без вызова определение ничего не печатает.",
+     "hints": [
+      "Отдели описание действия от места, где его нужно запустить.",
+      "Функция уже описана. Добавь блок «Вызвать функцию».",
+      "В разделе «Функции» выбери вызов. Имя в нём должно совпадать с именем определения."
+     ],
+     "starter": "",
+     "code": "def приветствие():\n    print(\"Привет!\")\nприветствие()",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет!",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "kodik_define",
+          "fields": {
+           "NAME": "приветствие"
+          },
+          "inputs": {
+           "BODY": {
+            "block": {
+             "type": "text_print",
+             "inputs": {
+              "TEXT": {
+               "block": {
+                "type": "text",
+                "fields": {
+                 "TEXT": "Привет!"
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "kodik_call",
+            "fields": {
+             "NAME": "приветствие"
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "starter": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "kodik_define",
+          "fields": {
+           "NAME": "приветствие"
+          },
+          "inputs": {
+           "BODY": {
+            "block": {
+             "type": "text_print",
+             "inputs": {
+              "TEXT": {
+               "block": {
+                "type": "text",
+                "fields": {
+                 "TEXT": "Привет!"
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic",
+       "logic_compare",
+       "controls_if",
+       "controls_repeat_ext",
+       "kodik_define",
+       "kodik_call"
+      ]
+     }
+    },
+    {
+     "key": "functions.repeat-call",
+     "title": "Одна функция — три привета",
+     "goal": "Финальная практика",
+     "aim": "Создай функцию «приветствие», которая печатает «Привет!». Вызови её в цикле 3 раза.",
+     "instruction": "Создай функцию «приветствие», которая печатает «Привет!». Вызови её в цикле 3 раза.\n\nТеперь соедини знакомые идеи: функция хранит действие, а цикл повторяет её вызов.",
+     "theory": "Определение хранит действие, цикл повторяет вызов. Нажми на заголовок функции, чтобы добавить цикл после неё.",
+     "hints": [
+      "Отдели описание действия от места, где его нужно запустить.",
+      "Сначала опиши функцию, затем добавь цикл и помести вызов внутрь.",
+      "Порядок: определение функции с печатью → повторить 3 раза → внутри цикла вызвать «приветствие»."
+     ],
+     "starter": "",
+     "code": "def приветствие():\n    print(\"Привет!\")\nfor i in range(3):\n    приветствие()",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет!\nПривет!\nПривет!",
+       "hidden": false
+      }
+     ],
+     "rules": [],
+     "blocks": {
+      "solution": {
+       "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+         {
+          "type": "kodik_define",
+          "fields": {
+           "NAME": "приветствие"
+          },
+          "inputs": {
+           "BODY": {
+            "block": {
+             "type": "text_print",
+             "inputs": {
+              "TEXT": {
+               "block": {
+                "type": "text",
+                "fields": {
+                 "TEXT": "Привет!"
+                }
+               }
+              }
+             }
+            }
+           }
+          },
+          "next": {
+           "block": {
+            "type": "controls_repeat_ext",
+            "inputs": {
+             "TIMES": {
+              "block": {
+               "type": "math_number",
+               "fields": {
+                "NUM": 3
+               }
+              }
+             },
+             "DO": {
+              "block": {
+               "type": "kodik_call",
+               "fields": {
+                "NAME": "приветствие"
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": 24,
+          "y": 32
+         }
+        ]
+       }
+      },
+      "starter": null,
+      "palette": [
+       "text_print",
+       "text",
+       "math_number",
+       "variables_set",
+       "variables_get",
+       "math_arithmetic",
+       "logic_compare",
+       "controls_if",
+       "controls_repeat_ext",
+       "kodik_define",
+       "kodik_call"
+      ]
+     }
+    },
+    {
+     "key": "data.independent-variable",
+     "title": "Переменная без блоков",
+     "goal": "Переменные",
+     "aim": "Сохрани «Мира» в переменную имя и напечатай её значение.",
+     "instruction": "Сохрани «Мира» в переменную имя и напечатай её значение.\n\nТы уже сохранял имя в блоках и узнавал его строку. Теперь напиши обе команды сам.",
+     "theory": "Это те же присваивание и чтение переменной, но теперь блоки больше не нужны.",
+     "hints": [
+      "Сначала реши, где программе нужно сохранить значение, а где прочитать его.",
+      "Один шаг: добавь в печать блок, который получает значение «имя».",
+      "Нажми «Добавить блок» → «Получить переменную». Блок «имя» вставится в пустую печать."
+     ],
+     "starter": "",
+     "code": "имя = \"Мира\"\nprint(имя)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Мира",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "functions.independent-loop",
+     "title": "Функция и цикл — твой код",
+     "goal": "Финальная практика",
+     "aim": "Функция приветствие печатает «Привет!», а цикл вызывает её 3 раза.",
+     "instruction": "Функция приветствие печатает «Привет!», а цикл вызывает её 3 раза.\n\nСобери знакомые идеи уже в настоящем Python: опиши функцию и вызови её три раза в цикле.",
+     "theory": "Blockly исчез: структура осталась той же — определение, цикл и вложенный вызов с отступом.",
+     "hints": [
+      "Отдели описание действия от места, где его нужно запустить.",
+      "Сначала опиши функцию, затем добавь цикл и помести вызов внутрь.",
+      "Порядок: определение функции с печатью → повторить 3 раза → внутри цикла вызвать «приветствие»."
+     ],
+     "starter": "",
+     "code": "def приветствие():\n    print(\"Привет!\")\nfor i in range(3):\n    приветствие()",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет!\nПривет!\nПривет!",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "title": "Данные в деле",
+   "description": "Строки, вычисления и переменные в маленьких задачах.",
+   "question": "Что напечатает print(14 % 2 == 0)?",
+   "choices": [
+    "True",
+    "False",
+    "7"
+   ],
+   "correct": 0,
+   "explanation": "Остаток от деления 14 на 2 равен 0, значит число чётное.",
+   "tasks": [
+    {
+     "key": "data.club-sign",
+     "title": "Вывеска клуба",
+     "goal": "Данные в деле",
+     "aim": "Собери из двух частей и напечатай «Клуб Кодик».",
+     "instruction": "Собери из двух частей и напечатай «Клуб Кодик».\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Знак + соединяет две строки.",
+      "Знак + соединяет две строки. Проверь ожидаемый результат: Клуб Кодик."
+     ],
+     "starter": "",
+     "code": "print(\"Клуб \" + \"Кодик\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Клуб Кодик",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "data.ticket-price",
+     "title": "Три билета",
+     "goal": "Данные в деле",
+     "aim": "Один билет стоит 7 монет. Покажи стоимость трёх билетов вычислением.",
+     "instruction": "Один билет стоит 7 монет. Покажи стоимость трёх билетов вычислением.\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Сохрани цену и умножь её на количество.",
+      "Сохрани цену и умножь её на количество. Проверь ожидаемый результат: 21."
+     ],
+     "starter": "",
+     "code": "ticket = 7\nprint(ticket * 3)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "21",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "assign:1"
+     ]
+    },
+    {
+     "key": "data.remaining-tokens",
+     "title": "Остаток жетонов",
+     "goal": "Данные в деле",
+     "aim": "Было 20 жетонов, потратили 6. Выведи остаток.",
+     "instruction": "Было 20 жетонов, потратили 6. Выведи остаток.\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Вычти потраченное из общего числа.",
+      "Вычти потраченное из общего числа. Проверь ожидаемый результат: 14."
+     ],
+     "starter": "",
+     "code": "total = 20\nused = 6\nprint(total - used)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "14",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "data.name-greeting",
+     "title": "Приветствие по имени",
+     "goal": "Данные в деле",
+     "aim": "Сохрани имя Лея и напечатай «Привет, Лея».",
+     "instruction": "Сохрани имя Лея и напечатай «Привет, Лея».\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Соедини начало фразы со значением переменной.",
+      "Соедини начало фразы со значением переменной. Проверь ожидаемый результат: Привет, Лея."
+     ],
+     "starter": "",
+     "code": "name = \"Лея\"\nprint(\"Привет, \" + name)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет, Лея",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "assign:1"
+     ]
+    },
+    {
+     "key": "data.parentheses",
+     "title": "Скобки меняют ответ",
+     "goal": "Данные в деле",
+     "aim": "Сначала сложи 8 и 4, затем умножь сумму на 3. Выведи результат.",
+     "instruction": "Сначала сложи 8 и 4, затем умножь сумму на 3. Выведи результат.\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Сумма должна оказаться во внутренних скобках.",
+      "Сумма должна оказаться во внутренних скобках. Проверь ожидаемый результат: 36."
+     ],
+     "starter": "",
+     "code": "print((8 + 4) * 3)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "36",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "data.average-score",
+     "title": "Средний балл",
+     "goal": "Данные в деле",
+     "aim": "Баллы за два раунда: 7 и 9. Вычисли и выведи среднее.",
+     "instruction": "Баллы за два раунда: 7 и 9. Вычисли и выведи среднее.\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Сложи два результата и раздели на два.",
+      "Сложи два результата и раздели на два. Проверь ожидаемый результат: 8.0."
+     ],
+     "starter": "",
+     "code": "print((7 + 9) / 2)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "8.0",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "data.even-floor",
+     "title": "Чётный этаж",
+     "goal": "Данные в деле",
+     "aim": "Проверь вычислением, чётный ли этаж 14. Выведи True или False.",
+     "instruction": "Проверь вычислением, чётный ли этаж 14. Выведи True или False.\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Остаток от деления на 2 помогает проверить чётность.",
+      "Остаток от деления на 2 помогает проверить чётность. Проверь ожидаемый результат: True."
+     ],
+     "starter": "",
+     "code": "print(14 % 2 == 0)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "True",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "data.poster-lines",
+     "title": "Две строки афиши",
+     "goal": "Данные в деле",
+     "aim": "Напечатай на разных строках «Открыто» и «До 18:00».",
+     "instruction": "Напечатай на разных строках «Открыто» и «До 18:00».\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Каждая команда print создаёт отдельную строку.",
+      "Каждая команда print создаёт отдельную строку. Проверь ожидаемый результат: Открыто → До 18:00."
+     ],
+     "starter": "",
+     "code": "print(\"Открыто\")\nprint(\"До 18:00\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Открыто\nДо 18:00",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "data.update-points",
+     "title": "Пополнение счёта",
+     "goal": "Данные в деле",
+     "aim": "На счёте было 5 очков, добавили 4. Измени переменную и покажи новый счёт.",
+     "instruction": "На счёте было 5 очков, добавили 4. Измени переменную и покажи новый счёт.\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Переменной можно присвоить новое значение на основе старого.",
+      "Переменной можно присвоить новое значение на основе старого. Проверь ожидаемый результат: 9."
+     ],
+     "starter": "",
+     "code": "points = 5\npoints = points + 4\nprint(points)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "9",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "data.enough-coins",
+     "title": "Достаточно монет?",
+     "goal": "Данные в деле",
+     "aim": "Проверь, хватит ли 12 монет на покупку за 10. Выведи результат сравнения.",
+     "instruction": "Проверь, хватит ли 12 монет на покупку за 10. Выведи результат сравнения.\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Знак >= означает «больше или равно».",
+      "Знак >= означает «больше или равно». Проверь ожидаемый результат: True."
+     ],
+     "starter": "",
+     "code": "coins = 12\nprint(coins >= 10)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "True",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "assign:1"
+     ]
+    },
+    {
+     "key": "data.purchase-total",
+     "title": "Чек за набор",
+     "goal": "Данные в деле",
+     "aim": "Тетрадь стоит 9 монет. Купили 3. Сохрани цену и количество, выведи итог.",
+     "instruction": "Тетрадь стоит 9 монет. Купили 3. Сохрани цену и количество, выведи итог.\n\nСтроки соединяются знаком +. Числа складываются и умножаются. Переменная хранит значение, а print показывает результат вычисления.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши исходные данные, выполни нужное вычисление и передай результат в print.",
+      "Итог — цена одной вещи, умноженная на количество.",
+      "Итог — цена одной вещи, умноженная на количество. Проверь ожидаемый результат: 27."
+     ],
+     "starter": "",
+     "code": "price = 9\ncount = 3\nprint(price * count)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "27",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "title": "Решения программы",
+   "description": "Условия с несколькими исходами.",
+   "question": "Когда выполняется ветка else?",
+   "choices": [
+    "Всегда",
+    "Когда условие if ложно",
+    "Когда условие if истинно"
+   ],
+   "correct": 1,
+   "explanation": "Программа выбирает одну ветку: else — если условие не выполнилось.",
+   "tasks": [
+    {
+     "key": "conditions.frost",
+     "title": "Мороз за окном",
+     "goal": "Решения программы",
+     "aim": "Температура −3. Если она ниже нуля, покажи «Мороз», иначе «Тепло».",
+     "instruction": "Температура −3. Если она ниже нуля, покажи «Мороз», иначе «Тепло».\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Условие проверяет temp < 0.",
+      "Условие проверяет temp < 0. Проверь ожидаемый результат: Мороз."
+     ],
+     "starter": "",
+     "code": "temp = -3\nif temp < 0:\n    print(\"Мороз\")\nelse:\n    print(\"Тепло\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Мороз",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "conditions.concert-entry",
+     "title": "Вход на концерт",
+     "goal": "Решения программы",
+     "aim": "Возраст 19 лет. Если человеку есть 18, покажи «Можно войти».",
+     "instruction": "Возраст 19 лет. Если человеку есть 18, покажи «Можно войти».\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Порог включён: нужен знак >=.",
+      "Порог включён: нужен знак >=. Проверь ожидаемый результат: Можно войти."
+     ],
+     "starter": "",
+     "code": "age = 19\nif age >= 18:\n    print(\"Можно войти\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Можно войти",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "conditions.game-threshold",
+     "title": "Порог игры",
+     "goal": "Решения программы",
+     "aim": "Игрок набрал 8 очков. Покажи «Победа» от 10 очков, иначе «Попробуй ещё».",
+     "instruction": "Игрок набрал 8 очков. Покажи «Победа» от 10 очков, иначе «Попробуй ещё».\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Нужны обе ветки: если и иначе.",
+      "Нужны обе ветки: если и иначе. Проверь ожидаемый результат: Попробуй ещё."
+     ],
+     "starter": "",
+     "code": "score = 8\nif score >= 10:\n    print(\"Победа\")\nelse:\n    print(\"Попробуй ещё\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Попробуй ещё",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "conditions.green-light",
+     "title": "Зелёный свет",
+     "goal": "Решения программы",
+     "aim": "Цвет сигнала — «зелёный». Покажи «Иди» только для зелёного цвета.",
+     "instruction": "Цвет сигнала — «зелёный». Покажи «Иди» только для зелёного цвета.\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Строки сравнивают знаком ==.",
+      "Строки сравнивают знаком ==. Проверь ожидаемый результат: Иди."
+     ],
+     "starter": "",
+     "code": "color = \"зелёный\"\nif color == \"зелёный\":\n    print(\"Иди\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Иди",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "conditions.box-size",
+     "title": "Размер коробки",
+     "goal": "Решения программы",
+     "aim": "Число 2 означает среднюю коробку: 1 — малая, 2 — средняя, остальные — большая. Выведи размер.",
+     "instruction": "Число 2 означает среднюю коробку: 1 — малая, 2 — средняя, остальные — большая. Выведи размер.\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "После первого if можно проверить второй случай через elif.",
+      "После первого if можно проверить второй случай через elif. Проверь ожидаемый результат: Средняя."
+     ],
+     "starter": "",
+     "code": "size = 2\nif size == 1:\n    print(\"Малая\")\nelif size == 2:\n    print(\"Средняя\")\nelse:\n    print(\"Большая\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Средняя",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "conditions.odd-ticket",
+     "title": "Чётный билет",
+     "goal": "Решения программы",
+     "aim": "Номер билета 17. Выведи «Чётный» или «Нечётный».",
+     "instruction": "Номер билета 17. Выведи «Чётный» или «Нечётный».\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Чётное число делится на 2 без остатка.",
+      "Чётное число делится на 2 без остатка. Проверь ожидаемый результат: Нечётный."
+     ],
+     "starter": "",
+     "code": "number = 17\nif number % 2 == 0:\n    print(\"Чётный\")\nelse:\n    print(\"Нечётный\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Нечётный",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "conditions.delivery",
+     "title": "Доставка заказа",
+     "goal": "Решения программы",
+     "aim": "Заказ на 55 монет. Доставка бесплатна от 50, иначе стоит отдельно. Выведи «Бесплатно» или «Платно».",
+     "instruction": "Заказ на 55 монет. Доставка бесплатна от 50, иначе стоит отдельно. Выведи «Бесплатно» или «Платно».\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Сравни сумму заказа с порогом 50.",
+      "Сравни сумму заказа с порогом 50. Проверь ожидаемый результат: Бесплатно."
+     ],
+     "starter": "",
+     "code": "price = 55\nif price >= 50:\n    print(\"Бесплатно\")\nelse:\n    print(\"Платно\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Бесплатно",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "conditions.age-and-ticket",
+     "title": "Возраст и билет",
+     "goal": "Решения программы",
+     "aim": "Возраст 13, билет куплен (1). Покажи «Проходи», только если выполнены оба условия.",
+     "instruction": "Возраст 13, билет куплен (1). Покажи «Проходи», только если выполнены оба условия.\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "and объединяет две необходимые проверки.",
+      "and объединяет две необходимые проверки. Проверь ожидаемый результат: Проходи."
+     ],
+     "starter": "",
+     "code": "age = 13\nticket = 1\nif age >= 12 and ticket == 1:\n    print(\"Проходи\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Проходи",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "conditions.warm-day",
+     "title": "Тёплый день",
+     "goal": "Решения программы",
+     "aim": "Температура 23. До 0 — мороз, до 20 — прохладно, иначе тепло. Покажи подходящее слово.",
+     "instruction": "Температура 23. До 0 — мороз, до 20 — прохладно, иначе тепло. Покажи подходящее слово.\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Проверки идут от меньшей температуры к большей.",
+      "Проверки идут от меньшей температуры к большей. Проверь ожидаемый результат: Тепло."
+     ],
+     "starter": "",
+     "code": "temp = 23\nif temp < 0:\n    print(\"Мороз\")\nelif temp < 20:\n    print(\"Прохладно\")\nelse:\n    print(\"Тепло\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Тепло",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "conditions.access-code",
+     "title": "Код доступа",
+     "goal": "Решения программы",
+     "aim": "Сохранённый код — «лист». При совпадении покажи «Открыто», иначе «Закрыто».",
+     "instruction": "Сохранённый код — «лист». При совпадении покажи «Открыто», иначе «Закрыто».\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Сравни строки через ==.",
+      "Сравни строки через ==. Проверь ожидаемый результат: Открыто."
+     ],
+     "starter": "",
+     "code": "code = \"лист\"\nif code == \"лист\":\n    print(\"Открыто\")\nelse:\n    print(\"Закрыто\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Открыто",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "conditions.book-discount",
+     "title": "Скидка на три книги",
+     "goal": "Решения программы",
+     "aim": "Купили 3 книги по 8 монет. От трёх книг скидка 4 монеты. Выведи итог.",
+     "instruction": "Купили 3 книги по 8 монет. От трёх книг скидка 4 монеты. Выведи итог.\n\nif проверяет условие. elif проверяет следующий случай, если предыдущий не подошёл. else выполняется, когда ни одно условие не подошло. and требует выполнения обеих проверок.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Запиши условия по порядку. После двоеточия сделай отступ в четыре пробела для действия каждой ветки.",
+      "Рассчитай цену в обеих ветках условия.",
+      "Рассчитай цену в обеих ветках условия. Проверь ожидаемый результат: 20."
+     ],
+     "starter": "",
+     "code": "count = 3\nprice = 8\nif count >= 3:\n    print(count * price - 4)\nelse:\n    print(count * price)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "20",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "title": "Циклы и накопление",
+   "description": "Повторения, счётчики и суммы.",
+   "question": "Что напечатает программа?\ns = 0\nfor i in range(4):\n    s += i\nprint(s)",
+   "choices": [
+    "4",
+    "6",
+    "10"
+   ],
+   "correct": 1,
+   "explanation": "0 + 1 + 2 + 3 = 6.",
+   "tasks": [
+    {
+     "key": "loops.three-signals",
+     "title": "Три сигнала",
+     "goal": "Циклы и накопление",
+     "aim": "Выведи «Готово» три раза с помощью одного цикла.",
+     "instruction": "Выведи «Готово» три раза с помощью одного цикла.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "range(3) задаёт три повторения.",
+      "range(3) задаёт три повторения. Проверь ожидаемый результат: Готово → Готово → Готово."
+     ],
+     "starter": "",
+     "code": "for i in range(3):\n    print(\"Готово\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Готово\nГотово\nГотово",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "loops.countdown",
+     "title": "Обратный отсчёт",
+     "goal": "Циклы и накопление",
+     "aim": "Покажи 3, 2, 1 на отдельных строках, используя цикл.",
+     "instruction": "Покажи 3, 2, 1 на отдельных строках, используя цикл.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "Отрицательный шаг ведёт счёт назад.",
+      "Отрицательный шаг ведёт счёт назад. Проверь ожидаемый результат: 3 → 2 → 1."
+     ],
+     "starter": "",
+     "code": "for i in range(3, 0, -1):\n    print(i)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "3\n2\n1",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "loops.even-numbers",
+     "title": "Чётные номера",
+     "goal": "Циклы и накопление",
+     "aim": "Покажи 2, 4 и 6 через range с шагом 2.",
+     "instruction": "Покажи 2, 4 и 6 через range с шагом 2.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "Третий аргумент range — шаг.",
+      "Третий аргумент range — шаг. Проверь ожидаемый результат: 2 → 4 → 6."
+     ],
+     "starter": "",
+     "code": "for i in range(2, 8, 2):\n    print(i)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "2\n4\n6",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "loops.sum-four-days",
+     "title": "Сумма четырёх дней",
+     "goal": "Циклы и накопление",
+     "aim": "За дни получили 1, 2, 3 и 4 монеты. Накопи сумму циклом и выведи её.",
+     "instruction": "За дни получили 1, 2, 3 и 4 монеты. Накопи сумму циклом и выведи её.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "Начни с нуля и добавляй номер каждого дня.",
+      "Начни с нуля и добавляй номер каждого дня. Проверь ожидаемый результат: 10."
+     ],
+     "starter": "",
+     "code": "total = 0\nfor i in range(1, 5):\n    total = total + i\nprint(total)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "10",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "loops.savings",
+     "title": "Копилка",
+     "goal": "Циклы и накопление",
+     "aim": "Каждый из трёх дней откладывали 5 монет. Накопи итог циклом.",
+     "instruction": "Каждый из трёх дней откладывали 5 монет. Накопи итог циклом.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "Добавляй 5 к текущей сумме на каждом шаге.",
+      "Добавляй 5 к текущей сумме на каждом шаге. Проверь ожидаемый результат: 15."
+     ],
+     "starter": "",
+     "code": "money = 0\nfor day in range(3):\n    money = money + 5\nprint(money)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "15",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "loops.while-count",
+     "title": "Пока не пять",
+     "goal": "Циклы и накопление",
+     "aim": "Начни с 1 и выводи числа до 5 включительно с помощью while.",
+     "instruction": "Начни с 1 и выводи числа до 5 включительно с помощью while.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "Внутри while число должно меняться.",
+      "Внутри while число должно меняться. Проверь ожидаемый результат: 1 → 2 → 3 → 4 → 5."
+     ],
+     "starter": "",
+     "code": "n = 1\nwhile n <= 5:\n    print(n)\n    n = n + 1",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "1\n2\n3\n4\n5",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:while"
+     ]
+    },
+    {
+     "key": "loops.remaining-tickets",
+     "title": "Остались билеты",
+     "goal": "Циклы и накопление",
+     "aim": "В кассе 3 билета. Пока билеты есть, показывай остаток и уменьшай его.",
+     "instruction": "В кассе 3 билета. Пока билеты есть, показывай остаток и уменьшай его.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "После каждого вывода убирай один билет.",
+      "После каждого вывода убирай один билет. Проверь ожидаемый результат: 3 → 2 → 1."
+     ],
+     "starter": "",
+     "code": "tickets = 3\nwhile tickets > 0:\n    print(tickets)\n    tickets = tickets - 1",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "3\n2\n1",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:while"
+     ]
+    },
+    {
+     "key": "loops.times-two",
+     "title": "Таблица двоек",
+     "goal": "Циклы и накопление",
+     "aim": "Выведи 2, 4, 6, 8 через цикл и умножение.",
+     "instruction": "Выведи 2, 4, 6, 8 через цикл и умножение.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "Номер шага умножай на два.",
+      "Номер шага умножай на два. Проверь ожидаемый результат: 2 → 4 → 6 → 8."
+     ],
+     "starter": "",
+     "code": "for i in range(1, 5):\n    print(i * 2)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "2\n4\n6\n8",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "loops.nested-grid",
+     "title": "Ячейки сетки",
+     "goal": "Циклы и накопление",
+     "aim": "Выведи номера ячеек 11, 12, 21, 22 двумя вложенными циклами.",
+     "instruction": "Выведи номера ячеек 11, 12, 21, 22 двумя вложенными циклами.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "Внешний цикл отвечает за десятки, внутренний — за единицы.",
+      "Внешний цикл отвечает за десятки, внутренний — за единицы. Проверь ожидаемый результат: 11 → 12 → 21 → 22."
+     ],
+     "starter": "",
+     "code": "for row in range(1, 3):\n    for col in range(1, 3):\n        print(row * 10 + col)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "11\n12\n21\n22",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "nested_loop"
+     ]
+    },
+    {
+     "key": "loops.count-odd",
+     "title": "Сколько нечётных",
+     "goal": "Циклы и накопление",
+     "aim": "Посчитай нечётные числа от 1 до 7 и выведи количество.",
+     "instruction": "Посчитай нечётные числа от 1 до 7 и выведи количество.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "Если остаток от деления на два не ноль, увеличь счётчик.",
+      "Если остаток от деления на два не ноль, увеличь счётчик. Проверь ожидаемый результат: 4."
+     ],
+     "starter": "",
+     "code": "count = 0\nfor i in range(1, 8):\n    if i % 2 != 0:\n        count = count + 1\nprint(count)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "4",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for",
+      "kind:if"
+     ]
+    },
+    {
+     "key": "loops.sum-squares",
+     "title": "Сумма квадратов",
+     "goal": "Циклы и накопление",
+     "aim": "Вычисли циклом 1² + 2² + 3² и выведи сумму.",
+     "instruction": "Вычисли циклом 1² + 2² + 3² и выведи сумму.\n\nrange(начало, конец, шаг) не включает конец. while повторяет команды, пока условие верно; изменяй значение внутри цикла, чтобы он закончился. Для суммы создай переменную до цикла и обновляй её внутри.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Определи начальное значение, условие продолжения и изменение на каждом шаге. Итоговую сумму выведи после цикла.",
+      "На каждом шаге добавляй i × i.",
+      "На каждом шаге добавляй i × i. Проверь ожидаемый результат: 14."
+     ],
+     "starter": "",
+     "code": "total = 0\nfor i in range(1, 4):\n    total = total + i * i\nprint(total)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "14",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "title": "Функции с аргументами",
+   "description": "Один шаблон для разных данных.",
+   "question": "Что делает return в функции?",
+   "choices": [
+    "Печатает значение",
+    "Возвращает результат в место вызова",
+    "Повторяет функцию"
+   ],
+   "correct": 1,
+   "explanation": "return отдаёт значение туда, где функцию вызвали; печатает только print.",
+   "tasks": [
+    {
+     "key": "functions.hello-twice",
+     "title": "Позови дважды",
+     "goal": "Функции с аргументами",
+     "aim": "Создай функцию hello, которая печатает «Привет», и вызови её дважды.",
+     "instruction": "Создай функцию hello, которая печатает «Привет», и вызови её дважды.\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Определение только описывает действие; его нужно вызвать.",
+      "Определение только описывает действие; его нужно вызвать. Проверь ожидаемый результат: Привет → Привет."
+     ],
+     "starter": "",
+     "code": "def hello():\n    print(\"Привет\")\nhello()\nhello()",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет\nПривет",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:function"
+     ]
+    },
+    {
+     "key": "functions.greeting",
+     "title": "Имя для приветствия",
+     "goal": "Функции с аргументами",
+     "aim": "Функция greet принимает имя. Вызови её с «Мира» и напечатай «Привет, Мира».",
+     "instruction": "Функция greet принимает имя. Вызови её с «Мира» и напечатай «Привет, Мира».\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Параметр name получает значение при вызове.",
+      "Параметр name получает значение при вызове. Проверь ожидаемый результат: Привет, Мира."
+     ],
+     "starter": "def greet(name):\n    print(\"Привет, \" + name)\n",
+     "code": "def greet(name):\n    print(\"Привет, \" + name)\ngreet(\"Мира\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет, Мира",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "functions.square",
+     "title": "Квадрат числа",
+     "goal": "Функции с аргументами",
+     "aim": "Создай square с аргументом n; она возвращает n × n. Покажи square(4).",
+     "instruction": "Создай square с аргументом n; она возвращает n × n. Покажи square(4).\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "return передаёт вычисленное значение наружу.",
+      "return передаёт вычисленное значение наружу. Проверь ожидаемый результат: 16."
+     ],
+     "starter": "",
+     "code": "def square(n):\n    return n * n\nprint(square(4))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "16",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:return"
+     ]
+    },
+    {
+     "key": "functions.double",
+     "title": "Удвой два числа",
+     "goal": "Функции с аргументами",
+     "aim": "Функция double возвращает удвоенное число. Покажи результаты для 3 и 5.",
+     "instruction": "Функция double возвращает удвоенное число. Покажи результаты для 3 и 5.\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Одну функцию можно вызвать с разными аргументами.",
+      "Одну функцию можно вызвать с разными аргументами. Проверь ожидаемый результат: 6 → 10."
+     ],
+     "starter": "",
+     "code": "def double(n):\n    return n * 2\nprint(double(3))\nprint(double(5))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "6\n10",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:return"
+     ]
+    },
+    {
+     "key": "functions.entry",
+     "title": "Можно войти?",
+     "goal": "Функции с аргументами",
+     "aim": "Функция can_enter получает возраст и возвращает результат проверки 18+. Покажи ответ для 16.",
+     "instruction": "Функция can_enter получает возраст и возвращает результат проверки 18+. Покажи ответ для 16.\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Верни True или False из сравнения.",
+      "Верни True или False из сравнения. Проверь ожидаемый результат: False."
+     ],
+     "starter": "",
+     "code": "def can_enter(age):\n    return age >= 18\nprint(can_enter(16))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "False",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:return"
+     ]
+    },
+    {
+     "key": "functions.perimeter",
+     "title": "Периметр комнаты",
+     "goal": "Функции с аргументами",
+     "aim": "Функция perimeter принимает длину 5 и ширину 3. Верни и покажи периметр.",
+     "instruction": "Функция perimeter принимает длину 5 и ширину 3. Верни и покажи периметр.\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Периметр прямоугольника — две длины и две ширины.",
+      "Периметр прямоугольника — две длины и две ширины. Проверь ожидаемый результат: 16."
+     ],
+     "starter": "",
+     "code": "def perimeter(a, b):\n    return 2 * (a + b)\nprint(perimeter(5, 3))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "16",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:return"
+     ]
+    },
+    {
+     "key": "functions.label",
+     "title": "Ярлык для текста",
+     "goal": "Функции с аргументами",
+     "aim": "Функция label добавляет перед текстом «>> ». Покажи ярлык для «План».",
+     "instruction": "Функция label добавляет перед текстом «>> ». Покажи ярлык для «План».\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Строки можно соединять внутри функции.",
+      "Строки можно соединять внутри функции. Проверь ожидаемый результат: >> План."
+     ],
+     "starter": "",
+     "code": "def label(text):\n    return \">> \" + text\nprint(label(\"План\"))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": ">> План",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:return"
+     ]
+    },
+    {
+     "key": "functions.sum-to",
+     "title": "Сумма до числа",
+     "goal": "Функции с аргументами",
+     "aim": "Функция sum_to(n) складывает числа от 1 до n. Покажи результат для 4.",
+     "instruction": "Функция sum_to(n) складывает числа от 1 до n. Покажи результат для 4.\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Накопи сумму внутри цикла и верни после него.",
+      "Накопи сумму внутри цикла и верни после него. Проверь ожидаемый результат: 10."
+     ],
+     "starter": "",
+     "code": "def sum_to(n):\n    total = 0\n    for i in range(1, n + 1):\n        total = total + i\n    return total\nprint(sum_to(4))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "10",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:return",
+      "kind:for"
+     ]
+    },
+    {
+     "key": "functions.is-even",
+     "title": "Чётное или нет",
+     "goal": "Функции с аргументами",
+     "aim": "Функция is_even возвращает True для чётного числа. Проверь 9.",
+     "instruction": "Функция is_even возвращает True для чётного числа. Проверь 9.\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Используй остаток от деления на два.",
+      "Используй остаток от деления на два. Проверь ожидаемый результат: False."
+     ],
+     "starter": "",
+     "code": "def is_even(n):\n    return n % 2 == 0\nprint(is_even(9))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "False",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:return"
+     ]
+    },
+    {
+     "key": "functions.discount",
+     "title": "Скидка в функции",
+     "goal": "Функции с аргументами",
+     "aim": "Функция final_price уменьшает цену на 3, если товаров хотя бы два. Покажи цену для 2 товаров по 8.",
+     "instruction": "Функция final_price уменьшает цену на 3, если товаров хотя бы два. Покажи цену для 2 товаров по 8.\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Сначала вычисли итог, затем реши, нужна ли скидка.",
+      "Сначала вычисли итог, затем реши, нужна ли скидка. Проверь ожидаемый результат: 13."
+     ],
+     "starter": "",
+     "code": "def final_price(count, price):\n    total = count * price\n    if count >= 2:\n        return total - 3\n    return total\nprint(final_price(2, 8))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "13",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:return",
+      "kind:if"
+     ]
+    },
+    {
+     "key": "functions.two-greetings",
+     "title": "Один шаблон, два вызова",
+     "goal": "Функции с аргументами",
+     "aim": "Функция message(name) печатает «Привет, имя». Поздоровайся с Леей и Мирой.",
+     "instruction": "Функция message(name) печатает «Привет, имя». Поздоровайся с Леей и Мирой.\n\nПараметр в скобках def получает значение при вызове функции. return возвращает результат в место вызова. print показывает значение на экране; return сам ничего не печатает.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Сначала определи функцию с нужными параметрами. Затем вызови её с данными задачи и напечатай возвращённый результат.",
+      "Вызови одну функцию два раза с разными именами.",
+      "Вызови одну функцию два раза с разными именами. Проверь ожидаемый результат: Привет, Лея → Привет, Мира."
+     ],
+     "starter": "",
+     "code": "def message(name):\n    print(\"Привет, \" + name)\nmessage(\"Лея\")\nmessage(\"Мира\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Привет, Лея\nПривет, Мира",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "title": "Списки",
+   "description": "Храни и обрабатывай несколько значений.",
+   "question": "Что напечатает print([3, 7, 9][0])?",
+   "choices": [
+    "3",
+    "7",
+    "9"
+   ],
+   "correct": 0,
+   "explanation": "Элементы списка нумеруются с нуля.",
+   "tasks": [
+    {
+     "key": "lists.first-index",
+     "title": "Первое имя",
+     "goal": "Списки",
+     "aim": "В списке Лея и Мира. Покажи первое имя по индексу.",
+     "instruction": "В списке Лея и Мира. Покажи первое имя по индексу.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Отсчёт индексов начинается с нуля.",
+      "Отсчёт индексов начинается с нуля. Проверь ожидаемый результат: Лея."
+     ],
+     "starter": "names = [\"Лея\", \"Мира\"]\nprint(names[])",
+     "code": "names = [\"Лея\", \"Мира\"]\nprint(names[0])",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Лея",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "lists.last-score",
+     "title": "Последний балл",
+     "goal": "Списки",
+     "aim": "В списке 3, 5, 8. Покажи последний балл.",
+     "instruction": "В списке 3, 5, 8. Покажи последний балл.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "У трёх элементов индексы 0, 1, 2.",
+      "У трёх элементов индексы 0, 1, 2. Проверь ожидаемый результат: 8."
+     ],
+     "starter": "",
+     "code": "scores = [3, 5, 8]\nprint(scores[2])",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "8",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "lists.length",
+     "title": "Сколько книг",
+     "goal": "Списки",
+     "aim": "В списке три книги. Выведи его длину через len.",
+     "instruction": "В списке три книги. Выведи его длину через len.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "len возвращает число элементов списка.",
+      "len возвращает число элементов списка. Проверь ожидаемый результат: 3."
+     ],
+     "starter": "",
+     "code": "books = [\"Код\", \"Игра\", \"Мир\"]\nprint(len(books))",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "3",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "lists.negative-index",
+     "title": "Последняя карточка",
+     "goal": "Списки",
+     "aim": "Покажи последнюю карточку списка 4, 7, 9 через отрицательный индекс.",
+     "instruction": "Покажи последнюю карточку списка 4, 7, 9 через отрицательный индекс.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Индекс −1 берёт элемент с конца.",
+      "Индекс −1 берёт элемент с конца. Проверь ожидаемый результат: 9."
+     ],
+     "starter": "",
+     "code": "cards = [4, 7, 9]\nprint(cards[-1])",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "9",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "lists.iterate-names",
+     "title": "Имена по очереди",
+     "goal": "Списки",
+     "aim": "Выведи Лея, Мира и Олег по одному имени в строке через цикл по списку.",
+     "instruction": "Выведи Лея, Мира и Олег по одному имени в строке через цикл по списку.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Цикл может брать сразу значения списка.",
+      "Цикл может брать сразу значения списка. Проверь ожидаемый результат: Лея → Мира → Олег."
+     ],
+     "starter": "",
+     "code": "names = [\"Лея\", \"Мира\", \"Олег\"]\nfor name in names:\n    print(name)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "Лея\nМира\nОлег",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "lists.sum-prices",
+     "title": "Сумма покупок",
+     "goal": "Списки",
+     "aim": "Цены 4, 6, 3. Сложи их циклом и покажи сумму.",
+     "instruction": "Цены 4, 6, 3. Сложи их циклом и покажи сумму.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Начни с нуля и добавляй каждую цену.",
+      "Начни с нуля и добавляй каждую цену. Проверь ожидаемый результат: 13."
+     ],
+     "starter": "",
+     "code": "prices = [4, 6, 3]\ntotal = 0\nfor price in prices:\n    total = total + price\nprint(total)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "13",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "lists.maximum",
+     "title": "Лучший результат",
+     "goal": "Списки",
+     "aim": "Баллы 4, 9, 6. Найди максимум циклом без готовой функции max.",
+     "instruction": "Баллы 4, 9, 6. Найди максимум циклом без готовой функции max.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Сравнивай каждый балл с лучшим найденным.",
+      "Сравнивай каждый балл с лучшим найденным. Проверь ожидаемый результат: 9."
+     ],
+     "starter": "",
+     "code": "scores = [4, 9, 6]\nbest = scores[0]\nfor score in scores:\n    if score > best:\n        best = score\nprint(best)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "9",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for",
+      "kind:if"
+     ]
+    },
+    {
+     "key": "lists.replace-item",
+     "title": "Исправь оценку",
+     "goal": "Списки",
+     "aim": "Оценки 3, 2, 5. Замени вторую на 4 и покажи список.",
+     "instruction": "Оценки 3, 2, 5. Замени вторую на 4 и покажи список.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Индекс второй позиции равен 1.",
+      "Индекс второй позиции равен 1. Проверь ожидаемый результат: [3, 4, 5]."
+     ],
+     "starter": "",
+     "code": "grades = [3, 2, 5]\ngrades[1] = 4\nprint(grades)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "[3, 4, 5]",
+       "hidden": false
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "lists.count-even",
+     "title": "Сколько чётных",
+     "goal": "Списки",
+     "aim": "В списке 1, 2, 4, 7, 8 посчитай чётные числа.",
+     "instruction": "В списке 1, 2, 4, 7, 8 посчитай чётные числа.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Проверяй каждое значение и увеличивай счётчик.",
+      "Проверяй каждое значение и увеличивай счётчик. Проверь ожидаемый результат: 3."
+     ],
+     "starter": "",
+     "code": "numbers = [1, 2, 4, 7, 8]\ncount = 0\nfor number in numbers:\n    if number % 2 == 0:\n        count = count + 1\nprint(count)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "3",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for",
+      "kind:if"
+     ]
+    },
+    {
+     "key": "lists.filter-prices",
+     "title": "Цены выше порога",
+     "goal": "Списки",
+     "aim": "В списке 4, 11, 7, 15 покажи только цены выше 10.",
+     "instruction": "В списке 4, 11, 7, 15 покажи только цены выше 10.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Условие должно находиться внутри цикла.",
+      "Условие должно находиться внутри цикла. Проверь ожидаемый результат: 11 → 15."
+     ],
+     "starter": "",
+     "code": "prices = [4, 11, 7, 15]\nfor price in prices:\n    if price > 10:\n        print(price)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "11\n15",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for",
+      "kind:if"
+     ]
+    },
+    {
+     "key": "lists.running-total",
+     "title": "Счёт по дням",
+     "goal": "Списки",
+     "aim": "За три дня собрали 2, 3, 4 жетона. Покажи накопленную сумму после каждого дня.",
+     "instruction": "За три дня собрали 2, 3, 4 жетона. Покажи накопленную сумму после каждого дня.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Выводи сумму внутри цикла после добавления.",
+      "Выводи сумму внутри цикла после добавления. Проверь ожидаемый результат: 2 → 5 → 9."
+     ],
+     "starter": "",
+     "code": "days = [2, 3, 4]\ntotal = 0\nfor amount in days:\n    total = total + amount\n    print(total)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "2\n5\n9",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "lists.basket-total",
+     "title": "Корзина покупок",
+     "goal": "Списки",
+     "aim": "В корзине цены 5, 8, 2. Покажи количество товаров и общую стоимость.",
+     "instruction": "В корзине цены 5, 8, 2. Покажи количество товаров и общую стоимость.\n\nСписок хранит несколько значений в квадратных скобках. Первый индекс — 0, последний можно получить через -1. len даёт длину. Цикл for получает каждый элемент по очереди.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Создай список с данными задачи. Для одной позиции используй индекс, для обработки всех значений — цикл.",
+      "Количество даёт len, итог накопи циклом.",
+      "Количество даёт len, итог накопи циклом. Проверь ожидаемый результат: 3 → 15."
+     ],
+     "starter": "",
+     "code": "prices = [5, 8, 2]\ntotal = 0\nfor price in prices:\n    total = total + price\nprint(len(prices))\nprint(total)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "3\n15",
+       "hidden": false
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "title": "Ввод и мини-программы",
+   "description": "Программа отвечает на реальные данные пользователя.",
+   "question": "Что вернёт input(), если ввести 5?",
+   "choices": [
+    "Число 5",
+    "Строку «5»",
+    "Ничего"
+   ],
+   "correct": 1,
+   "explanation": "input() всегда возвращает строку; для вычислений нужен int().",
+   "tasks": [
+    {
+     "key": "input.greeting",
+     "title": "Поздоровайся с гостем",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи имя через input и напечатай «Привет, имя».",
+     "instruction": "Получи имя через input и напечатай «Привет, имя».\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "input возвращает текст; сохрани его в переменной.",
+      "input возвращает текст; сохрани его в переменной. Проверь ожидаемый результат: Привет, Мира."
+     ],
+     "starter": "name = \nprint(\"Привет, \" + name)",
+     "code": "name = input()\nprint(\"Привет, \" + name)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "Мира"
+       ],
+       "expected": "Привет, Мира",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "Олег"
+       ],
+       "expected": "Привет, Олег",
+       "hidden": true
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "input.next-year",
+     "title": "Через год",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи возраст числом и покажи, сколько лет будет через год.",
+     "instruction": "Получи возраст числом и покажи, сколько лет будет через год.\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "input возвращает строку, int превращает её в число.",
+      "input возвращает строку, int превращает её в число. Проверь ожидаемый результат: 13."
+     ],
+     "starter": "",
+     "code": "age = int(input())\nprint(age + 1)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "12"
+       ],
+       "expected": "13",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "20"
+       ],
+       "expected": "21",
+       "hidden": true
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "input.add",
+     "title": "Сложи два ввода",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи два целых числа и выведи их сумму.",
+     "instruction": "Получи два целых числа и выведи их сумму.\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Преобразуй оба введённых значения.",
+      "Преобразуй оба введённых значения. Проверь ожидаемый результат: 8."
+     ],
+     "starter": "",
+     "code": "a = int(input())\nb = int(input())\nprint(a + b)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "3",
+        "5"
+       ],
+       "expected": "8",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "10",
+        "2"
+       ],
+       "expected": "12",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "input:1"
+     ]
+    },
+    {
+     "key": "input.order-price",
+     "title": "Цена заказа",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи цену и количество, затем выведи стоимость.",
+     "instruction": "Получи цену и количество, затем выведи стоимость.\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Стоимость равна цене, умноженной на количество.",
+      "Стоимость равна цене, умноженной на количество. Проверь ожидаемый результат: 21."
+     ],
+     "starter": "",
+     "code": "price = int(input())\ncount = int(input())\nprint(price * count)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "7",
+        "3"
+       ],
+       "expected": "21",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "4",
+        "5"
+       ],
+       "expected": "20",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "input:1"
+     ]
+    },
+    {
+     "key": "input.age-threshold",
+     "title": "Возрастной порог",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи возраст. Покажи «Можно» от 18 лет, иначе «Рано».",
+     "instruction": "Получи возраст. Покажи «Можно» от 18 лет, иначе «Рано».\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Сравни число с 18 в условии.",
+      "Сравни число с 18 в условии. Проверь ожидаемый результат: Рано."
+     ],
+     "starter": "",
+     "code": "age = int(input())\nif age >= 18:\n    print(\"Можно\")\nelse:\n    print(\"Рано\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "16"
+       ],
+       "expected": "Рано",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "21"
+       ],
+       "expected": "Можно",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "input.password",
+     "title": "Секретное слово",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи слово. Для «лист» покажи «Открыто», иначе «Закрыто».",
+     "instruction": "Получи слово. Для «лист» покажи «Открыто», иначе «Закрыто».\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Сравни строки через ==.",
+      "Сравни строки через ==. Проверь ожидаемый результат: Открыто."
+     ],
+     "starter": "",
+     "code": "word = input()\nif word == \"лист\":\n    print(\"Открыто\")\nelse:\n    print(\"Закрыто\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "лист"
+       ],
+       "expected": "Открыто",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "камень"
+       ],
+       "expected": "Закрыто",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "input.weather",
+     "title": "Тёплая погода",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи температуру. От 20 покажи «Тепло», иначе «Прохладно».",
+     "instruction": "Получи температуру. От 20 покажи «Тепло», иначе «Прохладно».\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Преобразуй ввод в число перед сравнением.",
+      "Преобразуй ввод в число перед сравнением. Проверь ожидаемый результат: Тепло."
+     ],
+     "starter": "",
+     "code": "temp = int(input())\nif temp >= 20:\n    print(\"Тепло\")\nelse:\n    print(\"Прохладно\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "24"
+       ],
+       "expected": "Тепло",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "12"
+       ],
+       "expected": "Прохладно",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "kind:if"
+     ]
+    },
+    {
+     "key": "input.repeat-name",
+     "title": "Повтори имя",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи имя и выведи его трижды через цикл.",
+     "instruction": "Получи имя и выведи его трижды через цикл.\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Имя вводят один раз, затем цикл печатает его трижды.",
+      "Имя вводят один раз, затем цикл печатает его трижды. Проверь ожидаемый результат: Лея → Лея → Лея."
+     ],
+     "starter": "",
+     "code": "name = input()\nfor i in range(3):\n    print(name)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "Лея"
+       ],
+       "expected": "Лея\nЛея\nЛея",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "Мира"
+       ],
+       "expected": "Мира\nМира\nМира",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "input.signal-count",
+     "title": "Сигнал нужное число раз",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи число n и выведи «Сигнал» ровно n раз.",
+     "instruction": "Получи число n и выведи «Сигнал» ровно n раз.\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Используй n как границу range.",
+      "Используй n как границу range. Проверь ожидаемый результат: Сигнал → Сигнал."
+     ],
+     "starter": "",
+     "code": "n = int(input())\nfor i in range(n):\n    print(\"Сигнал\")",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "2"
+       ],
+       "expected": "Сигнал\nСигнал",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "4"
+       ],
+       "expected": "Сигнал\nСигнал\nСигнал\nСигнал",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "input.change",
+     "title": "Сдача в магазине",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи сумму оплаты и цену покупки. Покажи сдачу.",
+     "instruction": "Получи сумму оплаты и цену покупки. Покажи сдачу.\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Вычти цену из оплаты.",
+      "Вычти цену из оплаты. Проверь ожидаемый результат: 7."
+     ],
+     "starter": "",
+     "code": "paid = int(input())\nprice = int(input())\nprint(paid - price)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "20",
+        "13"
+       ],
+       "expected": "7",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "50",
+        "32"
+       ],
+       "expected": "18",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "input:1"
+     ]
+    },
+    {
+     "key": "input.receipt",
+     "title": "Мини-чек",
+     "goal": "Ввод и мини-программы",
+     "aim": "Получи имя товара, цену и количество. Покажи имя и затем итоговую стоимость.",
+     "instruction": "Получи имя товара, цену и количество. Покажи имя и затем итоговую стоимость.\n\ninput() получает одну строку. Для вычислений преобразуй её в целое число через int(input()). Каждый новый вызов input берёт следующее значение. При проверке Kodik подставляет несколько наборов данных автоматически.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Получи значения в указанном порядке. Числа преобразуй через int. Решение должно работать с разными данными, а не только с первым примером.",
+      "Сначала выведи название, затем произведение цены на количество.",
+      "Сначала выведи название, затем произведение цены на количество. Проверь ожидаемый результат: Книга → 16."
+     ],
+     "starter": "",
+     "code": "name = input()\nprice = int(input())\ncount = int(input())\nprint(name)\nprint(price * count)",
+     "wrong": [
+      "print(\"\")"
+     ],
+     "tests": [
+      {
+       "inputs": [
+        "Книга",
+        "8",
+        "2"
+       ],
+       "expected": "Книга\n16",
+       "hidden": false
+      },
+      {
+       "inputs": [
+        "Мяч",
+        "5",
+        "3"
+       ],
+       "expected": "Мяч\n15",
+       "hidden": true
+      }
+     ],
+     "rules": [
+      "input:1"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "title": "Рисование и проекты",
+   "description": "Собери рисунок из команд, циклов и функций.",
+   "question": "На сколько градусов поворачивать черепашку, чтобы нарисовать квадрат?",
+   "choices": [
+    "60",
+    "90",
+    "120"
+   ],
+   "correct": 1,
+   "explanation": "Четыре стороны: 360 / 4 = 90 градусов.",
+   "tasks": [
+    {
+     "key": "drawing.first-line",
+     "title": "Первая линия",
+     "goal": "Рисование и проекты",
+     "aim": "Нарисуй линию длиной 60 командой forward.",
+     "instruction": "Нарисуй линию длиной 60 командой forward.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "forward принимает длину движения.",
+      "forward принимает длину движения. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n(60)",
+     "code": "from turtle import *\nforward(60)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "drawing.corner",
+     "title": "Поверни за угол",
+     "goal": "Рисование и проекты",
+     "aim": "Нарисуй две линии по 40 с поворотом вправо на 90 градусов между ними.",
+     "instruction": "Нарисуй две линии по 40 с поворотом вправо на 90 градусов между ними.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "После первой линии поверни на прямой угол.",
+      "После первой линии поверни на прямой угол. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\nforward(40)\nright(90)\nforward(40)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": []
+    },
+    {
+     "key": "drawing.square-loop",
+     "title": "Квадрат циклом",
+     "goal": "Рисование и проекты",
+     "aim": "Нарисуй квадрат со стороной 50 одним циклом.",
+     "instruction": "Нарисуй квадрат со стороной 50 одним циклом.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "У квадрата четыре одинаковые стороны и поворота.",
+      "У квадрата четыре одинаковые стороны и поворота. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\nfor i in range(4):\n    forward(50)\n    right(90)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "drawing.triangle",
+     "title": "Треугольник",
+     "goal": "Рисование и проекты",
+     "aim": "Нарисуй равносторонний треугольник со стороной 50 через цикл.",
+     "instruction": "Нарисуй равносторонний треугольник со стороной 50 через цикл.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "Внешний поворот треугольника равен 120 градусам.",
+      "Внешний поворот треугольника равен 120 градусам. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\nfor i in range(3):\n    forward(50)\n    right(120)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "drawing.rectangle",
+     "title": "Прямоугольник",
+     "goal": "Рисование и проекты",
+     "aim": "Нарисуй прямоугольник со сторонами 80 и 40.",
+     "instruction": "Нарисуй прямоугольник со сторонами 80 и 40.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "Пара длинной и короткой сторон повторяется дважды.",
+      "Пара длинной и короткой сторон повторяется дважды. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\nfor i in range(2):\n    forward(80)\n    right(90)\n    forward(40)\n    right(90)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "drawing.hexagon",
+     "title": "Шестиугольник",
+     "goal": "Рисование и проекты",
+     "aim": "Нарисуй правильный шестиугольник со стороной 30.",
+     "instruction": "Нарисуй правильный шестиугольник со стороной 30.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "Угол внешнего поворота — 360 / 6.",
+      "Угол внешнего поворота — 360 / 6. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\nfor i in range(6):\n    forward(30)\n    right(60)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "drawing.variable-size",
+     "title": "Размер в переменной",
+     "goal": "Рисование и проекты",
+     "aim": "Сохрани размер 70 и нарисуй квадрат, используя эту переменную.",
+     "instruction": "Сохрани размер 70 и нарисуй квадрат, используя эту переменную.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "Перед циклом запомни длину стороны.",
+      "Перед циклом запомни длину стороны. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\nsize = 70\nfor i in range(4):\n    forward(size)\n    right(90)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:for",
+      "assign:1"
+     ]
+    },
+    {
+     "key": "drawing.stairs",
+     "title": "Лестница",
+     "goal": "Рисование и проекты",
+     "aim": "Нарисуй три ступени: вправо 30, поворот, вверх 30 — и так три раза.",
+     "instruction": "Нарисуй три ступени: вправо 30, поворот, вверх 30 — и так три раза.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "Одна ступень состоит из двух отрезков.",
+      "Одна ступень состоит из двух отрезков. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\nfor i in range(3):\n    forward(30)\n    left(90)\n    forward(30)\n    right(90)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "drawing.square-function",
+     "title": "Функция рисует квадрат",
+     "goal": "Рисование и проекты",
+     "aim": "Создай функцию square(size), которая рисует квадрат. Вызови её для стороны 40.",
+     "instruction": "Создай функцию square(size), которая рисует квадрат. Вызови её для стороны 40.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "Внутри функции повтори четыре стороны.",
+      "Внутри функции повтори четыре стороны. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\ndef square(size):\n    for i in range(4):\n        forward(size)\n        right(90)\nsquare(40)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    },
+    {
+     "key": "drawing.flower",
+     "title": "Цветок из квадратов",
+     "goal": "Рисование и проекты",
+     "aim": "Нарисуй четыре квадрата со стороной 30, поворачивая начало каждого на 90 градусов.",
+     "instruction": "Нарисуй четыре квадрата со стороной 30, поворачивая начало каждого на 90 градусов.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "Квадрат возвращает черепашку к началу; затем поверни направление.",
+      "Квадрат возвращает черепашку к началу; затем поверни направление. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\ndef square():\n    for i in range(4):\n        forward(30)\n        right(90)\nfor j in range(4):\n    square()\n    right(90)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:function",
+      "nested_loop"
+     ]
+    },
+    {
+     "key": "drawing.star-project",
+     "title": "Звезда Кодика",
+     "goal": "Рисование и проекты",
+     "aim": "Итоговый проект: функция рисует пятиконечную звезду из линий по 80. Используй цикл и вызови функцию.",
+     "instruction": "Итоговый проект: функция рисует пятиконечную звезду из линий по 80. Используй цикл и вызови функцию.\n\nЧерепашка начинает движение вправо. forward(длина) рисует отрезок, right(угол) поворачивает вправо, left(угол) — влево. Первая строка from turtle import * подключает черепашку — она уже есть в заготовке. Для правильного многоугольника внешний угол равен 360, делённым на число сторон.",
+     "theory": "Напиши программу сам. Проверка запустит её и сравнит результат с заданием.",
+     "hints": [
+      "Раздели рисунок на отрезки и повороты. Повторяющиеся стороны перенеси в цикл. Длины и углы должны соответствовать условию.",
+      "Для звезды после каждого луча поверни на 144 градуса.",
+      "Для звезды после каждого луча поверни на 144 градуса. Проверь ожидаемый результат на рисунке."
+     ],
+     "starter": "from turtle import *\n",
+     "code": "from turtle import *\ndef star(size):\n    for i in range(5):\n        forward(size)\n        right(144)\nstar(80)",
+     "wrong": [
+      "from turtle import *\nforward(1)"
+     ],
+     "tests": [
+      {
+       "inputs": [],
+       "expected": "",
+       "hidden": false,
+       "checks": [
+        "drawing"
+       ]
+      }
+     ],
+     "rules": [
+      "kind:for"
+     ]
+    }
+   ]
+  }
+ ]
+}

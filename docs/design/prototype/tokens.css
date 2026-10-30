@@ -1,0 +1,69 @@
+/* Kodik B2B Design System — токены (предложение, ещё не подключены к src/b2b).
+   Основа — Kodik Brand Kit 2026, слайд 03 «Палитра интерфейса». Контраст проверен (см. DESIGN_SYSTEM.md). */
+:root {
+  /* Бренд */
+  --k-ink: #17352e;          /* основной текст, 13,1:1 на surface */
+  --k-cta: #17463a;          /* основная кнопка, белый 10,6:1 */
+  --k-cta-hover: #0f362c;    /* белый 13,3:1 */
+  --k-green: #235e51;        /* знак K., ссылки, активная навигация, 7,5:1 */
+  --k-green-soft: #e7ede4;   /* фон акцента, выбранный пункт */
+  --k-sage: #b7cfca;         /* графика, не текст */
+  --k-accent: #c77c5d;       /* terracotta: иконки и крупные элементы, 3,2:1 */
+  --k-accent-text: #974f36;  /* текст акцента, 6,0:1 */
+  --k-accent-soft: #f6e9e2;
+
+  /* Нейтральные */
+  --k-canvas: #f8f7f2;
+  --k-surface: #fffefa;
+  --k-surface-alt: #edf0e8;
+  --k-muted: #5f6e67;        /* вторичный текст, 5,3:1 — минимальный уровень текста */
+  --k-line: #e2e5dd;         /* декоративные разделители */
+  --k-line-strong: #7f8b84;  /* границы полей и чекбоксов, 3,5:1 */
+
+  /* Статусы: текст ≥ 4,8:1 на своём мягком фоне */
+  --k-success: #24694c;  --k-success-soft: #e8f1e9;
+  --k-warning: #9a5b12;  --k-warning-soft: #fbf1e2;
+  --k-danger:  #b3412f;  --k-danger-soft:  #fbefea;
+  --k-info:    #1f6f8b;  --k-info-soft:    #e6f0f3;
+
+  /* Код */
+  --k-code-bg: #fbfbf7;
+  --k-code-gutter: #8a968f;
+  --k-code-keyword: #8a3f8f;
+  --k-code-string: #24694c;
+  --k-code-number: #9a5b12;
+  --k-code-func: #1f6f8b;
+  --k-code-comment: #66756d;
+
+  /* Типографика */
+  --k-font: "Nunito", "Kodik Sans", "Segoe UI", system-ui, sans-serif;
+  --k-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  /* Отступы, шаг 8 (4 — половинный шаг внутри компонентов) */
+  --k-space-1: 4px;  --k-space-2: 8px;  --k-space-3: 12px; --k-space-4: 16px;
+  --k-space-5: 24px; --k-space-6: 32px; --k-space-7: 40px; --k-space-8: 48px; --k-space-9: 64px;
+
+  /* Размеры */
+  --k-control-sm: 32px; --k-control: 40px; --k-control-lg: 44px; --k-control-xl: 48px;
+  --k-sidebar: 240px; --k-topbar: 56px; --k-row: 44px;
+
+  /* Радиусы */
+  --k-radius-xs: 6px;  /* теги */
+  --k-radius-sm: 8px;  /* кнопки, поля */
+  --k-radius-md: 12px; /* карточки и таблицы преподавателя */
+  --k-radius-lg: 16px; /* модальные окна, карточки ученика */
+  --k-radius-xl: 20px; /* главная карточка ученика */
+  --k-radius-full: 999px;
+
+  /* Тени — только для слоёв поверх контента */
+  --k-shadow-1: 0 1px 2px rgba(23, 53, 46, 0.06);
+  --k-shadow-2: 0 8px 24px rgba(23, 53, 46, 0.12);
+  --k-shadow-3: 0 24px 64px rgba(23, 53, 46, 0.2);
+
+  /* Фокус: двойное кольцо видно и на светлом фоне, и на зелёной кнопке */
+  --k-focus: 0 0 0 2px var(--k-surface), 0 0 0 4px var(--k-info);
+
+  --k-ease: cubic-bezier(0.2, 0, 0, 1);
+  --k-fast: 120ms;
+  --k-base: 200ms;
+}

@@ -15,6 +15,9 @@ export default async function handler(req: Request, res: Response) {
   res.setHeader('Cache-Control', 'no-store')
   if (!apiCors(req,res)) return
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'method_not_allowed' }) }
+  // AI is paused regardless of stale deployment flags.
+  const aiPaused = true
+  if (aiPaused) return res.status(503).json({ error: 'ai_disabled' })
   const provider = configuredTutorProvider()
   if (process.env.AI_TUTOR_ENABLED !== 'true' || !provider) return res.status(503).json({ error: 'ai_unavailable' })
   let body: TutorRequest

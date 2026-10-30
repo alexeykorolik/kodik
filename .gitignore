@@ -19,3 +19,12 @@ android/**/build/
 android/app/src/main/assets/public/
 android/app/src/main/assets/capacitor.config.json
 android/app/src/main/assets/capacitor.plugins.json
+
+data/
+.runner/
+work/
+playwright-report/
+desktop.ini
+
+# Separate git repository for the static teacher demo
+teacher-demo/
